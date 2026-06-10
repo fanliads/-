@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>需求管理平台 - 产品需求池</title>
+<style>
+  :root {
+    --bg: #f5f5f7;
+    --surface: #ffffff;
+    --text-primary: #1d1d1f;
+    --text-secondary: #86868b;
+    --border: rgba(0,0,0,0.08);
+    --primary: #0071e3;
+    --success: #34c759;
+    --warning: #ff9500;
+    --danger: #ff3b30;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.5;
+    overflow: hidden;
+  }
+  .layout { display: flex; height: 100vh; }
+  .sidebar {
+    width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+  }
+  .logo { padding: 0 24px 24px; font-size: 18px; font-weight: 600; }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 24px;
+    margin: 2px 12px;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 13px;
+  }
+  .nav-item.active, .nav-item:hover { background: rgba(0,113,227,0.08); color: var(--primary); font-weight: 500; }
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .header {
+    height: 64px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+  }
+  .header-left, .header-right { display: flex; align-items: center; gap: 16px; }
+  .search-box {
+    width: 240px;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg);
+    font-size: 13px;
+  }
+  .btn {
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-success { background: rgba(52,199,89,0.10); color: #248a3d; }
+  .btn-danger { background: rgba(255,59,48,0.08); color: var(--danger); }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: #e8e8ed; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: var(--text-secondary);
+  }
+  .mode-switch, .view-switch {
+    display: flex; gap: 4px; background: var(--bg); padding: 4px; border-radius: var(--radius-sm);
+  }
+  .mode-btn, .view-btn {
+    padding: 6px 12px; border: none; background: transparent; border-radius: 6px;
+    font-size: 12px; color: var(--text-secondary); cursor: pointer;
+  }
+  .mode-btn.active, .view-btn.active {
+    background: var(--surface); color: var(--text-primary); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+  .filter-bar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 32px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .filter-chip {
+    padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border);
+    background: var(--surface); font-size: 13px; color: var(--text-secondary);
+  }
+  .filter-chip.active { background: rgba(0,113,227,0.08); border-color: var(--primary); color: var(--primary); }
+  .risk-banner {
+    margin: 16px 32px 0;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    background: rgba(255,149,0,0.10);
+    color: #8a5a00;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .summary {
+    padding: 16px 32px 0;
+    display: flex; gap: 12px; flex-wrap: wrap;
+  }
+  .summary-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 10px 14px; min-width: 180px;
+  }
+  .summary-k { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+  .summary-v { font-size: 18px; font-weight: 600; }
+  .content-scroll { flex: 1; overflow-y: auto; padding: 20px 32px 24px; }
+  .view-panel { display: none; }
+  .view-panel.active { display: block; }
+  .section { margin-bottom: 24px; }
+  .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .section-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .section-title { font-size: 14px; font-weight: 600; }
+  .section-count { font-size: 12px; color: var(--text-secondary); background: var(--bg); padding: 2px 10px; border-radius: 999px; }
+  .group-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); overflow: hidden; margin-bottom: 12px;
+  }
+  .group-head {
+    padding: 14px 16px; background: rgba(0,113,227,0.04); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer;
+  }
+  .group-title { font-size: 13px; font-weight: 600; }
+  .group-sub { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+  .group-badge { font-size: 11px; color: var(--primary); background: rgba(0,113,227,0.08); padding: 2px 8px; border-radius: 999px; }
+  .group-body { padding: 14px 16px; display: block; }
+  .group-card.collapsed .group-body { display: none; }
+  .prd-list { display: flex; flex-direction: column; gap: 10px; }
+  .prd-item {
+    border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg);
+    padding: 14px;
+  }
+  .prd-main {
+    display: grid; grid-template-columns: minmax(280px, 1.8fr) 0.95fr 0.8fr 0.85fr 0.95fr 1fr auto;
+    gap: 14px; align-items: center;
+  }
+  .prd-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .prd-meta {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    margin-bottom: 6px;
+  }
+  .code-pill {
+    display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px;
+    background: rgba(0,0,0,0.05); color: var(--text-secondary); font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .prd-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+  .field-k { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
+  .field-v { font-size: 13px; font-weight: 500; }
+  .tag {
+    display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600;
+  }
+  .priority-p0 { background: rgba(255,59,48,0.10); color: var(--danger); }
+  .priority-p1 { background: rgba(255,149,0,0.10); color: #b75c00; }
+  .priority-p2 { background: rgba(255,204,0,0.12); color: #9a7d00; }
+  .priority-p3 { background: rgba(142,142,147,0.12); color: var(--text-secondary); }
+  .status-filter { background: rgba(0,113,227,0.10); color: var(--primary); }
+  .status-dispatch { background: rgba(52,199,89,0.10); color: #248a3d; }
+  .status-hold { background: rgba(142,142,147,0.10); color: var(--text-secondary); }
+  .type-tag { background: rgba(0,113,227,0.08); color: var(--primary); }
+  .link-pill {
+    display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px;
+    background: rgba(0,113,227,0.08); color: var(--primary); font-size: 12px; text-decoration: none;
+  }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .detail {
+    display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);
+  }
+  .detail.open { display: block; }
+  .detail-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;
+  }
+  .detail-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px;
+  }
+  .detail-card.full { grid-column: 1 / -1; }
+  .detail-title { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+  .detail-value { font-size: 13px; line-height: 1.7; }
+  .preview-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.2); z-index: 20; opacity: 0; visibility: hidden; transition: 0.25s; }
+  .preview-overlay.open { opacity: 1; visibility: visible; }
+  .preview-drawer {
+    position: fixed; top: 0; right: -560px; width: 560px; height: 100vh; background: var(--surface);
+    box-shadow: -8px 0 32px rgba(0,0,0,0.12); z-index: 21; transition: right 0.3s;
+    display: flex; flex-direction: column;
+  }
+  .preview-drawer.open { right: 0; }
+  .preview-header, .preview-footer { padding: 18px 24px; border-bottom: 1px solid var(--border); }
+  .preview-footer { border-bottom: none; border-top: 1px solid var(--border); display: flex; justify-content: space-between; }
+  .preview-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+  .preview-id { font-family: monospace; font-size: 12px; color: var(--text-secondary); background: var(--bg); padding: 2px 10px; border-radius: 4px; }
+  .table-wrap {
+    background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: auto;
+  }
+  .data-table {
+    width: max-content; min-width: 100%; border-collapse: collapse; font-size: 13px;
+  }
+  .data-table th {
+    text-align: left; padding: 10px 14px; background: var(--bg); font-weight: 600; color: var(--text-secondary);
+    font-size: 12px; border-bottom: 1px solid var(--border); white-space: nowrap; position: sticky; top: 0;
+  }
+  .data-table td {
+    padding: 12px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; vertical-align: middle;
+  }
+  .data-table tr:hover td { background: rgba(0,113,227,0.02); }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; align-items: center; justify-content: center; z-index: 22; }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    width: 640px; background: var(--surface); border-radius: var(--radius); box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    max-height: 80vh; overflow-y: auto;
+  }
+  .modal-header, .modal-footer { padding: 18px 24px; border-bottom: 1px solid var(--border); }
+  .modal-footer { border-bottom: none; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+  .modal-body { padding: 20px 24px; }
+  .form-group { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; font-weight: 600; }
+  .form-input, .form-select {
+    width: 100%; padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 13px;
+  }
+  .form-textarea {
+    width: 100%; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 13px;
+    min-height: 88px; resize: vertical; font-family: inherit; line-height: 1.6;
+  }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1d1d1f; color: #fff;
+    padding: 10px 20px; border-radius: 8px; opacity: 0; transition: 0.25s; z-index: 30; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+  @media (max-width: 1100px) {
+    .prd-main { grid-template-columns: 1fr; }
+    .actions { justify-content: flex-start; }
+    .detail-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 760px) {
+    .detail-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="logo">需求管理平台</div>
+    <a href="kanban.html" class="nav-item">看板视图</a>
+    <a href="sprint.html" class="nav-item">迭代版本</a>
+    <a href="raw-pool.html" class="nav-item">原始需求池</a>
+    <a href="product-pool.html" class="nav-item active">产品需求池</a>
+    <a href="dashboard.html" class="nav-item">数据看板</a>
+  </aside>
+
+  <main class="main">
+    <header class="header">
+      <div class="header-left">
+        <div>
+          <div style="font-size:16px;font-weight:600;">产品需求池</div>
+          <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">折叠模式服务过滤与分发，展开模式保留完整字段总览</div>
+        </div>
+        <div class="view-switch">
+          <button class="view-btn active" id="groupedBtn" onclick="switchGrouping('grouped')">按原始需求分组</button>
+          <button class="view-btn" id="flatBtn" onclick="switchGrouping('flat')">打散展示</button>
+        </div>
+        <div class="mode-switch">
+          <button class="mode-btn active" id="collapsedBtn" onclick="switchMode('collapsed')">折叠</button>
+          <button class="mode-btn" id="expandedBtn" onclick="switchMode('expanded')">展开</button>
+        </div>
+      </div>
+      <div class="header-right">
+        <input class="search-box" placeholder="搜索产品需求..." oninput="activeFilters.search=this.value;render()">
+        <button class="btn btn-primary" onclick="openCreateModal()">+ 新建产品需求</button>
+        <div class="avatar">PM</div>
+      </div>
+    </header>
+
+    <div class="filter-bar">
+      <div class="filter-chip active">过滤 / 分发工作台</div>
+      <div class="filter-chip">优先级</div>
+      <div class="filter-chip">业务线</div>
+      <div class="filter-chip">需求类型</div>
+      <div class="filter-chip">迭代版本</div>
+      <div class="filter-chip">处理人</div>
+      <button class="btn btn-ghost" style="padding:6px 12px;" onclick="clearFilters()">清除筛选</button>
+      <button class="btn btn-ghost" style="padding:6px 12px;" onclick="filterUnscheduled()">只看未排期</button>
+    </div>
+
+    <div class="risk-banner">
+      <span>当前有 5 条产品需求已通过过滤但未进入迭代，建议优先处理排期或挂起决策。</span>
+      <button class="btn btn-primary" style="padding:6px 12px;" onclick="filterUnscheduled()">查看未排期需求</button>
+    </div>
+
+    <div class="summary">
+      <div class="summary-card"><div class="summary-k">待产品组长过滤</div><div class="summary-v">6</div></div>
+      <div class="summary-card"><div class="summary-k">待指派</div><div class="summary-v">1</div></div>
+      <div class="summary-card"><div class="summary-k">未排期需求</div><div class="summary-v">5</div></div>
+      <div class="summary-card"><div class="summary-k">直接创建需求</div><div class="summary-v">2</div></div>
+    </div>
+
+    <div class="content-scroll">
+      <div class="view-panel active" id="collapsedPanel"></div>
+      <div class="view-panel" id="expandedPanel"></div>
+    </div>
+  </main>
+</div>
+
+<div class="preview-overlay" id="previewOverlay" onclick="closeRawPreview()"></div>
+<div class="preview-drawer" id="previewDrawer">
+  <div class="preview-header">
+    <div class="preview-id" id="previewRawId">RAW-000000-000</div>
+  </div>
+  <div class="preview-body" id="previewBody"></div>
+  <div class="preview-footer">
+    <a href="raw-pool.html" class="btn btn-ghost" style="text-decoration:none;">↗ 在原始需求池中打开</a>
+    <button class="btn btn-primary" onclick="closeRawPreview()">关闭</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="createModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span style="font-size:16px;font-weight:600;">新建产品需求</span>
+      <button class="btn btn-ghost" onclick="closeCreateModal()">关闭</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">需求标题</label>
+        <input class="form-input" id="f_title" placeholder="输入产品需求标题">
+      </div>
+      <div class="form-group">
+        <label class="form-label">需求描述</label>
+        <textarea class="form-textarea" id="f_desc" placeholder="补充需求背景、目标和范围，便于后续过滤与分发"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">优先级</label>
+          <select class="form-select" id="f_priority"><option>P1</option><option>P0</option><option>P2</option><option>P3</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">业务线</label>
+          <select class="form-select" id="f_biz"><option>校园G端</option><option>校园B端</option><option>智慧食堂</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">需求类型</label>
+          <select class="form-select" id="f_type"><option>优化迭代</option><option>问题转需求</option><option>设计缺陷</option><option>规划功能</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">功能模块</label>
+          <input class="form-input" id="f_module" placeholder="如：支付中心 / 消息通知 / 供应商管理">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">迭代版本</label>
+          <select class="form-select" id="f_sprint"><option value="">暂不关联</option><option>v2.4.0</option><option>v2.5.0</option><option>v3.0.0</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">PRD 地址</label>
+          <input class="form-input" id="f_prd" placeholder="输入 PRD 文档链接">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">处理人</label>
+        <select class="form-select" id="f_handler"><option>陈经理</option><option>张产品</option><option>李组长</option></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeCreateModal()">取消</button>
+      <button class="btn btn-primary" onclick="submitCreate()">创建</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SPLIT_STORAGE_KEY = 'req-mgmt-split-results-v1';
+const DATA = [
+  {
+    section: '待指派',
+    color: 'var(--warning)',
+    hasAction: true,
+    actionType: 'assign',
+    rawGroups: [],
+    standalone: [
+      { id: 'PRD-20260525-010', title: '供应商评价维度扩展', desc: '补充供应商评分维度和权重规则，便于采购环节统一评估。', module: '供应商管理', priority: 'P2', biz: '校园G端', type: '规划功能', prd: '', sprint: '', creator: '张产品', handler: '陈经理', direct: true }
+    ]
+  },
+  {
+    section: '待产品组长过滤',
+    color: 'var(--primary)',
+    hasAction: true,
+    actionType: 'dispatch',
+    rawGroups: [
+      {
+        rawId: 'RAW-20260515-006',
+        rawTitle: '采购平台供应商入驻流程优化及仓储同步改造',
+        children: [
+          { id: 'PRD-20260515-002', title: '采购平台供应商入驻流程优化', desc: '缩短审核链路并补齐自动资质核验能力，减少人工流转。', module: '供应商入驻', priority: 'P1', biz: '校园G端', type: '优化迭代', prd: '', sprint: '', creator: '系统拆分', handler: '陈经理', direct: false },
+          { id: 'PRD-20260516-003', title: '仓储屏数据同步延迟优化', desc: '优化仓储屏数据同步链路，降低页面展示延迟。', module: '仓储屏', priority: 'P2', biz: '校园G端', type: '问题转需求', prd: '', sprint: '', creator: '系统拆分', handler: '陈经理', direct: false }
+        ]
+      },
+      {
+        rawId: 'RAW-20260520-011',
+        rawTitle: '校园支付对账系统升级',
+        children: [
+          { id: 'PRD-20260520-005', title: '支付对账报表生成功能', desc: '支持多支付渠道对账数据汇总和标准报表输出。', module: '对账中心', priority: 'P1', biz: '智慧食堂', type: '规划功能', prd: '', sprint: '', creator: '系统拆分', handler: '张产品', direct: false },
+          { id: 'PRD-20260520-006', title: '对账异常自动预警', desc: '自动识别异常交易和对账失败记录，并生成预警提醒。', module: '对账预警', priority: 'P2', biz: '智慧食堂', type: '优化迭代', prd: '', sprint: '', creator: '系统拆分', handler: '张产品', direct: false },
+          { id: 'PRD-20260521-007', title: '历史对账记录查询', desc: '提供历史账单检索和对账结果回溯能力。', module: '对账查询', priority: 'P3', biz: '校园G端', type: '优化迭代', prd: '', sprint: '', creator: '系统拆分', handler: '陈经理', direct: false }
+        ]
+      }
+    ],
+    standalone: [
+      { id: 'PRD-20260524-009', title: '学生端消息通知优化', desc: '统一消息触达规则，提升学生端消息送达率和阅读效率。', module: '消息通知', priority: 'P1', biz: '校园B端', type: '优化迭代', prd: '', sprint: '', creator: '李组长', handler: '李组长', direct: true }
+    ]
+  },
+  {
+    section: '已分发',
+    color: 'var(--success)',
+    hasAction: false,
+    actionType: '',
+    rawGroups: [
+      {
+        rawId: 'RAW-20260518-001',
+        rawTitle: '智慧食堂多场景支付能力建设',
+        children: [
+          { id: 'PRD-20260518-001', title: '智慧食堂支付通道扩容', desc: '扩展支付通道并兼容更多线下与线上支付场景。', module: '支付中心', priority: 'P0', biz: '校园G端', type: '规划功能', prd: 'https://docs.example.com/prd/001', sprint: 'v2.4.0', creator: '系统拆分', handler: '陈经理', direct: false },
+          { id: 'PRD-20260518-004', title: '教育局数据报表导出功能', desc: '支持教育局所需的标准化数据报表生成与导出。', module: '报表中心', priority: 'P1', biz: '校园G端', type: '优化迭代', prd: '', sprint: 'v2.5.0', creator: '系统拆分', handler: '张产品', direct: false }
+        ]
+      }
+    ],
+    standalone: []
+  },
+  {
+    section: '已挂起',
+    color: 'var(--text-secondary)',
+    hasAction: false,
+    actionType: '',
+    rawGroups: [
+      {
+        rawId: 'RAW-20260510-009',
+        rawTitle: '家校互通平台统一改造',
+        children: [
+          { id: 'PRD-20260512-007', title: '家校互通消息推送改造', desc: '统一家校互通的消息推送策略和触达路径。', module: '消息推送', priority: 'P3', biz: '校园B端', type: '问题转需求', prd: '', sprint: '', creator: '系统拆分', handler: '张产品', direct: false }
+        ]
+      }
+    ],
+    standalone: []
+  }
+];
+
+const RAW_DATA = {
+  'RAW-20260515-006': {
+    title: '采购平台供应商入驻流程优化及仓储同步改造',
+    status: '待产品组长过滤',
+    priority: 'P1',
+    biz: '校园G端',
+    pm: '陈经理',
+    projMgr: '张三',
+    expectOnline: '2026-06-15',
+    remark: '供应商入驻审核周期过长，同时仓储屏同步存在延迟，需要拆分后分别推进。',
+    prdDef: '包含流程优化、资质核验、仓储同步延迟修复三类能力。'
+  },
+  'RAW-20260520-011': {
+    title: '校园支付对账系统升级',
+    status: '待产品组长过滤',
+    priority: 'P1',
+    biz: '智慧食堂',
+    pm: '张产品',
+    projMgr: '李强',
+    expectOnline: '2026-07-30',
+    remark: '升级支持多支付场景，补齐对账与异常预警能力。',
+    prdDef: '支付对账报表、异常预警、历史查询三条子需求。'
+  },
+  'RAW-20260518-001': {
+    title: '智慧食堂多场景支付能力建设',
+    status: '已分发',
+    priority: 'P0',
+    biz: '校园G端',
+    pm: '陈经理',
+    projMgr: '王军',
+    expectOnline: '2026-06-30',
+    remark: '支付通道扩容和报表导出功能已进入分发和迭代阶段。',
+    prdDef: '支付能力建设 + 数据导出能力。'
+  }
+};
+
+let grouping = 'grouped';
+let displayMode = 'collapsed';
+let activeFilters = { search: '', sprint: '' };
+let collapsedGroups = {};
+
+function getStoredSplits() {
+  try {
+    return JSON.parse(localStorage.getItem(SPLIT_STORAGE_KEY) || '{}');
+  } catch (error) {
+    return {};
+  }
+}
+
+function syncSplitResults() {
+  const storedSplits = getStoredSplits();
+  Object.entries(storedSplits).forEach(([rawId, split]) => {
+    const items = (split.items || []).map(item => ({
+      id: item.id,
+      title: item.title,
+      desc: item.desc || '',
+      module: item.module || '',
+      priority: item.priority || 'P2',
+      biz: RAW_DATA[rawId] ? RAW_DATA[rawId].biz : '校园G端',
+      type: '优化迭代',
+      prd: '',
+      sprint: '',
+      creator: '系统拆分',
+      handler: item.owner || '待分配',
+      direct: false
+    }));
+    if (!items.length) return;
+
+    let matchedSection = DATA.find(sec => sec.rawGroups.some(group => group.rawId === rawId));
+    if (!matchedSection) {
+      matchedSection = DATA[1];
+      matchedSection.rawGroups.push({
+        rawId,
+        rawTitle: split.title || (RAW_DATA[rawId] && RAW_DATA[rawId].title) || rawId,
+        children: []
+      });
+    }
+
+    let matchedGroup = matchedSection.rawGroups.find(group => group.rawId === rawId);
+    if (!matchedGroup) {
+      matchedGroup = {
+        rawId,
+        rawTitle: split.title || (RAW_DATA[rawId] && RAW_DATA[rawId].title) || rawId,
+        children: []
+      };
+      matchedSection.rawGroups.push(matchedGroup);
+    }
+
+    matchedGroup.rawTitle = split.title || matchedGroup.rawTitle;
+    matchedGroup.children = items;
+
+    if (RAW_DATA[rawId]) {
+      RAW_DATA[rawId].status = '待产品组长过滤';
+      RAW_DATA[rawId].prdDef = items.map(item => item.title).join(' / ');
+      RAW_DATA[rawId].remark = split.summary || RAW_DATA[rawId].remark;
+    }
+  });
+}
+
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2400);
+}
+
+function getAllItems() {
+  const items = [];
+  DATA.forEach(sec => {
+    sec.rawGroups.forEach(group => {
+      group.children.forEach(item => items.push({ ...item, _rawId: group.rawId, _rawTitle: group.rawTitle, _section: sec.section, _actionType: sec.actionType, _hasAction: sec.hasAction }));
+    });
+    sec.standalone.forEach(item => items.push({ ...item, _rawId: '', _rawTitle: '', _section: sec.section, _actionType: sec.actionType, _hasAction: sec.hasAction }));
+  });
+  return items;
+}
+
+function matchesFilter(item) {
+  if (activeFilters.sprint === '__none__' && item.sprint) return false;
+  if (activeFilters.search) {
+    const q = activeFilters.search.toLowerCase();
+    if (!item.id.toLowerCase().includes(q) && !item.title.toLowerCase().includes(q)) return false;
+  }
+  return true;
+}
+
+function priorityTag(priority) {
+  return `<span class="tag priority-${priority.toLowerCase()}">${priority}</span>`;
+}
+
+function statusTag(section) {
+  if (section === '待产品组长过滤' || section === '待指派') return `<span class="tag status-filter">${section}</span>`;
+  if (section === '已分发') return `<span class="tag status-dispatch">${section}</span>`;
+  return `<span class="tag status-hold">${section}</span>`;
+}
+
+function renderActions(item) {
+  if (item._actionType === 'dispatch') {
+    return `<div class="actions"><button class="btn btn-success" onclick="showToast('演示：选择产品经理并分发')">通过并分发</button><button class="btn btn-danger" onclick="showToast('演示：填写挂起原因并通知上游')">挂起</button><button class="btn btn-ghost" onclick="toggleDetail('${item.id}')">查看详情</button></div>`;
+  }
+  if (item._actionType === 'assign') {
+    return `<div class="actions"><button class="btn btn-success" onclick="showToast('演示：确认指派方案')">确认指派</button><button class="btn btn-ghost" onclick="toggleDetail('${item.id}')">查看详情</button></div>`;
+  }
+  return `<div class="actions"><button class="btn btn-ghost" onclick="toggleDetail('${item.id}')">查看详情</button></div>`;
+}
+
+function renderPrdHeadline(item) {
+  return `<div>
+    <div class="prd-meta">
+      <span class="code-pill">${item.id}</span>
+      <span class="tag type-tag">${item.type}</span>
+      ${item.direct ? '<span class="tag status-dispatch">直接创建</span>' : ''}
+    </div>
+    <div class="prd-title">${item.title}</div>
+    <div class="prd-desc">${item.desc || (item.direct ? '直接创建需求，可直接进入指派或过滤。' : `来自 ${item._rawId}，当前适合做过滤和分发决策。`)}</div>
+  </div>`;
+}
+
+function renderDetail(item) {
+  return `<div class="detail" id="detail-${item.id}">
+    <div class="detail-grid">
+      <div class="detail-card"><div class="detail-title">产品需求编号</div><div class="detail-value">${item.id}</div></div>
+      <div class="detail-card"><div class="detail-title">需求类型</div><div class="detail-value"><span class="tag type-tag">${item.type}</span></div></div>
+      <div class="detail-card"><div class="detail-title">功能模块</div><div class="detail-value">${item.module || '待补充'}</div></div>
+      <div class="detail-card"><div class="detail-title">优先级</div><div class="detail-value">${item.priority}</div></div>
+      <div class="detail-card"><div class="detail-title">业务线</div><div class="detail-value">${item.biz}</div></div>
+      <div class="detail-card"><div class="detail-title">创建人</div><div class="detail-value">${item.creator}</div></div>
+      <div class="detail-card"><div class="detail-title">处理人</div><div class="detail-value">${item.handler}</div></div>
+      <div class="detail-card"><div class="detail-title">迭代版本</div><div class="detail-value">${item.sprint || '未关联'}</div></div>
+      <div class="detail-card"><div class="detail-title">PRD 地址</div><div class="detail-value">${item.prd || '待补充'}</div></div>
+      <div class="detail-card full"><div class="detail-title">需求描述</div><div class="detail-value">${item.desc || '待补充'}</div></div>
+      <div class="detail-card full"><div class="detail-title">原始需求来源</div><div class="detail-value">${item.direct ? '直接创建，无父原始需求' : `${item._rawId} · ${item._rawTitle}`}</div></div>
+      <div class="detail-card full"><div class="detail-title">过滤建议</div><div class="detail-value">${item._actionType === 'dispatch' ? `建议负责人：${item.handler}，当前尚未进入迭代，适合在通过后立即分发。` : item._actionType === 'assign' ? '创建人和处理人不同，建议先确认指派后再进入产品经理工作台。' : '该需求已进入后续流程，当前以查看为主。'}</div></div>
+    </div>
+  </div>`;
+}
+
+function renderCollapsedGrouped() {
+  let html = '';
+  DATA.forEach(sec => {
+    const filteredGroups = sec.rawGroups.map(group => ({
+      ...group,
+      items: group.children.map(item => ({ ...item, _rawId: group.rawId, _rawTitle: group.rawTitle, _section: sec.section, _actionType: sec.actionType, _hasAction: sec.hasAction })).filter(matchesFilter)
+    })).filter(group => group.items.length);
+    const filteredStandalone = sec.standalone.map(item => ({ ...item, _rawId: '', _rawTitle: '', _section: sec.section, _actionType: sec.actionType, _hasAction: sec.hasAction })).filter(matchesFilter);
+    if (!filteredGroups.length && !filteredStandalone.length) return;
+
+    const total = filteredGroups.reduce((sum, group) => sum + group.items.length, 0) + filteredStandalone.length;
+    html += `<div class="section"><div class="section-header"><span class="section-dot" style="background:${sec.color}"></span><span class="section-title">${sec.section}</span><span class="section-count">${total}</span></div>`;
+    filteredGroups.forEach(group => {
+      const collapsed = collapsedGroups[group.rawId];
+      html += `<div class="group-card ${collapsed ? 'collapsed' : ''}">
+        <div class="group-head" onclick="toggleGroup('${group.rawId}')">
+          <div><div class="group-title">${group.rawTitle}</div><div class="group-sub">${group.rawId}</div></div>
+          <span class="group-badge">拆分 ${group.items.length} 条</span>
+        </div>
+        <div class="group-body"><div class="prd-list">`;
+      group.items.forEach(item => {
+        html += `<div class="prd-item">
+          <div class="prd-main">
+            ${renderPrdHeadline(item)}
+            <div><div class="field-k">当前状态</div><div class="field-v">${statusTag(item._section)}</div></div>
+            <div><div class="field-k">业务线</div><div class="field-v">${item.biz}</div></div>
+            <div><div class="field-k">优先级</div><div class="field-v">${priorityTag(item.priority)}</div></div>
+            <div><div class="field-k">处理人</div><div class="field-v">${item.handler}</div></div>
+            <div><div class="field-k">PRD 链接</div><div class="field-v">${item.prd ? `<a class="link-pill" href="${item.prd}" target="_blank">查看 PRD</a>` : '待补充'}</div></div>
+            <div><div class="field-k">原始需求</div><div class="field-v">${item.direct ? '无' : `<a class="link-pill" href="javascript:void(0)" onclick="event.stopPropagation();openRawPreview('${item._rawId}')">${item._rawId}</a>`}</div></div>
+            ${renderActions(item)}
+          </div>
+          ${renderDetail(item)}
+        </div>`;
+      });
+      html += `</div></div></div>`;
+    });
+
+    if (filteredStandalone.length) {
+      html += `<div class="group-card"><div class="group-head"><div><div class="group-title">直接创建需求</div><div class="group-sub">无原始需求父级</div></div><span class="group-badge">${filteredStandalone.length} 条</span></div><div class="group-body"><div class="prd-list">`;
+      filteredStandalone.forEach(item => {
+        html += `<div class="prd-item">
+          <div class="prd-main">
+            ${renderPrdHeadline(item)}
+            <div><div class="field-k">当前状态</div><div class="field-v">${statusTag(item._section)}</div></div>
+            <div><div class="field-k">业务线</div><div class="field-v">${item.biz}</div></div>
+            <div><div class="field-k">优先级</div><div class="field-v">${priorityTag(item.priority)}</div></div>
+            <div><div class="field-k">处理人</div><div class="field-v">${item.handler}</div></div>
+            <div><div class="field-k">PRD 链接</div><div class="field-v">${item.prd ? `<a class="link-pill" href="${item.prd}" target="_blank">查看 PRD</a>` : '待补充'}</div></div>
+            <div><div class="field-k">原始需求</div><div class="field-v">无</div></div>
+            ${renderActions(item)}
+          </div>
+          ${renderDetail(item)}
+        </div>`;
+      });
+      html += `</div></div></div>`;
+    }
+
+    html += `</div>`;
+  });
+  return html;
+}
+
+function renderCollapsedFlat() {
+  const items = getAllItems().filter(matchesFilter);
+  if (!items.length) return '';
+  let html = `<div class="section"><div class="section-header"><span class="section-dot" style="background:var(--primary)"></span><span class="section-title">全部产品需求</span><span class="section-count">${items.length}</span></div><div class="prd-list">`;
+  items.forEach(item => {
+    html += `<div class="prd-item">
+      <div class="prd-main">
+        ${renderPrdHeadline(item)}
+        <div><div class="field-k">当前状态</div><div class="field-v">${statusTag(item._section)}</div></div>
+        <div><div class="field-k">业务线</div><div class="field-v">${item.biz}</div></div>
+        <div><div class="field-k">优先级</div><div class="field-v">${priorityTag(item.priority)}</div></div>
+        <div><div class="field-k">处理人</div><div class="field-v">${item.handler}</div></div>
+        <div><div class="field-k">PRD 链接</div><div class="field-v">${item.prd ? `<a class="link-pill" href="${item.prd}" target="_blank">查看 PRD</a>` : '待补充'}</div></div>
+        <div><div class="field-k">原始需求</div><div class="field-v">${item.direct ? '无' : `<a class="link-pill" href="javascript:void(0)" onclick="openRawPreview('${item._rawId}')">${item._rawId}</a>`}</div></div>
+        ${renderActions(item)}
+      </div>
+      ${renderDetail(item)}
+    </div>`;
+  });
+  html += `</div></div>`;
+  return html;
+}
+
+function renderExpanded() {
+  const items = getAllItems().filter(matchesFilter);
+  let rows = '';
+  items.forEach(item => {
+    rows += `<tr>
+      <td>${item.id}</td>
+      <td>${item.title}${item.direct ? ' <span class="tag status-dispatch">直接创建</span>' : ''}</td>
+      <td>${priorityTag(item.priority)}</td>
+      <td>${item.biz}</td>
+      <td>${item.direct ? '—' : `<a class="link-pill" href="javascript:void(0)" onclick="openRawPreview('${item._rawId}')">${item._rawId}</a>`}</td>
+      <td><span class="tag type-tag">${item.type}</span></td>
+      <td>${item.prd || '待补充'}</td>
+      <td>${item.sprint || '未关联'}</td>
+      <td>${item.creator}</td>
+      <td>${item.handler}</td>
+      <td>${item._section}</td>
+      <td>${item._actionType === 'dispatch' ? '<button class="btn btn-success">通过并分发</button>' : item._actionType === 'assign' ? '<button class="btn btn-success">确认指派</button>' : '<button class="btn btn-ghost">查看</button>'}</td>
+    </tr>`;
+  });
+  return `<div class="table-wrap"><table class="data-table"><thead><tr><th>产品需求编号</th><th>需求标题</th><th>优先级</th><th>业务线</th><th>原始需求</th><th>需求类型</th><th>PRD地址</th><th>迭代版本</th><th>创建人</th><th>处理人</th><th>当前状态</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function render() {
+  const collapsedTarget = document.getElementById('collapsedPanel');
+  const expandedTarget = document.getElementById('expandedPanel');
+  collapsedTarget.innerHTML = grouping === 'grouped' ? renderCollapsedGrouped() : renderCollapsedFlat();
+  expandedTarget.innerHTML = renderExpanded();
+}
+
+function switchGrouping(next) {
+  grouping = next;
+  document.getElementById('groupedBtn').classList.toggle('active', next === 'grouped');
+  document.getElementById('flatBtn').classList.toggle('active', next === 'flat');
+  render();
+}
+
+function switchMode(next) {
+  displayMode = next;
+  document.getElementById('collapsedBtn').classList.toggle('active', next === 'collapsed');
+  document.getElementById('expandedBtn').classList.toggle('active', next === 'expanded');
+  document.getElementById('collapsedPanel').classList.toggle('active', next === 'collapsed');
+  document.getElementById('expandedPanel').classList.toggle('active', next === 'expanded');
+}
+
+function toggleDetail(id) {
+  const detail = document.getElementById('detail-' + id);
+  if (detail) detail.classList.toggle('open');
+}
+
+function toggleGroup(rawId) {
+  collapsedGroups[rawId] = !collapsedGroups[rawId];
+  render();
+}
+
+function filterUnscheduled() {
+  activeFilters.sprint = '__none__';
+  render();
+}
+
+function clearFilters() {
+  activeFilters = { search: '', sprint: '' };
+  document.querySelector('.search-box').value = '';
+  render();
+}
+
+function openRawPreview(rawId) {
+  const data = RAW_DATA[rawId];
+  if (!data) return;
+  document.getElementById('previewRawId').textContent = rawId;
+  document.getElementById('previewBody').innerHTML = `
+    <div style="font-size:18px;font-weight:600;margin-bottom:16px;">${data.title}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;">
+      <div class="detail-card"><div class="detail-title">当前状态</div><div class="detail-value">${data.status}</div></div>
+      <div class="detail-card"><div class="detail-title">优先级</div><div class="detail-value">${data.priority}</div></div>
+      <div class="detail-card"><div class="detail-title">业务线</div><div class="detail-value">${data.biz}</div></div>
+      <div class="detail-card"><div class="detail-title">期望上线</div><div class="detail-value">${data.expectOnline}</div></div>
+      <div class="detail-card"><div class="detail-title">产品经理</div><div class="detail-value">${data.pm}</div></div>
+      <div class="detail-card"><div class="detail-title">项目经理</div><div class="detail-value">${data.projMgr}</div></div>
+    </div>
+    <div class="detail-card" style="margin-bottom:12px;"><div class="detail-title">需求备注</div><div class="detail-value">${data.remark}</div></div>
+    <div class="detail-card"><div class="detail-title">产品需求定义</div><div class="detail-value">${data.prdDef}</div></div>`;
+  document.getElementById('previewOverlay').classList.add('open');
+  document.getElementById('previewDrawer').classList.add('open');
+}
+
+function closeRawPreview() {
+  document.getElementById('previewOverlay').classList.remove('open');
+  document.getElementById('previewDrawer').classList.remove('open');
+}
+
+function openCreateModal() {
+  document.getElementById('createModal').classList.add('show');
+  document.getElementById('f_title').value = '';
+  document.getElementById('f_desc').value = '';
+  document.getElementById('f_module').value = '';
+  document.getElementById('f_prd').value = '';
+}
+
+function closeCreateModal() {
+  document.getElementById('createModal').classList.remove('show');
+}
+
+function submitCreate() {
+  const title = document.getElementById('f_title').value.trim();
+  if (!title) {
+    showToast('请输入需求标题');
+    return;
+  }
+  const desc = document.getElementById('f_desc').value.trim();
+  DATA[0].standalone.push({
+    id: 'PRD-' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-101',
+    title,
+    desc,
+    module: document.getElementById('f_module').value.trim(),
+    priority: document.getElementById('f_priority').value,
+    biz: document.getElementById('f_biz').value,
+    type: document.getElementById('f_type').value,
+    prd: document.getElementById('f_prd').value.trim(),
+    sprint: document.getElementById('f_sprint').value,
+    creator: '当前用户',
+    handler: document.getElementById('f_handler').value,
+    direct: true
+  });
+  closeCreateModal();
+  render();
+  showToast('已创建产品需求');
+}
+
+syncSplitResults();
+render();
+switchMode('collapsed');
+</script>
+</body>
+</html>

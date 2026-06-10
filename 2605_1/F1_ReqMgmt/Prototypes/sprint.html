@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>需求管理平台 - 迭代版本</title>
+<style>
+  :root {
+    --bg: #f5f5f7; --surface: #ffffff; --text-primary: #1d1d1f; --text-secondary: #86868b;
+    --border: rgba(0,0,0,0.08); --primary: #0071e3; --primary-hover: #0077ed;
+    --success: #34c759; --warning: #ff9500; --danger: #ff3b30;
+    --radius: 12px; --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--text-primary); font-size: 14px; line-height: 1.5; overflow: hidden;
+  }
+  .layout { display: flex; height: 100vh; }
+  .sidebar {
+    width: 220px; background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 20px 0;
+  }
+  .logo { padding: 0 24px 24px; font-size: 18px; font-weight: 600; letter-spacing: -0.5px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 12px; padding: 10px 24px; margin: 2px 12px;
+    border-radius: var(--radius-sm); cursor: pointer; color: var(--text-secondary); text-decoration: none; font-size: 13px; transition: all 0.2s;
+  }
+  .nav-item:hover, .nav-item.active { background: rgba(0,113,227,0.08); color: var(--primary); font-weight: 500; }
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .header {
+    height: 64px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 32px;
+  }
+  .header-left { display: flex; align-items: center; gap: 24px; }
+  .view-tabs { display: flex; gap: 4px; background: var(--bg); padding: 4px; border-radius: var(--radius-sm); }
+  .view-tab { padding: 6px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; color: var(--text-secondary); text-decoration: none; border: none; background: transparent; }
+  .view-tab.active { background: var(--surface); color: var(--text-primary); font-weight: 500; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .btn { padding: 8px 18px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: #e8e8ed; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--text-secondary); }
+
+  .content-scroll { flex: 1; overflow-y: auto; padding: 24px 32px; }
+  .sprint-layout { display: flex; gap: 20px; height: 100%; }
+  .sprint-sidebar { width: 260px; display: flex; flex-direction: column; gap: 12px; }
+  .sprint-card {
+    background: var(--surface); border-radius: var(--radius); padding: 16px;
+    box-shadow: var(--shadow); cursor: pointer; border: 2px solid transparent; transition: all 0.2s;
+  }
+  .sprint-card:hover, .sprint-card.active { border-color: var(--primary); }
+  .sprint-name { font-weight: 600; margin-bottom: 6px; }
+  .sprint-date { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+  .sprint-progress { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
+  .sprint-fill { height: 100%; background: var(--primary); border-radius: 3px; }
+  .sprint-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); }
+  .status-planning { color: var(--text-secondary); }
+  .status-active { color: var(--primary); font-weight: 500; }
+  .status-done { color: var(--success); }
+
+  .sprint-detail { flex: 1; background: var(--surface); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); }
+  .detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .detail-title { font-size: 18px; font-weight: 600; }
+  .detail-stats { display: flex; gap: 24px; }
+  .stat-item { text-align: center; }
+  .stat-value { font-size: 24px; font-weight: 700; }
+  .stat-label { font-size: 12px; color: var(--text-secondary); }
+
+  .board { display: flex; gap: 16px; margin-top: 20px; }
+  .column { width: 220px; display: flex; flex-direction: column; gap: 10px; }
+  .column-header { display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
+  .column-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+  .column-count { background: var(--bg); padding: 2px 8px; border-radius: 10px; font-size: 11px; color: var(--text-secondary); font-weight: 500; }
+  .column-body { background: rgba(0,0,0,0.02); border-radius: var(--radius); padding: 10px; display: flex; flex-direction: column; gap: 8px; min-height: 120px; }
+  .task-card {
+    background: var(--surface); border-radius: var(--radius-sm); padding: 12px;
+    box-shadow: var(--shadow); cursor: grab; transition: all 0.2s;
+  }
+  .task-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-1px); }
+  .task-card.dragging { opacity: 0.5; transform: rotate(2deg); }
+  .column-body.drag-over { background: rgba(0,113,227,0.06); border: 2px dashed var(--primary); }
+  .task-title { font-size: 13px; font-weight: 500; margin-bottom: 8px; }
+  .task-meta { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-secondary); }
+  .task-tag { padding: 2px 6px; border-radius: 4px; font-size: 10px; background: rgba(0,113,227,0.08); color: var(--primary); }
+
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .sprint-layout { flex-direction: column; }
+    .sprint-sidebar { width: 100%; flex-direction: row; overflow-x: auto; }
+    .sprint-card { min-width: 220px; }
+    .board { overflow-x: auto; }
+    .header { padding: 0 16px; }
+    .content-scroll { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="logo">需求管理平台</div>
+    <a href="kanban.html" class="nav-item"><span>&#9638;</span>看板视图</a>
+    <a href="sprint.html" class="nav-item active"><span>&#8634;</span>迭代版本</a>
+    <a href="raw-pool.html" class="nav-item"><span>&#9993;</span>原始需求池</a>
+    <a href="product-pool.html" class="nav-item"><span>&#9776;</span>产品需求池</a>
+    <a href="dashboard.html" class="nav-item"><span>&#9733;</span>数据看板</a>
+  </aside>
+
+  <main class="main">
+    <header class="header">
+      <div class="header-left">
+        <div class="view-tabs">
+          <a href="kanban.html" class="view-tab">看板</a>
+          <a href="calendar.html" class="view-tab">日历</a>
+          <a href="priority.html" class="view-tab">优先级</a>
+          <a href="pm-tasks.html" class="view-tab">产品经理任务</a>
+          <a href="sprint.html" class="view-tab active">迭代版本</a>
+          <a href="progress.html" class="view-tab">进度看板</a>
+        </div>
+      </div>
+      <div class="header-right">
+        <button class="btn btn-primary">+ 新建迭代</button>
+        <div class="avatar">PM</div>
+      </div>
+    </header>
+
+    <div class="content-scroll">
+      <div class="sprint-layout">
+        <div class="sprint-sidebar">
+          <div class="sprint-card active">
+            <div class="sprint-name">迭代 26.05-A</div>
+            <div class="sprint-date">2026-05-01 ~ 2026-05-31</div>
+            <div class="sprint-progress"><div class="sprint-fill" style="width:72%"></div></div>
+            <div class="sprint-meta"><span class="status-active">进行中</span><span>18/25 已完成</span></div>
+          </div>
+          <div class="sprint-card">
+            <div class="sprint-name">迭代 26.04-B</div>
+            <div class="sprint-date">2026-04-15 ~ 2026-04-30</div>
+            <div class="sprint-progress"><div class="sprint-fill" style="width:100%"></div></div>
+            <div class="sprint-meta"><span class="status-done">已结束</span><span>22/22 已完成</span></div>
+          </div>
+          <div class="sprint-card">
+            <div class="sprint-name">迭代 26.06-A</div>
+            <div class="sprint-date">2026-06-01 ~ 2026-06-15</div>
+            <div class="sprint-progress"><div class="sprint-fill" style="width:10%"></div></div>
+            <div class="sprint-meta"><span class="status-planning">规划中</span><span>3/20 已完成</span></div>
+          </div>
+        </div>
+
+        <div class="sprint-detail">
+          <div class="detail-header">
+            <div class="detail-title">迭代 26.05-A</div>
+            <div class="detail-stats">
+              <div class="stat-item"><div class="stat-value">25</div><div class="stat-label">总需求</div></div>
+              <div class="stat-item"><div class="stat-value">18</div><div class="stat-label">已完成</div></div>
+              <div class="stat-item"><div class="stat-value">5</div><div class="stat-label">进行中</div></div>
+              <div class="stat-item"><div class="stat-value">2</div><div class="stat-label">未开始</div></div>
+            </div>
+          </div>
+          <div class="board" id="sprintBoard">
+            <div class="column">
+              <div class="column-header"><span class="column-title">待办需求</span><span class="column-count">2</span></div>
+              <div class="column-body" data-status="待办需求">
+                <div class="task-card" draggable="true"><div class="task-title">仓储屏UI交互改版</div><div class="task-meta"><span class="task-tag">校园G端</span><span>P2</span></div></div>
+                <div class="task-card" draggable="true"><div class="task-title">监管大屏实时数据对接</div><div class="task-meta"><span class="task-tag">市监G端</span><span>P2</span></div></div>
+              </div>
+            </div>
+            <div class="column">
+              <div class="column-header"><span class="column-title">调研中</span><span class="column-count">1</span></div>
+              <div class="column-body" data-status="调研中">
+                <div class="task-card" draggable="true"><div class="task-title">校园食堂营养分析报告</div><div class="task-meta"><span class="task-tag">校园G端</span><span>P1</span></div></div>
+              </div>
+            </div>
+            <div class="column">
+              <div class="column-header"><span class="column-title">设计中</span><span class="column-count">1</span></div>
+              <div class="column-body" data-status="设计中">
+                <div class="task-card" draggable="true"><div class="task-title">智慧食堂支付通道扩容</div><div class="task-meta"><span class="task-tag">校园G端</span><span>P0</span></div></div>
+              </div>
+            </div>
+            <div class="column">
+              <div class="column-header"><span class="column-title">等待用户确认</span><span class="column-count">1</span></div>
+              <div class="column-body" data-status="等待用户确认">
+                <div class="task-card" draggable="true"><div class="task-title">学校订餐家长端优化</div><div class="task-meta"><span class="task-tag">校园G端</span><span>P1</span></div></div>
+              </div>
+            </div>
+            <div class="column">
+              <div class="column-header"><span class="column-title">研发中</span><span class="column-count">1</span></div>
+              <div class="column-body" data-status="研发中">
+                <div class="task-card" draggable="true"><div class="task-title">教育局数据报表导出</div><div class="task-meta"><span class="task-tag">校园G端</span><span>P1</span></div></div>
+              </div>
+            </div>
+            <div class="column">
+              <div class="column-header"><span class="column-title">测试中</span><span class="column-count">1</span></div>
+              <div class="column-body" data-status="测试中">
+                <div class="task-card" draggable="true"><div class="task-title">食堂消费流水对账优化</div><div class="task-meta"><span class="task-tag">校园G端</span><span>P0</span></div></div>
+              </div>
+            </div>
+            <div class="column">
+              <div class="column-header"><span class="column-title">已上线</span><span class="column-count">1</span></div>
+              <div class="column-body" data-status="已上线">
+                <div class="task-card" draggable="true"><div class="task-title">供应商资质审核流程</div><div class="task-meta"><span class="task-tag">校园G端</span><span>P1</span></div></div>
+              </div>
+            </div>
+            <div class="column">
+              <div class="column-header"><span class="column-title">已关闭</span><span class="column-count">0</span></div>
+              <div class="column-body" data-status="已关闭">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div style="position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#1d1d1f;color:#fff;padding:12px 24px;border-radius:8px;font-size:13px;z-index:200;opacity:0;transition:opacity 0.3s;pointer-events:none;" id="statusToast"></div>
+
+<script>
+let draggedCard=null, dragSource=null;
+function showToast(m){ const t=document.getElementById('statusToast'); t.textContent=m; t.style.opacity='1'; setTimeout(()=>t.style.opacity='0',2500); }
+function updateCount(col){ const c=col.querySelectorAll('.task-card').length; col.querySelector('.column-count').textContent=c; }
+
+document.querySelectorAll('.task-card[draggable]').forEach(card=>{
+  card.addEventListener('dragstart',function(e){ draggedCard=this; dragSource=this.parentElement; this.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
+  card.addEventListener('dragend',function(){ this.classList.remove('dragging'); document.querySelectorAll('.column-body').forEach(b=>b.classList.remove('drag-over')); });
+});
+
+document.querySelectorAll('#sprintBoard .column-body').forEach(body=>{
+  body.addEventListener('dragover',function(e){ e.preventDefault(); this.classList.add('drag-over'); });
+  body.addEventListener('dragleave',function(){ this.classList.remove('drag-over'); });
+  body.addEventListener('drop',function(e){
+    e.preventDefault(); this.classList.remove('drag-over');
+    if(!draggedCard||this===dragSource) return;
+    this.appendChild(draggedCard);
+    const oldS=dragSource.dataset.status, newS=this.dataset.status;
+    updateCount(dragSource.closest('.column'));
+    updateCount(this.closest('.column'));
+    showToast('✓ '+draggedCard.querySelector('.task-title').textContent+'：'+oldS+' → '+newS);
+  });
+});
+</script>
+</body>
+</html>

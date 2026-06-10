@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  nginx:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+    restart: always
+    networks:
+      - app-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - DB_HOST=mysql
+      - DB_USER=root
+      - DB_PASS=${MYSQL_ROOT_PASSWORD:-ReqMgmt2024!}
+      - REDIS_HOST=redis
+      - JWT_SECRET=${JWT_SECRET:-reqmgmt-production-secret-key-2024-must-be-256-bits}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: always
+    networks:
+      - app-network
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-ReqMgmt2024!}
+      MYSQL_DATABASE: req_mgmt
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/req-admin/src/main/resources/db/migration:/docker-entrypoint-initdb.d
+      - ./backend/mysql/my.cnf:/etc/mysql/conf.d/custom.cnf:ro
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+    networks:
+      - app-network
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  app-network:
+    driver: bridge

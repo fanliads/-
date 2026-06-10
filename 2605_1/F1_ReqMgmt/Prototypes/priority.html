@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>需求管理平台 - 优先级视图</title>
+<style>
+  :root {
+    --bg: #f5f5f7; --surface: #ffffff; --text-primary: #1d1d1f; --text-secondary: #86868b;
+    --border: rgba(0,0,0,0.08); --primary: #0071e3; --primary-hover: #0077ed;
+    --success: #34c759; --warning: #ff9500; --danger: #ff3b30;
+    --radius: 12px; --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
+    --shadow-hover: 0 4px 12px rgba(0,0,0,0.08), 0 16px 32px rgba(0,0,0,0.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--text-primary); font-size: 14px; line-height: 1.5; overflow: hidden;
+  }
+  .layout { display: flex; height: 100vh; }
+  .sidebar {
+    width: 220px; background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 20px 0;
+  }
+  .logo { padding: 0 24px 24px; font-size: 18px; font-weight: 600; letter-spacing: -0.5px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 12px; padding: 10px 24px; margin: 2px 12px;
+    border-radius: var(--radius-sm); cursor: pointer; color: var(--text-secondary); text-decoration: none; font-size: 13px; transition: all 0.2s;
+  }
+  .nav-item:hover, .nav-item.active { background: rgba(0,113,227,0.08); color: var(--primary); font-weight: 500; }
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .header {
+    height: 64px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 32px;
+  }
+  .header-left { display: flex; align-items: center; gap: 24px; }
+  .view-tabs { display: flex; gap: 4px; background: var(--bg); padding: 4px; border-radius: var(--radius-sm); }
+  .view-tab { padding: 6px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; color: var(--text-secondary); text-decoration: none; border: none; background: transparent; }
+  .view-tab.active { background: var(--surface); color: var(--text-primary); font-weight: 500; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .search-box { width: 240px; padding: 8px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg); font-size: 13px; outline: none; }
+  .search-box:focus { border-color: var(--primary); }
+  .btn { padding: 8px 18px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: #e8e8ed; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--text-secondary); }
+
+  .alert-bar {
+    background: linear-gradient(90deg, rgba(255,59,48,0.08), rgba(255,59,48,0.04));
+    border-bottom: 1px solid rgba(255,59,48,0.15); padding: 12px 32px;
+    display: flex; align-items: center; gap: 10px; font-size: 13px; color: #b0281e;
+  }
+  .alert-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .priority-scroll { flex: 1; overflow-y: auto; padding: 24px 32px; }
+  .priority-group { margin-bottom: 24px; border-radius: var(--radius); overflow: hidden; }
+  .group-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px; font-size: 14px; font-weight: 600;
+  }
+  .group-p0 { background: linear-gradient(90deg, rgba(255,59,48,0.12), rgba(255,59,48,0.04)); }
+  .group-p0 .group-header { color: var(--danger); }
+  .group-p1 { background: linear-gradient(90deg, rgba(255,149,0,0.10), rgba(255,149,0,0.03)); }
+  .group-p1 .group-header { color: #b75c00; }
+  .group-p2 { background: linear-gradient(90deg, rgba(255,204,0,0.10), rgba(255,204,0,0.03)); }
+  .group-p2 .group-header { color: #9a7d00; }
+  .group-p3 { background: linear-gradient(90deg, rgba(142,142,147,0.08), rgba(142,142,147,0.02)); }
+  .group-p3 .group-header { color: var(--text-secondary); }
+
+  .group-body { background: var(--surface); padding: 16px 20px; }
+  .req-row {
+    display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr 120px 80px; gap: 12px;
+    align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border);
+  }
+  .req-row { cursor: grab; transition: all 0.2s; }
+  .req-row:last-child { border-bottom: none; }
+  .req-row.dragging { opacity: 0.5; }
+  .group-body.drag-over { background: rgba(0,113,227,0.06); outline: 2px dashed var(--primary); outline-offset: -2px; }
+  .req-title { font-weight: 500; font-size: 14px; }
+  .req-meta { font-size: 12px; color: var(--text-secondary); }
+  .req-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; background: rgba(0,113,227,0.08); color: var(--primary); }
+  .progress-bar { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width 0.3s; }
+  .progress-text { font-size: 11px; color: var(--text-secondary); margin-top: 4px; text-align: right; }
+  .risk-high { color: var(--danger); font-weight: 500; }
+
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .req-row { grid-template-columns: 1fr; gap: 6px; }
+    .header { padding: 0 16px; }
+    .priority-scroll { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="logo">需求管理平台</div>
+    <a href="kanban.html" class="nav-item"><span>&#9638;</span>看板视图</a>
+    <a href="sprint.html" class="nav-item"><span>&#8634;</span>迭代版本</a>
+    <a href="raw-pool.html" class="nav-item"><span>&#9993;</span>原始需求池</a>
+    <a href="product-pool.html" class="nav-item"><span>&#9776;</span>产品需求池</a>
+    <a href="dashboard.html" class="nav-item"><span>&#9733;</span>数据看板</a>
+  </aside>
+
+  <main class="main">
+    <header class="header">
+      <div class="header-left">
+        <div class="view-tabs">
+          <a href="kanban.html" class="view-tab">看板</a>
+          <a href="calendar.html" class="view-tab">日历</a>
+          <a href="priority.html" class="view-tab active">优先级</a>
+          <a href="pm-tasks.html" class="view-tab">产品经理任务</a>
+          <a href="sprint.html" class="view-tab">迭代版本</a>
+          <a href="progress.html" class="view-tab">进度看板</a>
+        </div>
+      </div>
+      <div class="header-right">
+        <input class="search-box" placeholder="搜索需求...">
+        <button class="btn btn-primary">+ 新建需求</button>
+        <div class="avatar">PM</div>
+      </div>
+    </header>
+
+    <div class="alert-bar">
+      <span class="alert-dot"></span>
+      <span>当前有 2 个 P0 需求待处理，请优先关注</span>
+    </div>
+
+    <div class="priority-scroll">
+      <div class="priority-group group-p0">
+        <div class="group-header"><span>P0 紧急</span><span>2 个需求</span></div>
+        <div class="group-body">
+          <div class="req-row">
+            <div><div class="req-title">南昌青山湖区智慧食堂项目系统修改</div><div class="req-meta">RAW-20260520-002</div></div>
+            <div><span class="req-tag">校园G端</span></div>
+            <div class="req-meta">饭粒<br>2026-05-19</div>
+            <div class="req-meta">期望上线: 5-31</div>
+            <div><div class="progress-bar"><div class="progress-fill" style="width:10%"></div></div><div class="progress-text">待评估</div></div>
+            <div class="req-meta">工作量: 未估算</div>
+            <div class="risk-high">逾期风险</div>
+          </div>
+          <div class="req-row">
+            <div><div class="req-title">智慧食堂支付通道扩容</div><div class="req-meta">PRD-20260518-001</div></div>
+            <div><span class="req-tag">校园G端</span></div>
+            <div class="req-meta">陈经理<br>2026-05-18</div>
+            <div class="req-meta">期望上线: 5-28</div>
+            <div><div class="progress-bar"><div class="progress-fill" style="width:40%"></div></div><div class="progress-text">设计中</div></div>
+            <div class="req-meta">工作量: 12人天</div>
+            <div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="priority-group group-p1">
+        <div class="group-header"><span>P1 重要</span><span>3 个需求</span></div>
+        <div class="group-body">
+          <div class="req-row">
+            <div><div class="req-title">台州各区县采购平台优化</div><div class="req-meta">RAW-20260520-001</div></div>
+            <div><span class="req-tag">校园G端</span></div>
+            <div class="req-meta">饭粒<br>2026-05-19</div>
+            <div class="req-meta">期望上线: 5-25</div>
+            <div><div class="progress-bar"><div class="progress-fill" style="width:10%"></div></div><div class="progress-text">待评估</div></div>
+            <div class="req-meta">工作量: 未估算</div>
+            <div></div>
+          </div>
+          <div class="req-row">
+            <div><div class="req-title">山东互联网+明厨亮灶项目</div><div class="req-meta">RAW-20260520-003</div></div>
+            <div><span class="req-tag">市监G端</span></div>
+            <div class="req-meta">郑文明<br>2026-05-19</div>
+            <div class="req-meta">期望上线: 6-11</div>
+            <div><div class="progress-bar"><div class="progress-fill" style="width:15%"></div></div><div class="progress-text">待总监判定</div></div>
+            <div class="req-meta">工作量: 未估算</div>
+            <div></div>
+          </div>
+          <div class="req-row">
+            <div><div class="req-title">采购平台供应商入驻流程优化</div><div class="req-meta">PRD-20260515-002</div></div>
+            <div><span class="req-tag">校园G端</span></div>
+            <div class="req-meta">李产品<br>2026-05-15</div>
+            <div class="req-meta">期望上线: 6-15</div>
+            <div><div class="progress-bar"><div class="progress-fill" style="width:20%"></div></div><div class="progress-text">待组长过滤</div></div>
+            <div class="req-meta">工作量: 8人天</div>
+            <div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="priority-group group-p2">
+        <div class="group-header"><span>P2 一般</span><span>2 个需求</span></div>
+        <div class="group-body">
+          <div class="req-row">
+            <div><div class="req-title">嘉兴市仓储屏系统优化</div><div class="req-meta">RAW-20260520-004</div></div>
+            <div><span class="req-tag">校园G端</span></div>
+            <div class="req-meta">饭粒<br>2026-05-20</div>
+            <div class="req-meta">期望上线: 5-30</div>
+            <div><div class="progress-bar"><div class="progress-fill" style="width:5%"></div></div><div class="progress-text">待评估</div></div>
+            <div class="req-meta">工作量: 未估算</div>
+            <div></div>
+          </div>
+          <div class="req-row">
+            <div><div class="req-title">仓储屏数据同步延迟优化</div><div class="req-meta">PRD-20260516-003</div></div>
+            <div><span class="req-tag">校园G端</span></div>
+            <div class="req-meta">王产品<br>2026-05-16</div>
+            <div class="req-meta">期望上线: 6-20</div>
+            <div><div class="progress-bar"><div class="progress-fill" style="width:20%"></div></div><div class="progress-text">待组长过滤</div></div>
+            <div class="req-meta">工作量: 5人天</div>
+            <div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="priority-group group-p3">
+        <div class="group-header"><span>P3 低优</span><span>1 个需求</span></div>
+        <div class="group-body">
+          <div class="req-row">
+            <div><div class="req-title">仓储屏UI交互改版</div><div class="req-meta">PRD-20260510-005</div></div>
+            <div><span class="req-tag">校园G端</span></div>
+            <div class="req-meta">刘产品<br>2026-05-10</div>
+            <div class="req-meta">期望上线: 6-18</div>
+            <div><div class="progress-bar"><div class="progress-fill" style="width:40%"></div></div><div class="progress-text">设计中</div></div>
+            <div class="req-meta">工作量: 6人天</div>
+            <div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="status-toast" id="statusToast" style="position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#1d1d1f;color:#fff;padding:12px 24px;border-radius:8px;font-size:13px;z-index:200;opacity:0;transition:opacity 0.3s;pointer-events:none;"></div>
+
+<script>
+let draggedRow = null, dragSource = null;
+function showToast(m){ const t=document.getElementById('statusToast'); t.textContent=m; t.style.opacity='1'; setTimeout(()=>t.style.opacity='0',2500); }
+function updateCount(g){ g.querySelector('.group-header span:last-child').textContent = g.querySelectorAll('.req-row').length+' 个需求'; }
+
+document.querySelectorAll('.req-row').forEach(row=>{
+  row.setAttribute('draggable','true');
+  row.addEventListener('dragstart',function(e){ draggedRow=this; dragSource=this.parentElement; this.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
+  row.addEventListener('dragend',function(){ this.classList.remove('dragging'); document.querySelectorAll('.group-body').forEach(b=>b.classList.remove('drag-over')); });
+});
+
+document.querySelectorAll('.group-body').forEach(body=>{
+  body.addEventListener('dragover',function(e){ e.preventDefault(); this.classList.add('drag-over'); });
+  body.addEventListener('dragleave',function(){ this.classList.remove('drag-over'); });
+  body.addEventListener('drop',function(e){
+    e.preventDefault(); this.classList.remove('drag-over');
+    if(!draggedRow||this===dragSource) return;
+    this.appendChild(draggedRow);
+    const oldP=dragSource.closest('.priority-group').querySelector('.group-header span:first-child').textContent;
+    const newP=this.closest('.priority-group').querySelector('.group-header span:first-child').textContent;
+    updateCount(dragSource.closest('.priority-group'));
+    updateCount(this.closest('.priority-group'));
+    showToast('✓ '+draggedRow.querySelector('.req-title').textContent+'：'+oldP+' → '+newP);
+  });
+});
+</script>
+</body>
+</html>
