@@ -53,6 +53,13 @@
             <div>
               <div class="req-title">{{ req.title }}</div>
               <div class="req-meta">{{ req.reqNo }}</div>
+              <div class="req-assessment">
+                <span class="assessment-chip effective">{{ getPriorityLabel(req.effectiveLevel || req.priority) }}</span>
+                <span v-if="req.systemLevel && req.systemLevel !== (req.effectiveLevel || req.priority)" class="assessment-chip system">
+                  系统 {{ getPriorityLabel(req.systemLevel) }}
+                </span>
+              </div>
+              <div v-if="req.strategyHint" class="req-hint">{{ req.strategyHint }}</div>
             </div>
             <!-- 业务线 -->
             <div>
@@ -71,7 +78,7 @@
               <div class="progress-bar">
                 <div class="progress-fill" :style="{ width: getProgressWidth(req) + '%' }"></div>
               </div>
-              <div class="progress-text">{{ req.statusName || RAW_STATUS_MAP[req.status] || '-' }}</div>
+              <div class="progress-text">{{ getRawRequirementStatusLabel(req.status, req.statusName) }}</div>
             </div>
             <!-- 工作量 -->
             <div class="req-meta">工作量: {{ req.workload || '未估算' }}</div>
@@ -95,7 +102,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { pageQueryRawRequirements, updateRawRequirement } from '@/api/raw-requirement'
 import type { RawRequirementListVO } from '@/types/requirement'
-import { RAW_STATUS_MAP } from '@/types/requirement'
+import { getRawRequirementStatusLabel, normalizeRawRequirementStatus } from '@/types/requirement'
 import dayjs from 'dayjs'
 import { ElMessage } from 'element-plus'
 
@@ -126,12 +133,12 @@ const priorityKeyMap: Record<string, string> = {
 }
 
 const p0Count = computed(() => {
-  return allRequirements.value.filter(r => r.priority === 'P0').length
+  return allRequirements.value.filter(r => (r.effectiveLevel || r.priority) === 'P0').length
 })
 
 function getGroupItems(groupKey: string): ReqItem[] {
   const priority = priorityKeyMap[groupKey]
-  let items = allRequirements.value.filter(r => r.priority === priority)
+  let items = allRequirements.value.filter(r => (r.effectiveLevel || r.priority) === priority)
   if (searchKeyword.value) {
     const kw = searchKeyword.value.toLowerCase()
     items = items.filter(r =>
@@ -144,7 +151,15 @@ function getGroupItems(groupKey: string): ReqItem[] {
 
 function getGroupCount(groupKey: string): number {
   const priority = priorityKeyMap[groupKey]
-  return allRequirements.value.filter(r => r.priority === priority).length
+  return allRequirements.value.filter(r => (r.effectiveLevel || r.priority) === priority).length
+}
+
+function getPriorityLabel(priority?: string): string {
+  if (priority === 'P0') return '一级A类（P0）'
+  if (priority === 'P1') return '一级B类（P1）'
+  if (priority === 'P2') return '二级（P2）'
+  if (priority === 'P3') return '三级（P3）'
+  return priority || '-'
 }
 
 function formatDate(dt: string): string {
@@ -160,28 +175,23 @@ function formatShortDate(dt: string): string {
 
 function getProgressWidth(req: ReqItem): number {
   const map: Record<string, number> = {
-    pending_evaluate: 5,
-    evaluating: 10,
-    pending_accept: 15,
-    accepted: 20,
-    in_design: 40,
-    in_review: 50,
-    in_dev: 60,
-    in_test: 80,
-    ready_release: 90,
-    released: 100,
-    split: 30,
+    pending_judgement: 10,
+    pending_split: 30,
+    in_progress: 65,
+    online: 100,
+    suspended: 65,
+    rejected: 100,
     closed: 100,
   }
-  return map[req.status] || 10
+  return map[normalizeRawRequirementStatus(req.status, req.statusName)] || 10
 }
 
 function isOverdue(req: ReqItem): boolean {
   if (!req.expectedDate) return false
   const expected = dayjs(req.expectedDate)
   const now = dayjs()
-  const doneStatuses = ['released', 'closed']
-  if (doneStatuses.includes(req.status)) return false
+  const unifiedStatus = normalizeRawRequirementStatus(req.status, req.statusName)
+  if (['online', 'closed', 'rejected'].includes(unifiedStatus)) return false
   return expected.isBefore(now, 'day')
 }
 
@@ -427,6 +437,39 @@ onMounted(() => {
 .req-meta {
   font-size: 12px;
   color: var(--text-secondary);
+}
+
+.req-assessment {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.assessment-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.assessment-chip.effective {
+  background: rgba(16, 124, 65, 0.12);
+  color: #166534;
+}
+
+.assessment-chip.system {
+  background: rgba(33, 107, 255, 0.1);
+  color: #216bff;
+}
+
+.req-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #5f6368;
+  line-height: 1.5;
 }
 
 .req-tag {

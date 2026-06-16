@@ -103,6 +103,21 @@
 
     <!-- 看板Tab内容 -->
     <div v-if="activeTab === 'kanban'" class="board-scroll">
+      <div class="board-summary">
+        <div class="board-summary-card">
+          <div class="summary-label">当前视角</div>
+          <div class="summary-value">{{ boardType === 'product' ? '产品需求看板' : '原始需求看板' }}</div>
+        </div>
+        <div class="board-summary-card">
+          <div class="summary-label">总需求数</div>
+          <div class="summary-value">{{ totalCardCount }}</div>
+        </div>
+        <div class="board-summary-card">
+          <div class="summary-label">筛选状态</div>
+          <div class="summary-value summary-inline">{{ hasFilters ? '已应用筛选' : '查看全部' }}</div>
+        </div>
+      </div>
+
       <div v-if="loading" class="kanban-loading">
         <el-icon class="is-loading"><Loading /></el-icon>
         <span>加载中...</span>
@@ -148,7 +163,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, defineAsyncComponent, type Component } from 'vue'
+import { ref, reactive, onMounted, defineAsyncComponent, type Component, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Loading } from '@element-plus/icons-vue'
 import { getKanbanColumns, getProductKanbanData, getRawKanbanData } from '@/api/kanban'
@@ -212,6 +227,18 @@ const businessLineOptions = ref<{ label: string; value: number }[]>([])
 const assigneeOptions = ref<{ label: string; value: number }[]>([])
 const sprintOptions = ref<{ label: string; value: number }[]>([])
 const OPTION_TIMEOUT_MS = 5000
+const totalCardCount = computed(() =>
+  columns.value.reduce((sum, column) => sum + getColumnCount(column.status), 0)
+)
+const hasFilters = computed(() =>
+  Boolean(
+    queryForm.priority ||
+    queryForm.businessLineId ||
+    queryForm.assigneeId ||
+    queryForm.sprintId ||
+    queryForm.keyword
+  )
+)
 
 function unwrapResponseData<T>(payload: any, fallback: T): T {
   if (payload == null) {
@@ -352,16 +379,18 @@ onMounted(async () => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--bg);
+  gap: 16px;
 }
 
 .kanban-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 32px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  padding: 18px 20px;
+  background: rgba(255, 252, 247, 0.82);
+  border: 1px solid rgba(77, 63, 47, 0.08);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
   flex-shrink: 0;
 
   .toolbar-left {
@@ -378,18 +407,18 @@ onMounted(async () => {
 
 .view-tabs {
   display: inline-flex;
-  background: var(--bg, #f5f5f7);
-  border-radius: 8px;
-  padding: 3px;
+  background: rgba(77, 63, 47, 0.08);
+  border-radius: 16px;
+  padding: 4px;
 }
 
 .view-tab {
-  padding: 6px 16px;
-  border-radius: 6px;
+  padding: 8px 16px;
+  border-radius: 12px;
   font-size: 13px;
   cursor: pointer;
   color: var(--text-secondary);
-  transition: all 0.2s;
+  transition: var(--transition);
   white-space: nowrap;
   border: none;
   background: transparent;
@@ -399,26 +428,26 @@ onMounted(async () => {
   }
 
   &.active {
-    background: #fff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    font-weight: 500;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 12px 24px rgba(54, 41, 29, 0.08);
+    font-weight: 600;
     color: var(--text-primary);
   }
 }
 
 .board-type-switch {
   display: inline-flex;
-  background: var(--bg, #f5f5f7);
-  border-radius: 6px;
-  padding: 2px;
+  background: rgba(77, 63, 47, 0.08);
+  border-radius: 14px;
+  padding: 3px;
 
   .switch-item {
-    padding: 5px 14px;
-    border-radius: 4px;
+    padding: 8px 14px;
+    border-radius: 11px;
     font-size: 13px;
     cursor: pointer;
     color: var(--text-secondary);
-    transition: all 0.2s;
+    transition: var(--transition);
     white-space: nowrap;
 
     &:hover {
@@ -426,9 +455,10 @@ onMounted(async () => {
     }
 
     &.active {
-      background: var(--primary, #0071e3);
+      background: linear-gradient(135deg, var(--primary) 0%, #245f58 100%);
       color: #fff;
-      font-weight: 500;
+      font-weight: 600;
+      box-shadow: 0 12px 24px rgba(31, 107, 92, 0.18);
     }
   }
 }
@@ -438,10 +468,10 @@ onMounted(async () => {
 }
 
 .native-select {
-  padding: 6px 28px 6px 12px;
-  border-radius: 20px;
+  padding: 9px 34px 9px 12px;
+  border-radius: 14px;
   border: 1px solid var(--border);
-  background: var(--surface);
+  background: rgba(255, 255, 255, 0.75);
   font-size: 13px;
   color: var(--text-secondary);
   outline: none;
@@ -455,14 +485,15 @@ onMounted(async () => {
 
   &:focus {
     border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(31, 107, 92, 0.08);
   }
 }
 
 .search-box {
-  padding: 6px 14px;
-  border-radius: 20px;
+  padding: 9px 14px;
+  border-radius: 14px;
   border: 1px solid var(--border);
-  background: var(--surface);
+  background: rgba(255, 255, 255, 0.75);
   font-size: 13px;
   color: var(--text-primary);
   outline: none;
@@ -482,17 +513,52 @@ onMounted(async () => {
   flex: 1;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 0 32px 24px;
+  padding: 2px 0 8px;
+}
+
+.board-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.board-summary-card {
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: rgba(255, 252, 247, 0.78);
+  border: 1px solid rgba(77, 63, 47, 0.08);
+  box-shadow: var(--shadow);
+}
+
+.summary-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.summary-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: var(--font-family-accent);
+}
+
+.summary-inline {
+  font-size: 18px;
 }
 
 .kanban-loading {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 200px;
+  min-height: 280px;
   gap: 8px;
   color: var(--text-secondary);
   font-size: 14px;
+  background: rgba(255, 252, 247, 0.66);
+  border: 1px dashed rgba(77, 63, 47, 0.14);
+  border-radius: 24px;
 
   .el-icon {
     font-size: 20px;
@@ -501,17 +567,16 @@ onMounted(async () => {
 
 .board {
   display: flex;
-  gap: 16px;
+  gap: 18px;
   min-width: max-content;
   height: 100%;
-  padding-top: 16px;
 }
 
 .column {
-  width: 300px;
+  width: 320px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   flex-shrink: 0;
 }
 
@@ -519,57 +584,61 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 4px;
+  padding: 0 6px;
 }
 
 .column-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .column-count {
-  background: var(--bg);
-  padding: 2px 8px;
+  background: rgba(77, 63, 47, 0.08);
+  padding: 4px 10px;
   border-radius: 999px;
   font-size: 11px;
   color: var(--text-secondary);
 }
 
 .column-body {
-  background: rgba(0, 0, 0, 0.02);
-  border-radius: var(--radius);
-  padding: 10px;
-  min-height: 180px;
+  background: linear-gradient(180deg, rgba(255, 252, 247, 0.78) 0%, rgba(244, 239, 232, 0.78) 100%);
+  border: 1px solid rgba(77, 63, 47, 0.08);
+  border-radius: 24px;
+  padding: 14px;
+  min-height: 220px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  box-shadow: var(--shadow);
 }
 
 .kanban-card-simple {
-  background: var(--surface, #fff);
-  border-radius: var(--radius-sm, 8px);
-  padding: 12px;
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 18px;
+  padding: 14px;
   border: 1px solid var(--border);
-  transition: box-shadow 0.2s;
+  transition: var(--transition);
+  box-shadow: 0 8px 18px rgba(54, 41, 29, 0.06);
 
   &:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
+    box-shadow: 0 16px 28px rgba(54, 41, 29, 0.12);
   }
 
   .card-title {
-    font-size: 13px;
-    font-weight: 500;
+    font-size: 14px;
+    font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     line-height: 1.4;
   }
 
   .card-meta {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-secondary);
   }
 }
@@ -578,11 +647,12 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px 0;
+  padding: 30px 0;
   color: var(--text-secondary);
   font-size: 13px;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-sm);
+  border: 1px dashed rgba(77, 63, 47, 0.16);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.4);
 }
 
 .sub-view-wrapper {
@@ -604,8 +674,8 @@ onMounted(async () => {
     }
   }
 
-  .board-scroll {
-    padding: 0 16px 24px;
+  .board-summary {
+    grid-template-columns: 1fr;
   }
 
   .column {

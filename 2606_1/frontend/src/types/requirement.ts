@@ -65,6 +65,7 @@ export interface RawRequirementCreateDTO {
   title: string
   description?: string
   source?: string
+  submitOrigin?: 'internal' | 'external'
   proposer?: string
   proposerContact?: string
   projectName?: string
@@ -93,6 +94,7 @@ export interface RawRequirementUpdateDTO {
   title?: string
   description?: string
   source?: string
+  submitOrigin?: 'internal' | 'external'
   proposer?: string
   proposerContact?: string
   projectName?: string
@@ -191,6 +193,7 @@ export interface RawRequirementListVO {
   title: string
   description: string
   source: string
+  submitOrigin?: 'internal' | 'external'
   proposer: string
   projectName: string
   reqLink: string
@@ -229,6 +232,7 @@ export interface RawRequirementDetailVO {
   title: string
   description: string
   source: string
+  submitOrigin?: 'internal' | 'external'
   proposer: string
   proposerContact: string
   projectName: string
@@ -475,15 +479,136 @@ export interface SupplementVO {
 
 // ========== 常量映射 ==========
 
-/** 原始需求状态 */
-export const RAW_STATUS_MAP: Record<string, string> = {
-  pending_evaluate: '待评估',
-  evaluating: '评估中',
-  pending_accept: '待承接',
-  accepted: '已承接',
-  rejected: '已拒绝',
-  split: '已拆分',
+/** 原始需求统一状态 */
+export type RawRequirementUnifiedStatus =
+  | 'pending_judgement'
+  | 'pending_split'
+  | 'in_progress'
+  | 'online'
+  | 'closed'
+  | 'suspended'
+  | 'rejected'
+
+export interface RawStatusOption {
+  value: RawRequirementUnifiedStatus
+  label: string
+}
+
+export const RAW_STATUS_OPTIONS: RawStatusOption[] = [
+  { value: 'pending_judgement', label: '待判定' },
+  { value: 'pending_split', label: '待拆分' },
+  { value: 'in_progress', label: '开发中' },
+  { value: 'online', label: '已上线' },
+  { value: 'closed', label: '已关闭' },
+  { value: 'suspended', label: '已挂起' },
+  { value: 'rejected', label: '已拒绝' },
+]
+
+/** 原始需求状态标签 */
+export const RAW_STATUS_MAP: Record<RawRequirementUnifiedStatus, string> = {
+  pending_judgement: '待判定',
+  pending_split: '待拆分',
+  in_progress: '开发中',
+  online: '已上线',
   closed: '已关闭',
+  suspended: '已挂起',
+  rejected: '已拒绝',
+}
+
+const RAW_STATUS_LEGACY_MAP: Record<string, RawRequirementUnifiedStatus> = {
+  pending_judgement: 'pending_judgement',
+  pending_evaluate: 'pending_judgement',
+  evaluating: 'pending_judgement',
+  pending_pm_eval: 'pending_judgement',
+  pending_director: 'pending_judgement',
+  pending_accept: 'pending_judgement',
+  pending_pm_review: 'pending_judgement',
+  pending_split: 'pending_split',
+  accepted: 'pending_split',
+  pending_leader_filter: 'pending_split',
+  pending_design: 'pending_split',
+  designed: 'pending_split',
+  split: 'pending_split',
+  in_progress: 'in_progress',
+  designing: 'in_progress',
+  developing: 'in_progress',
+  testing: 'in_progress',
+  waiting_confirm: 'in_progress',
+  researching: 'in_progress',
+  backlog: 'in_progress',
+  pending_pm: 'in_progress',
+  pending_confirm: 'in_progress',
+  online: 'online',
+  closed: 'closed',
+  suspended: 'suspended',
+  rejected: 'rejected',
+  '待判定': 'pending_judgement',
+  '待评估': 'pending_judgement',
+  '评估中': 'pending_judgement',
+  '待项目经理评估': 'pending_judgement',
+  '待产品总监判定': 'pending_judgement',
+  '待总监判定': 'pending_judgement',
+  '待拆分': 'pending_split',
+  '待承接': 'pending_split',
+  '已承接': 'pending_split',
+  '待组长过滤': 'pending_split',
+  '待设计': 'pending_split',
+  '已设计': 'pending_split',
+  '已拆分': 'pending_split',
+  '已拆分待跟进': 'pending_split',
+  '开发中': 'in_progress',
+  '设计中': 'in_progress',
+  '测试中': 'in_progress',
+  '调研中': 'in_progress',
+  '待产品经理接手': 'in_progress',
+  '待办需求': 'in_progress',
+  '信息待补充': 'in_progress',
+  '待补充': 'in_progress',
+  '已上线': 'online',
+  '上线': 'online',
+  '已关闭': 'closed',
+  '关闭': 'closed',
+  '已挂起': 'suspended',
+  '挂起': 'suspended',
+  '已拒绝': 'rejected',
+  '拒绝': 'rejected',
+  '验收不通过': 'rejected',
+}
+
+export function normalizeRawRequirementStatus(status?: string, statusName?: string): RawRequirementUnifiedStatus {
+  const candidates = [status, statusName]
+    .map((item) => item?.trim())
+    .filter(Boolean) as string[]
+
+  for (const candidate of candidates) {
+    const direct = RAW_STATUS_LEGACY_MAP[candidate]
+    if (direct) return direct
+
+    const lower = candidate.toLowerCase()
+    const normalized = RAW_STATUS_LEGACY_MAP[lower]
+    if (normalized) return normalized
+  }
+
+  return 'pending_judgement'
+}
+
+export function getRawRequirementStatusLabel(status?: string, statusName?: string): string {
+  const unified = normalizeRawRequirementStatus(status, statusName)
+  return RAW_STATUS_MAP[unified]
+}
+
+export function getRawRequirementStatusClass(status?: string, statusName?: string): string {
+  const unified = normalizeRawRequirementStatus(status, statusName)
+  const classMap: Record<RawRequirementUnifiedStatus, string> = {
+    pending_judgement: 'status-pending',
+    pending_split: 'status-split',
+    in_progress: 'status-progress',
+    online: 'status-online',
+    closed: 'status-closed',
+    suspended: 'status-suspended',
+    rejected: 'status-rejected',
+  }
+  return classMap[unified]
 }
 
 /** 产品需求状态 */
@@ -510,6 +635,7 @@ export const SOURCE_MAP: Record<string, string> = {
   customer_service: '客服',
   implementation: '实施',
   internal: '内部',
+  external: '外部提报',
 }
 
 /** 需求类型 */
@@ -538,12 +664,12 @@ export const PRIORITY_TAG_TYPE: Record<string, 'primary' | 'success' | 'warning'
 
 /** 原始需求状态标签颜色 */
 export const RAW_STATUS_TAG_TYPE: Record<string, 'primary' | 'success' | 'warning' | 'info' | 'danger' | undefined> = {
-  pending_evaluate: 'info',
-  evaluating: 'warning',
-  pending_accept: undefined,
-  accepted: 'success',
+  pending_judgement: 'info',
+  pending_split: 'warning',
+  in_progress: undefined,
+  online: 'success',
+  suspended: 'info',
   rejected: 'danger',
-  split: 'success',
   closed: 'info',
 }
 

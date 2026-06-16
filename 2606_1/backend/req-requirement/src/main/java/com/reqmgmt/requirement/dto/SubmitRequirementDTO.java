@@ -17,6 +17,8 @@ public class SubmitRequirementDTO {
     @NotBlank(message = "需求来源不能为空")
     private String source;
 
+    private String submitOrigin;
+
     private String proposer;
 
     private String projectName;

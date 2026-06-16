@@ -100,20 +100,20 @@
     <!-- 状态统计卡片 -->
     <div v-if="viewMode === 'table'" class="summary">
       <div class="summary-card">
-        <div class="summary-k">待项目经理评估</div>
-        <div class="summary-v">{{ statusCount.pmEval }}</div>
+        <div class="summary-k">待判定</div>
+        <div class="summary-v">{{ statusCount.pendingJudgement }}</div>
       </div>
       <div class="summary-card">
-        <div class="summary-k">待产品总监判定</div>
-        <div class="summary-v">{{ statusCount.director }}</div>
+        <div class="summary-k">待拆分</div>
+        <div class="summary-v">{{ statusCount.pendingSplit }}</div>
       </div>
       <div class="summary-card">
-        <div class="summary-k">信息待补充</div>
-        <div class="summary-v">{{ statusCount.incomplete }}</div>
+        <div class="summary-k">开发中</div>
+        <div class="summary-v">{{ statusCount.inProgress }}</div>
       </div>
       <div class="summary-card">
-        <div class="summary-k">已拆分待跟进</div>
-        <div class="summary-v">{{ statusCount.split }}</div>
+        <div class="summary-k">已上线</div>
+        <div class="summary-v">{{ statusCount.online }}</div>
       </div>
     </div>
 
@@ -123,7 +123,7 @@
       <div v-if="viewMode === 'card'" class="compact-list">
         <div v-for="row in tableData" :key="row.id" class="compact-item">
           <div class="compact-main">
-            <div>
+            <div class="compact-lead">
               <div class="title">
                 <EditableField
                   :value="row.title"
@@ -133,74 +133,97 @@
               </div>
               <div class="desc">{{ getRequirementPreview(row) }}</div>
             </div>
-            <div>
-              <div class="field-k">当前状态</div>
-              <div class="field-v">
-                <EditableCell
-                  :value="row.status"
-                  type="select"
-                  :options="dictStatusOptions"
-                  @save="(val) => handleInlineSave(row, 'status', val)"
-                >
-                  <span class="status-tag" :class="getStatusClass(row.status)">{{ row.statusName || row.status }}</span>
-                </EditableCell>
+            <div class="field-group">
+              <div class="field-slot field-slot-emphasis">
+                <div class="field-k">当前状态</div>
+                <div class="field-v">
+                  <EditableCell
+                    :value="row.status"
+                    type="select"
+                    :options="dictStatusOptions"
+                    @save="(val) => handleInlineSave(row, 'status', val)"
+                  >
+                    <span class="status-tag" :class="getStatusClass(row.status, row.statusName)">{{ getStatusLabel(row.status, row.statusName) }}</span>
+                  </EditableCell>
+                </div>
               </div>
-            </div>
-            <div>
-              <div class="field-k">业务线</div>
-              <div class="field-v">
-                <EditableField
-                  :value="row.businessLine"
-                  type="select"
-                  :options="dictBusinessLineOptions"
-                  @save="(val) => handleInlineSave(row, 'businessLine', val)"
-                />
+
+              <div class="field-slot">
+                <div class="field-k">业务线</div>
+                <div class="field-v">
+                  <EditableField
+                    :value="row.businessLine"
+                    type="select"
+                    :options="dictBusinessLineOptions"
+                    @save="(val) => handleInlineSave(row, 'businessLine', val)"
+                  />
+                </div>
               </div>
-            </div>
-            <div>
-              <div class="field-k">优先级</div>
-              <div class="field-v">
-                <EditableCell
-                  :value="row.priority"
-                  type="select"
-                  :options="dictPriorityOptions"
-                  @save="(val) => handleInlineSave(row, 'priority', val)"
-                >
-                  <span class="priority-tag">{{ row.priority || '-' }}</span>
-                </EditableCell>
+
+              <div class="field-slot field-slot-stack">
+                <div class="field-k">优先级</div>
+                <div class="field-v">
+                  <EditableCell
+                    :value="row.priority"
+                    type="select"
+                    :options="dictPriorityOptions"
+                    @save="(val) => handleInlineSave(row, 'priority', val)"
+                  >
+                    <span class="priority-pill">{{ row.priority || '-' }}</span>
+                  </EditableCell>
+                </div>
               </div>
-            </div>
-            <div>
-              <div class="field-k">提出人</div>
-              <div class="field-v">
-                <EditableField
-                  :value="row.proposer"
-                  type="text"
-                  @save="(val) => handleInlineSave(row, 'proposer', val)"
-                />
+
+              <div class="field-slot field-slot-stack">
+                <div class="field-k">判定来源</div>
+                <div class="field-v">
+                  <span class="judge-pill" :class="getJudgeSourceClass(row)">{{ getJudgeSourceLabel(row) }}</span>
+                </div>
               </div>
-            </div>
-            <div>
-              <div class="field-k">需求单链接</div>
-              <div class="field-v">
-                <EditableCell
-                  :value="row.reqLink"
-                  type="text"
-                  @save="(val) => handleInlineSave(row, 'reqLink', val)"
-                >
-                  <a v-if="row.reqLink" class="link-pill" :href="row.reqLink" target="_blank" @click.stop>查看需求单</a>
-                  <span v-else class="editable-placeholder">-</span>
-                </EditableCell>
+
+              <div class="field-slot field-slot-link">
+                <div class="field-k">需求单链接</div>
+                <div class="field-v">
+                  <EditableCell
+                    :value="row.reqLink"
+                    type="text"
+                    @save="(val) => handleInlineSave(row, 'reqLink', val)"
+                  >
+                    <a v-if="row.reqLink" class="link-pill" :href="row.reqLink" target="_blank" @click.stop>查看需求单</a>
+                    <span v-else class="editable-placeholder">-</span>
+                  </EditableCell>
+                </div>
+              </div>
+
+              <div class="field-slot field-slot-minor">
+                <div class="field-k">提出人</div>
+                <div class="field-v">
+                  <EditableField
+                    :value="row.proposer"
+                    type="text"
+                    @save="(val) => handleInlineSave(row, 'proposer', val)"
+                  />
+                </div>
+                <div class="field-meta">
+                  <span class="priority-chip effective">{{ getPriorityLabel(row.effectiveLevel || row.priority) }}</span>
+                  <span v-if="row.systemLevel && row.systemLevel !== (row.effectiveLevel || row.priority)" class="priority-chip system">
+                    系统 {{ getPriorityLabel(row.systemLevel) }}
+                  </span>
+                  <span v-if="isExternalSubmit(row)" class="origin-chip">外部提报</span>
+                </div>
               </div>
             </div>
             <div class="actions" @click.stop>
-              <!-- 拆分（已拆分的不显示） -->
               <button
-                v-if="!isSplitStatus(row.status)"
+                v-if="canShowHandoffAction(row)"
+                class="btn btn-primary"
+                @click="handleHandoff(row)"
+              >承接</button>
+              <button
+                v-else-if="canShowSplitAction(row)"
                 class="btn btn-primary"
                 @click="handleSplit(row)"
               >拆分</button>
-              <!-- 展开详情 -->
               <button class="btn btn-ghost" @click="toggleDetail(row.id)">
                 {{ expandedIds.has(row.id) ? '收起详情' : '展开详情' }}
               </button>
@@ -270,6 +293,14 @@
                     :options="dictPriorityOptions"
                     @save="(val) => handleInlineSave(row, 'priority', val)"
                   />
+                </div>
+              </div>
+              <div class="detail-card span-2">
+                <div class="detail-title">系统分级摘要</div>
+                <div class="detail-value detail-assessment">
+                  <span class="priority-chip effective">{{ getPriorityLabel(row.effectiveLevel || row.priority) }}</span>
+                  <span v-if="row.systemLevel" class="priority-chip system">系统 {{ getPriorityLabel(row.systemLevel) }}</span>
+                  <span v-if="row.strategyHint" class="assessment-hint">{{ row.strategyHint }}</span>
                 </div>
               </div>
               <div class="detail-card">
@@ -345,12 +376,13 @@
                 </div>
               </div>
               <div class="detail-card full">
-                <div class="detail-title">需求备注</div>
+                <div class="detail-title">处理备注</div>
+                <div class="detail-tip">记录录入说明、处理背景和补充判断，不替代正文。</div>
                 <div class="detail-value">
                   <EditableField
                     :value="row.remark"
                     type="textarea"
-                    placeholder="点击添加备注"
+                    placeholder="点击添加处理备注"
                     @save="(val) => handleInlineSave(row, 'remark', val)"
                   />
                 </div>
@@ -366,9 +398,10 @@
                   />
                 </div>
               </div>
-              <div class="detail-card full" v-if="row.description && row.description !== row.remark">
+              <div class="detail-card full">
                 <div class="detail-title">需求描述</div>
-                <div class="detail-value">{{ row.description }}</div>
+                <div class="detail-tip">主正文，用于说明这条原始需求本身要解决什么问题。</div>
+                <div class="detail-value detail-description">{{ row.description || '暂无需求描述' }}</div>
               </div>
 
               <!-- 下钻产品需求列表（仅在有拆分结果时显示） -->
@@ -377,21 +410,25 @@
                 <div class="linked-list">
                   <div v-for="prd in row.linkedProducts" :key="prd.id" class="linked-item">
                     <span>{{ prd.reqNo }} {{ prd.title }}</span>
-                    <span class="status-tag" :class="getStatusClass(prd.status)">{{ prd.statusName || prd.status }}</span>
+                    <span class="status-tag" :class="getStatusClass(prd.status, prd.statusName)">{{ getStatusLabel(prd.status, prd.statusName) }}</span>
                   </div>
                 </div>
               </div>
 
               <!-- 内容补充区域 -->
               <div class="detail-card full">
-                <div class="detail-title">内容补充</div>
+                <div class="detail-title">追加记录</div>
+                <div class="detail-tip">按时间追加的补充信息，作为正文后的增量上下文。</div>
                 <div class="detail-value" v-if="row.supplements && row.supplements.length > 0">
                   <div v-for="sup in row.supplements" :key="sup.id" class="sup-item">
-                    <span class="sup-type">{{ sup.supplementTypeName }}</span>
-                    <span class="sup-content">{{ sup.content }}</span>
+                    <div class="sup-meta">
+                      <span class="sup-type">{{ sup.supplementTypeName }}</span>
+                      <span class="sup-time">{{ formatDateTime(sup.createTime) }}</span>
+                    </div>
+                    <div class="sup-content">{{ sup.content }}</div>
                   </div>
                 </div>
-                <div class="detail-value" v-else>暂无补充内容</div>
+                <div class="detail-value" v-else>暂无追加记录</div>
               </div>
             </div>
           </div>
@@ -408,7 +445,8 @@
                 <th>业务线</th>
                 <th>原始需求标题</th>
                 <th>需求单</th>
-                <th>需求备注</th>
+                <th>主描述摘要</th>
+                <th>处理备注</th>
                 <th>登记人</th>
                 <th>提出人</th>
                 <th>提出时间</th>
@@ -417,6 +455,7 @@
                 <th>产品经理</th>
                 <th>项目经理</th>
                 <th>优先级建议</th>
+                <th>系统分级</th>
                 <th>是否加急</th>
                 <th>加急原因</th>
                 <th>关联项目</th>
@@ -447,6 +486,9 @@
                   <a v-if="row.reqLink" class="link-pill" :href="row.reqLink" target="_blank">{{ row.reqNo }}</a>
                   <span v-else>{{ row.reqNo }}</span>
                 </td>
+                <td class="col-description" :title="row.description || ''">
+                  {{ getRequirementPreview(row) }}
+                </td>
                 <td class="col-remark" :title="row.remark || ''">
                   <EditableCell
                     :value="row.remark"
@@ -465,12 +507,12 @@
                 <td>{{ row.createTime ? row.createTime.substring(0, 10) : '-' }}</td>
                 <td>
                   <EditableCell
-                    :value="row.status"
-                    type="select"
-                    :options="dictStatusOptions"
-                    @save="(val) => handleInlineSave(row, 'status', val)"
-                  >
-                    <span class="status-tag" :class="getStatusClass(row.status)">{{ row.statusName || row.status }}</span>
+                  :value="row.status"
+                  type="select"
+                  :options="dictStatusOptions"
+                  @save="(val) => handleInlineSave(row, 'status', val)"
+                >
+                    <span class="status-tag" :class="getStatusClass(row.status, row.statusName)">{{ getStatusLabel(row.status, row.statusName) }}</span>
                   </EditableCell>
                 </td>
                 <td>
@@ -504,6 +546,14 @@
                     :options="dictPriorityOptions"
                     @save="(val) => handleInlineSave(row, 'priority', val)"
                   />
+                </td>
+                <td>
+                  <div class="table-assessment">
+                    <span class="priority-chip effective">{{ getPriorityLabel(row.effectiveLevel || row.priority) }}</span>
+                    <span v-if="row.systemLevel && row.systemLevel !== (row.effectiveLevel || row.priority)" class="priority-chip system">
+                      系统 {{ getPriorityLabel(row.systemLevel) }}
+                    </span>
+                  </div>
                 </td>
                 <td>
                   <EditableCell
@@ -541,12 +591,14 @@
                   />
                 </td>
                 <td>
-                  <span class="info-badge" :class="row.remark && row.productDefinition ? 'info-ok' : 'info-missing'">
-                    {{ row.remark && row.productDefinition ? '完整' : '待补充' }}
+                  <span class="info-badge" :class="isContentReady(row) ? 'info-ok' : 'info-missing'">
+                    {{ isContentReady(row) ? '完整' : '待补充' }}
                   </span>
+                  <span v-if="isExternalSubmit(row)" class="origin-chip table-origin-chip">外部提报</span>
                 </td>
                 <td class="table-actions">
-                  <button v-if="canSplitRaw && !isSplitStatus(row.status)" class="btn btn-primary" @click.stop="handleSplit(row)">拆分</button>
+                  <button v-if="canShowHandoffAction(row)" class="btn btn-primary" @click.stop="handleHandoff(row)">承接</button>
+                  <button v-else-if="canShowSplitAction(row)" class="btn btn-primary" @click.stop="handleSplit(row)">拆分</button>
                 </td>
               </tr>
             </tbody>
@@ -608,7 +660,7 @@
               </div>
 
               <div v-if="splitTarget?.remark" class="split-extract-block">
-                <div class="split-extract-label">需求备注</div>
+                <div class="split-extract-label">处理备注</div>
                 <div class="split-extract-content">{{ splitTarget.remark }}</div>
               </div>
 
@@ -626,10 +678,10 @@
                 v-if="splitTarget?.supplements && splitTarget.supplements.length > 0"
                 class="split-extract-block"
               >
-                <div class="split-extract-label">补充内容</div>
+                <div class="split-extract-label">追加记录</div>
                 <div class="split-supplement-list">
                   <div v-for="sup in splitTarget.supplements" :key="sup.id" class="split-supplement-item">
-                    <div class="split-supplement-type">{{ sup.supplementTypeName || sup.supplementType }}</div>
+                    <div class="split-supplement-type">{{ sup.supplementTypeName || sup.supplementType }} · {{ formatDateTime(sup.createTime) }}</div>
                     <div class="split-extract-content">{{ sup.content }}</div>
                   </div>
                 </div>
@@ -639,7 +691,7 @@
                 v-if="!splitTarget?.description && !splitTarget?.remark && !splitTarget?.productDefinition && !splitTarget?.urgentReason && (!splitTarget?.supplements || splitTarget.supplements.length === 0)"
                 class="split-extract-empty"
               >
-                当前原始需求暂无可摘录内容，请优先补充需求描述、备注或补充信息。
+                当前原始需求暂无可摘录内容，请优先补充需求描述、处理备注或追加记录。
               </div>
             </div>
           </div>
@@ -773,6 +825,87 @@
         <el-form-item label="价值量化评估" prop="valueAssessment">
           <el-input v-model="createForm.valueAssessment" placeholder="请输入价值量化评估" />
         </el-form-item>
+        <el-divider content-position="left">V3 业务判定信息</el-divider>
+        <div class="dialog-grid">
+          <el-form-item label="项目名称">
+            <el-input v-model="assessmentCreateForm.projectName" placeholder="请输入项目名称" />
+          </el-form-item>
+          <el-form-item label="客户名称">
+            <el-input v-model="assessmentCreateForm.customerName" placeholder="请输入客户名称" />
+          </el-form-item>
+          <el-form-item label="合同编号">
+            <el-input v-model="assessmentCreateForm.contractNo" placeholder="请输入合同编号" />
+          </el-form-item>
+          <el-form-item label="合同金额">
+            <el-input v-model="assessmentCreateForm.contractAmount" placeholder="请输入合同金额" />
+          </el-form-item>
+          <el-form-item label="项目类型">
+            <el-input v-model="assessmentCreateForm.projectType" placeholder="如：常规营收项目/专属定制" />
+          </el-form-item>
+          <el-form-item label="商务负责人">
+            <el-input v-model="assessmentCreateForm.businessOwner" placeholder="请输入商务负责人" />
+          </el-form-item>
+          <el-form-item label="合同范围">
+            <el-input v-model="assessmentCreateForm.contractScope" placeholder="请输入合同范围" />
+          </el-form-item>
+          <el-form-item label="预估工时">
+            <el-input v-model="assessmentCreateForm.estimatedWorkload" placeholder="请输入预估工时" />
+          </el-form-item>
+          <el-form-item label="刚性交付日期">
+            <el-date-picker v-model="assessmentCreateForm.rigidDeliveryDate" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
+          </el-form-item>
+          <el-form-item label="可复用性">
+            <el-input v-model="assessmentCreateForm.reusability" placeholder="如：可复用技术建设" />
+          </el-form-item>
+          <el-form-item label="履约风险">
+            <el-select v-model="assessmentCreateForm.deliveryRisk" placeholder="请选择" style="width: 100%">
+              <el-option v-for="item in yesNoOptions" :key="`raw-delivery-${item.value}`" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="回款风险">
+            <el-select v-model="assessmentCreateForm.paymentRisk" placeholder="请选择" style="width: 100%">
+              <el-option v-for="item in yesNoOptions" :key="`raw-payment-${item.value}`" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="验收风险">
+            <el-select v-model="assessmentCreateForm.acceptanceRisk" placeholder="请选择" style="width: 100%">
+              <el-option v-for="item in yesNoOptions" :key="`raw-acceptance-${item.value}`" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="安全/合规风险">
+            <el-select v-model="assessmentCreateForm.securityOrComplianceRisk" placeholder="请选择" style="width: 100%">
+              <el-option v-for="item in yesNoOptions" :key="`raw-compliance-${item.value}`" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="重大故障风险">
+            <el-select v-model="assessmentCreateForm.majorIncidentRisk" placeholder="请选择" style="width: 100%">
+              <el-option v-for="item in yesNoOptions" :key="`raw-incident-${item.value}`" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="省级督办">
+            <el-select v-model="assessmentCreateForm.govSupervision" placeholder="请选择" style="width: 100%">
+              <el-option v-for="item in yesNoOptions" :key="`raw-gov-${item.value}`" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="战略客户/标杆客户">
+            <el-select v-model="assessmentCreateForm.strategicCustomer" placeholder="请选择" style="width: 100%">
+              <el-option v-for="item in yesNoOptions" :key="`raw-strategic-${item.value}`" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="核心产品线">
+            <el-select v-model="assessmentCreateForm.coreProductLine" placeholder="请选择" style="width: 100%">
+              <el-option v-for="item in yesNoOptions" :key="`raw-core-${item.value}`" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="是否样板">
+            <el-select v-model="assessmentCreateForm.benchmarkCase" placeholder="请选择" style="width: 100%">
+              <el-option v-for="item in yesNoOptions" :key="`raw-benchmark-${item.value}`" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
+        </div>
+        <el-form-item label="特殊备注">
+          <el-input v-model="assessmentCreateForm.specialRemark" type="textarea" :rows="3" placeholder="请输入会影响优先级判定的补充说明" />
+        </el-form-item>
         <el-form-item label="需求备注" prop="remark">
           <el-input v-model="createForm.remark" type="textarea" :rows="2" placeholder="请输入需求备注" />
         </el-form-item>
@@ -798,10 +931,24 @@ import {
   getRawRequirementSupplements,
   updateRawRequirement,
 } from '@/api/raw-requirement'
+import { executeAction } from '@/api/workflow'
 import { listDictData } from '@/api/dict'
 import EditableField from '@/components/EditableField.vue'
 import EditableCell from '@/components/EditableCell.vue'
-import type { RawRequirementListVO, RawRequirementCreateDTO, RawRequirementDetailVO, DictDataVO, SupplementVO } from '@/types/requirement'
+import type {
+  RawRequirementListVO,
+  RawRequirementCreateDTO,
+  RawRequirementDetailVO,
+  DictDataVO,
+  SupplementVO,
+  PriorityAssessmentContextDTO,
+  RawRequirementUnifiedStatus,
+} from '@/types/requirement'
+import {
+  getRawRequirementStatusClass,
+  getRawRequirementStatusLabel,
+  normalizeRawRequirementStatus,
+} from '@/types/requirement'
 import { useUserStore } from '@/store/user'
 
 // 视图模式
@@ -810,6 +957,7 @@ const userStore = useUserStore()
 const canCreateRaw = computed(() => userStore.hasAnyPermission(['raw-pool:add']))
 const canEditRaw = computed(() => userStore.hasAnyPermission(['raw-pool:edit', 'raw-pool:evaluate', 'raw-pool:approve']))
 const canSplitRaw = computed(() => userStore.hasAnyPermission(['product-pool:add', 'raw-pool:approve']))
+const canHandoffRaw = computed(() => userStore.hasAnyPermission(['raw-pool:evaluate', 'raw-pool:approve']))
 
 // 字典数据
 const dictStatusOptions = ref<DictDataVO[]>([])
@@ -818,6 +966,36 @@ const dictBusinessLineOptions = ref<DictDataVO[]>([])
 const dictProductManagerOptions = ref<DictDataVO[]>([])
 const dictProjectManagerOptions = ref<DictDataVO[]>([])
 const dictReqDefinitionOptions = ref<DictDataVO[]>([])
+const yesNoOptions = [
+  { label: '是', value: '是' },
+  { label: '否', value: '否' },
+]
+
+function createDefaultAssessmentContext(): PriorityAssessmentContextDTO {
+  return {
+    projectName: '',
+    customerName: '',
+    contractNo: '',
+    contractAmount: '',
+    deliveryRisk: '',
+    paymentRisk: '',
+    acceptanceRisk: '',
+    securityOrComplianceRisk: '',
+    majorIncidentRisk: '',
+    govSupervision: '',
+    strategicCustomer: '',
+    coreProductLine: '',
+    projectType: '',
+    reusability: '',
+    benchmarkCase: '',
+    contractScope: '',
+    rigidDeliveryDate: '',
+    estimatedWorkload: '',
+    businessOwner: '',
+    expectedOnlineTime: '',
+    specialRemark: '',
+  }
+}
 
 // 查询参数
 const queryForm = reactive({
@@ -863,6 +1041,7 @@ const createForm = reactive<RawRequirementCreateDTO>({
   expectedOnlineDate: undefined,
   valueAssessment: '',
 })
+const assessmentCreateForm = reactive<PriorityAssessmentContextDTO>(createDefaultAssessmentContext())
 
 const validateReqLinkOrRemark = (_rule: unknown, _value: unknown, callback: (error?: Error) => void) => {
   if (createForm.reqLink?.trim() || createForm.remark?.trim()) {
@@ -904,7 +1083,7 @@ const splitSourceText = computed(() => {
   appendSection('需求单编号', splitTarget.value.reqNo)
   appendSection('需求单链接', normalizedSplitReqLink.value || splitTarget.value.reqLink)
   appendSection('需求描述', splitTarget.value.description)
-  appendSection('需求备注', splitTarget.value.remark)
+  appendSection('处理备注', splitTarget.value.remark)
   appendSection('产品需求定义', splitTarget.value.productDefinition)
   appendSection('加急原因', splitTarget.value.urgentReason)
 
@@ -912,7 +1091,7 @@ const splitSourceText = computed(() => {
     const supplementText = splitTarget.value.supplements
       .map((sup, index) => `${index + 1}. ${sup.supplementTypeName || sup.supplementType}\n${sup.content}`)
       .join('\n\n')
-    appendSection('补充内容', supplementText)
+    appendSection('追加记录', supplementText)
   }
 
   return sections.join('\n\n')
@@ -920,14 +1099,28 @@ const splitSourceText = computed(() => {
 
 // 状态统计
 const statusCount = computed(() => {
-  const counts = { pmEval: 0, director: 0, incomplete: 0, split: 0 }
+  const counts: Record<RawRequirementUnifiedStatus, number> = {
+    pending_judgement: 0,
+    pending_split: 0,
+    in_progress: 0,
+    online: 0,
+    closed: 0,
+    suspended: 0,
+    rejected: 0,
+  }
   tableData.value.forEach(row => {
-    if (isPmEvalStatus(row.status)) counts.pmEval++
-    else if (isDirectorStatus(row.status)) counts.director++
-    else if (isIncompleteStatus(row.status)) counts.incomplete++
-    else if (row.status === 'split' || row.status === 'SPLIT' || row.status === '已拆分待跟进') counts.split++
+    const unified = normalizeRawRequirementStatus(row.status, row.statusName)
+    counts[unified]++
   })
-  return counts
+  return {
+    pendingJudgement: counts.pending_judgement,
+    pendingSplit: counts.pending_split,
+    inProgress: counts.in_progress,
+    online: counts.online,
+    closed: counts.closed,
+    suspended: counts.suspended,
+    rejected: counts.rejected,
+  }
 })
 
 // 是否有激活的筛选条件
@@ -935,32 +1128,71 @@ const hasActiveFilters = computed(() => {
   return !!(queryForm.keyword || queryForm.status || queryForm.priority || queryForm.source || queryForm.businessLine || queryForm.registerName || queryForm.projectManager || queryForm.productManager || queryForm.isUrgent !== undefined || queryForm.startDate || queryForm.endDate)
 })
 
-// ===== 状态判断（同时支持英文编码和中文值） =====
-function isPmEvalStatus(status: string): boolean {
-  return ['pending_evaluate', 'evaluating', 'pending_pm_eval', 'PENDING_PM_EVAL', '待评估', '评估中'].includes(status)
+function getUnifiedStatus(status?: string, statusName?: string): RawRequirementUnifiedStatus {
+  return normalizeRawRequirementStatus(status, statusName)
 }
 
-function isDirectorStatus(status: string): boolean {
-  return ['pending_director', 'PENDING_DIRECTOR', 'pending_accept', 'accepted', '待产品总监判定', '待总监判定', '已承接'].includes(status)
+function getStatusLabel(status?: string, statusName?: string): string {
+  return getRawRequirementStatusLabel(status, statusName)
 }
 
-function isIncompleteStatus(status: string): boolean {
-  return ['pending_design', 'supplementing', 'incomplete', '待设计', '信息待补充', '待补充'].includes(status)
+function getStatusClass(status?: string, statusName?: string): string {
+  return getRawRequirementStatusClass(status, statusName)
 }
 
-function isSplitStatus(status: string): boolean {
-  return status === 'split' || status === 'SPLIT' || status === '已拆分待跟进'
-}
-
-function getStatusClass(status: string): string {
-  if (isPmEvalStatus(status)) return 'status-eval'
-  if (isDirectorStatus(status)) return 'status-director'
-  if (status === 'split' || status === 'SPLIT' || status === '已拆分待跟进') return 'status-split'
-  return 'status-eval'
+function getPriorityLabel(priority?: string): string {
+  if (priority === 'P0') return '一级A类（P0）'
+  if (priority === 'P1') return '一级B类（P1）'
+  if (priority === 'P2') return '二级（P2）'
+  if (priority === 'P3') return '三级（P3）'
+  return priority || '-'
 }
 
 function getRequirementPreview(row: RawRequirementListVO): string {
   return row.description?.trim() || '暂无更多需求描述'
+}
+
+function formatDateTime(value?: string): string {
+  if (!value) return '-'
+  return value.replace('T', ' ').slice(0, 16)
+}
+
+function isContentReady(row: RawRequirementListVO): boolean {
+  return Boolean(
+    row.description?.trim() ||
+    row.remark?.trim() ||
+    row.productDefinition?.trim() ||
+    (row.supplements && row.supplements.length > 0)
+  )
+}
+
+function isExternalSubmit(row: RawRequirementListVO): boolean {
+  return row.submitOrigin === 'external'
+}
+
+function getJudgeSourceLabel(row: RawRequirementListVO): string {
+  return row.overrideFlag === 1 ? '人工' : 'AI'
+}
+
+function getJudgeSourceClass(row: RawRequirementListVO): string {
+  return row.overrideFlag === 1 ? 'judge-manual' : 'judge-ai'
+}
+
+function needsHandoffBeforeSplit(row: RawRequirementListVO): boolean {
+  return isExternalSubmit(row) && getUnifiedStatus(row.status, row.statusName) === 'pending_judgement'
+}
+
+function canShowSplitAction(row: RawRequirementListVO): boolean {
+  const unifiedStatus = getUnifiedStatus(row.status, row.statusName)
+  if (!canSplitRaw.value || ['online', 'closed', 'suspended', 'rejected'].includes(unifiedStatus)) return false
+  if (isExternalSubmit(row)) {
+    return unifiedStatus === 'pending_split'
+  }
+  return ['pending_split', 'in_progress'].includes(unifiedStatus)
+}
+
+function canShowHandoffAction(row: RawRequirementListVO): boolean {
+  return canHandoffRaw.value && needsHandoffBeforeSplit(row)
 }
 
 // ===== Accordion 展开/收起 =====
@@ -1005,8 +1237,7 @@ async function handleInlineSave(row: RawRequirementListVO, field: string, value:
     ;(row as any)[field] = value
     // 同步更新关联的显示名称
     if (field === 'status') {
-      const statusOption = dictStatusOptions.value.find(o => o.value === value)
-      ;(row as any).statusName = statusOption ? statusOption.label : value
+      ;(row as any).statusName = getStatusLabel(String(value))
     }
     if (field === 'businessLine') {
       const blOption = dictBusinessLineOptions.value.find(o => o.value === value)
@@ -1026,6 +1257,23 @@ function handleSplit(row: RawRequirementListVO) {
   iframeLoadError.value = false
   splitDialogVisible.value = true
   loadSplitContext(row.id)
+}
+
+async function handleHandoff(row: RawRequirementListVO) {
+  if (!canShowHandoffAction(row)) return
+  try {
+    await executeAction({
+      reqType: 'raw',
+      reqId: row.id,
+      toStatus: 'pending_split',
+      remark: '外部提报需求承接',
+    })
+    row.status = 'pending_split'
+    row.statusName = '待拆分'
+    ElMessage.success('承接成功')
+  } catch {
+    ElMessage.error('承接失败')
+  }
 }
 
 function addSplitItem() {
@@ -1150,7 +1398,9 @@ async function loadDictData() {
       listDictData('project_manager'),
       listDictData('req_definition'),
     ])
-    dictStatusOptions.value = (statusRes as any).data || []
+    dictStatusOptions.value = ((statusRes as any).data || []).filter((item: DictDataVO) =>
+      ['pending_judgement', 'pending_split', 'in_progress', 'online', 'closed', 'suspended', 'rejected'].includes(item.value),
+    )
     dictPriorityOptions.value = (priorityRes as any).data || []
     dictBusinessLineOptions.value = (businessLineRes as any).data || []
     dictProductManagerOptions.value = (pmRes as any).data || []
@@ -1212,6 +1462,7 @@ function handleCreate() {
     expectedOnlineDate: undefined,
     valueAssessment: '',
   })
+  Object.assign(assessmentCreateForm, createDefaultAssessmentContext())
   createDialogVisible.value = true
 }
 
@@ -1228,6 +1479,7 @@ async function handleSubmitCreate() {
   try {
     const payload: RawRequirementCreateDTO = {
       ...createForm,
+      submitOrigin: 'internal',
       title: createForm.title.trim(),
       description: createForm.description?.trim() || undefined,
       businessLine: createForm.businessLine?.trim() || undefined,
@@ -1236,6 +1488,30 @@ async function handleSubmitCreate() {
       remark: createForm.remark?.trim() || undefined,
       expectedOnlineDate: createForm.expectedOnlineDate || undefined,
       valueAssessment: createForm.valueAssessment?.trim() || undefined,
+      assessmentContext: {
+        ...assessmentCreateForm,
+        projectName: assessmentCreateForm.projectName?.trim() || undefined,
+        customerName: assessmentCreateForm.customerName?.trim() || undefined,
+        contractNo: assessmentCreateForm.contractNo?.trim() || undefined,
+        contractAmount: assessmentCreateForm.contractAmount?.trim() || undefined,
+        deliveryRisk: assessmentCreateForm.deliveryRisk || undefined,
+        paymentRisk: assessmentCreateForm.paymentRisk || undefined,
+        acceptanceRisk: assessmentCreateForm.acceptanceRisk || undefined,
+        securityOrComplianceRisk: assessmentCreateForm.securityOrComplianceRisk || undefined,
+        majorIncidentRisk: assessmentCreateForm.majorIncidentRisk || undefined,
+        govSupervision: assessmentCreateForm.govSupervision || undefined,
+        strategicCustomer: assessmentCreateForm.strategicCustomer || undefined,
+        coreProductLine: assessmentCreateForm.coreProductLine || undefined,
+        projectType: assessmentCreateForm.projectType?.trim() || undefined,
+        reusability: assessmentCreateForm.reusability?.trim() || undefined,
+        benchmarkCase: assessmentCreateForm.benchmarkCase || undefined,
+        contractScope: assessmentCreateForm.contractScope?.trim() || undefined,
+        rigidDeliveryDate: assessmentCreateForm.rigidDeliveryDate || undefined,
+        estimatedWorkload: assessmentCreateForm.estimatedWorkload?.trim() || undefined,
+        businessOwner: assessmentCreateForm.businessOwner?.trim() || undefined,
+        expectedOnlineTime: createForm.expectedOnlineDate || undefined,
+        specialRemark: assessmentCreateForm.specialRemark?.trim() || undefined,
+      },
     }
     await createRawRequirement(payload)
     ElMessage.success('创建成功')
@@ -1369,42 +1645,81 @@ onMounted(() => {
 
 .compact-main {
   display: grid;
-  grid-template-columns: 1.8fr 0.85fr 0.75fr 0.75fr 0.9fr 1fr auto;
-  gap: 16px;
-  align-items: center;
+  grid-template-columns: minmax(320px, 1.45fr) minmax(0, 2.25fr) auto;
+  gap: 20px;
+  align-items: start;
   padding: 16px 18px;
 }
 
+.compact-lead {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  padding-right: 4px;
+}
+
 .title {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 4px;
+  font-size: 15px;
+  font-weight: 700;
   color: var(--text-primary);
+  line-height: 1.4;
 
   :deep(.editable-field) {
-    font-weight: 600;
-    font-size: 14px;
+    font-weight: 700;
+    font-size: 15px;
   }
 }
 
 .desc {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
-  line-height: 1.6;
+  line-height: 1.7;
   overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.field-group {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(112px, 1fr)) minmax(140px, 1.1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.field-slot {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-width: 0;
+}
+
+.field-slot-stack {
+  min-width: 100px;
+}
+
+.field-slot-link {
+  min-width: 132px;
+}
+
+.field-slot-minor {
+  min-width: 160px;
+}
+
+.field-slot-emphasis {
+  padding-left: 2px;
 }
 
 .field-k {
-  font-size: 11px;
-  color: var(--text-secondary);
-  margin-bottom: 4px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  line-height: 1.1;
 }
 
 .field-v {
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--text-primary);
   min-width: 0;
   overflow: hidden;
@@ -1415,13 +1730,43 @@ onMounted(() => {
   }
 }
 
-.priority-tag {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  background: rgba(0, 113, 227, 0.08);
+.field-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.priority-pill,
+.judge-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  width: fit-content;
+}
+
+.priority-pill {
+  background: rgba(201, 122, 21, 0.12);
+  color: #b56912;
+}
+
+.judge-pill {
+  background: rgba(22, 104, 220, 0.1);
+  color: var(--primary);
+}
+
+.judge-pill.judge-manual {
+  background: rgba(47, 143, 99, 0.12);
+  color: #1f8f5f;
+}
+
+.judge-pill.judge-ai {
+  background: rgba(22, 104, 220, 0.1);
   color: var(--primary);
 }
 
@@ -1444,23 +1789,28 @@ onMounted(() => {
   font-weight: 600;
 }
 
-.status-eval { background: rgba(0, 113, 227, 0.10); color: var(--primary); }
-.status-director { background: rgba(255, 149, 0, 0.10); color: #b75c00; }
-.status-split { background: rgba(52, 199, 89, 0.10); color: #248a3d; }
+.status-pending { background: rgba(0, 113, 227, 0.10); color: var(--primary); }
+.status-split { background: rgba(255, 149, 0, 0.10); color: #b75c00; }
+.status-progress { background: rgba(52, 199, 89, 0.10); color: #248a3d; }
+.status-online { background: rgba(88, 86, 214, 0.12); color: #4f46b5; }
+.status-closed { background: rgba(120, 120, 128, 0.12); color: #5c5c61; }
+.status-suspended { background: rgba(255, 159, 10, 0.12); color: #b56a00; }
+.status-rejected { background: rgba(255, 59, 48, 0.10); color: #c23030; }
 
 .link-pill {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 10px;
+  padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(0, 113, 227, 0.08);
+  background: rgba(22, 104, 220, 0.08);
   color: var(--primary);
   font-size: 12px;
+  font-weight: 600;
   text-decoration: none;
 
   &:hover {
-    background: rgba(0, 113, 227, 0.15);
+    background: rgba(22, 104, 220, 0.15);
   }
 }
 
@@ -1469,6 +1819,8 @@ onMounted(() => {
   gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
+  align-items: center;
+  white-space: nowrap;
 }
 
 // ===== 操作按钮样式 =====
@@ -1831,6 +2183,23 @@ onMounted(() => {
   align-items: center;
 }
 
+.origin-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(0, 113, 227, 0.08);
+  color: var(--primary, #0071e3);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.table-origin-chip {
+  margin-left: 8px;
+  margin-top: 0;
+}
+
 .pagination-wrapper {
   display: flex;
   justify-content: flex-end;
@@ -2064,6 +2433,10 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
 
+  .field-group {
+    grid-template-columns: repeat(3, minmax(120px, 1fr));
+  }
+
   .actions {
     justify-content: flex-start;
   }
@@ -2078,6 +2451,10 @@ onMounted(() => {
 }
 
 @media (max-width: 760px) {
+  .field-group {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .detail-grid {
     grid-template-columns: 1fr;
   }

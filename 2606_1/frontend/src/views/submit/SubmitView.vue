@@ -3,7 +3,7 @@
     <div class="form-card">
       <div class="form-header">
         <h1>需求汇总表单</h1>
-        <p>请填写原始需求信息，提交后由产品团队进行评估</p>
+        <p>请填写原始需求信息，提交后进入待判定流程</p>
       </div>
 
       <el-form
@@ -78,14 +78,170 @@
           </el-form-item>
         </div>
 
+        <div class="form-section">
+          <div class="section-title">V3 业务判定信息</div>
+          <div class="section-tip">以下结构化字段将直接参与系统规则判定和 AI 解释增强。</div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">项目名称</label>
+            <el-form-item>
+              <el-input v-model="assessmentForm.projectName" placeholder="请输入项目名称" class="apple-input" />
+            </el-form-item>
+          </div>
+          <div class="form-group">
+            <label class="form-label">客户名称</label>
+            <el-form-item>
+              <el-input v-model="assessmentForm.customerName" placeholder="请输入客户名称" class="apple-input" />
+            </el-form-item>
+          </div>
+          <div class="form-group">
+            <label class="form-label">合同编号</label>
+            <el-form-item>
+              <el-input v-model="assessmentForm.contractNo" placeholder="请输入合同编号" class="apple-input" />
+            </el-form-item>
+          </div>
+          <div class="form-group">
+            <label class="form-label">合同金额</label>
+            <el-form-item>
+              <el-input v-model="assessmentForm.contractAmount" placeholder="请输入合同金额" class="apple-input" />
+            </el-form-item>
+          </div>
+          <div class="form-group">
+            <label class="form-label">项目类型</label>
+            <el-form-item>
+              <el-input v-model="assessmentForm.projectType" placeholder="如：常规营收项目/专属定制" class="apple-input" />
+            </el-form-item>
+          </div>
+          <div class="form-group">
+            <label class="form-label">商务负责人</label>
+            <el-form-item>
+              <el-input v-model="assessmentForm.businessOwner" placeholder="请输入商务负责人" class="apple-input" />
+            </el-form-item>
+          </div>
+          <div class="form-group">
+            <label class="form-label">合同范围</label>
+            <el-form-item>
+              <el-input v-model="assessmentForm.contractScope" placeholder="请输入合同范围" class="apple-input" />
+            </el-form-item>
+          </div>
+          <div class="form-group">
+            <label class="form-label">预估工时</label>
+            <el-form-item>
+              <el-input v-model="assessmentForm.estimatedWorkload" placeholder="请输入预估工时" class="apple-input" />
+            </el-form-item>
+          </div>
+          <div class="form-group">
+            <label class="form-label">刚性交付日期</label>
+            <el-form-item>
+              <el-date-picker v-model="assessmentForm.rigidDeliveryDate" type="date" value-format="YYYY-MM-DD" placeholder="请选择交付日期" class="apple-input" style="width: 100%" />
+            </el-form-item>
+          </div>
+          <div class="form-group">
+            <label class="form-label">可复用性</label>
+            <el-form-item>
+              <el-input v-model="assessmentForm.reusability" placeholder="如：可复用技术建设" class="apple-input" />
+            </el-form-item>
+          </div>
+        </div>
+
+        <div class="form-grid risk-grid">
+          <div class="form-group">
+            <label class="form-label">履约风险</label>
+            <el-form-item>
+              <el-select v-model="assessmentForm.deliveryRisk" placeholder="请选择" class="apple-input" style="width: 100%">
+                <el-option v-for="item in yesNoOptions" :key="`delivery-${item.value}`" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+          </div>
+          <div class="form-group">
+            <label class="form-label">回款风险</label>
+            <el-form-item>
+              <el-select v-model="assessmentForm.paymentRisk" placeholder="请选择" class="apple-input" style="width: 100%">
+                <el-option v-for="item in yesNoOptions" :key="`payment-${item.value}`" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+          </div>
+          <div class="form-group">
+            <label class="form-label">验收风险</label>
+            <el-form-item>
+              <el-select v-model="assessmentForm.acceptanceRisk" placeholder="请选择" class="apple-input" style="width: 100%">
+                <el-option v-for="item in yesNoOptions" :key="`acceptance-${item.value}`" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+          </div>
+          <div class="form-group">
+            <label class="form-label">安全/合规风险</label>
+            <el-form-item>
+              <el-select v-model="assessmentForm.securityOrComplianceRisk" placeholder="请选择" class="apple-input" style="width: 100%">
+                <el-option v-for="item in yesNoOptions" :key="`compliance-${item.value}`" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+          </div>
+          <div class="form-group">
+            <label class="form-label">重大故障风险</label>
+            <el-form-item>
+              <el-select v-model="assessmentForm.majorIncidentRisk" placeholder="请选择" class="apple-input" style="width: 100%">
+                <el-option v-for="item in yesNoOptions" :key="`incident-${item.value}`" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+          </div>
+          <div class="form-group">
+            <label class="form-label">省级督办</label>
+            <el-form-item>
+              <el-select v-model="assessmentForm.govSupervision" placeholder="请选择" class="apple-input" style="width: 100%">
+                <el-option v-for="item in yesNoOptions" :key="`gov-${item.value}`" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+          </div>
+          <div class="form-group">
+            <label class="form-label">战略客户/标杆客户</label>
+            <el-form-item>
+              <el-select v-model="assessmentForm.strategicCustomer" placeholder="请选择" class="apple-input" style="width: 100%">
+                <el-option v-for="item in yesNoOptions" :key="`strategic-${item.value}`" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+          </div>
+          <div class="form-group">
+            <label class="form-label">核心产品线</label>
+            <el-form-item>
+              <el-select v-model="assessmentForm.coreProductLine" placeholder="请选择" class="apple-input" style="width: 100%">
+                <el-option v-for="item in yesNoOptions" :key="`core-${item.value}`" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+          </div>
+          <div class="form-group">
+            <label class="form-label">是否样板</label>
+            <el-form-item>
+              <el-select v-model="assessmentForm.benchmarkCase" placeholder="请选择" class="apple-input" style="width: 100%">
+                <el-option v-for="item in yesNoOptions" :key="`benchmark-${item.value}`" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+          </div>
+        </div>
+
         <div class="form-group">
-          <label class="form-label">需求备注</label>
+          <label class="form-label">特殊备注</label>
+          <el-form-item>
+            <el-input
+              v-model="assessmentForm.specialRemark"
+              type="textarea"
+              :rows="3"
+              placeholder="请输入会影响优先级判定的补充说明"
+              class="apple-input"
+            />
+          </el-form-item>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">处理备注</label>
           <el-form-item prop="remark" :show-message="false">
             <el-input
               v-model="formData.remark"
               type="textarea"
               :rows="3"
-              placeholder="请输入需求备注"
+              placeholder="请输入处理备注"
               maxlength="1000"
               show-word-limit
               class="apple-input"
@@ -107,13 +263,43 @@ import { useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { createRawRequirement } from '@/api/raw-requirement'
 import { listDictData } from '@/api/dict'
-import type { DictDataVO, RawRequirementCreateDTO } from '@/types/requirement'
+import type { DictDataVO, PriorityAssessmentContextDTO, RawRequirementCreateDTO } from '@/types/requirement'
 import { useUserStore } from '@/store/user'
 
 const router = useRouter()
 const userStore = useUserStore()
 const formRef = ref<FormInstance>()
 const submitting = ref(false)
+const yesNoOptions = [
+  { label: '是', value: '是' },
+  { label: '否', value: '否' },
+]
+
+function createDefaultAssessmentContext(): PriorityAssessmentContextDTO {
+  return {
+    projectName: '',
+    customerName: '',
+    contractNo: '',
+    contractAmount: '',
+    deliveryRisk: '',
+    paymentRisk: '',
+    acceptanceRisk: '',
+    securityOrComplianceRisk: '',
+    majorIncidentRisk: '',
+    govSupervision: '',
+    strategicCustomer: '',
+    coreProductLine: '',
+    projectType: '',
+    reusability: '',
+    benchmarkCase: '',
+    contractScope: '',
+    rigidDeliveryDate: '',
+    estimatedWorkload: '',
+    businessOwner: '',
+    expectedOnlineTime: '',
+    specialRemark: '',
+  }
+}
 
 // 字典数据
 const dictBusinessLineOptions = ref<DictDataVO[]>([])
@@ -127,13 +313,14 @@ const formData = reactive<RawRequirementCreateDTO>({
   valueAssessment: '',
   remark: '',
 })
+const assessmentForm = reactive<PriorityAssessmentContextDTO>(createDefaultAssessmentContext())
 
 const validateReqLinkOrRemark = (_rule: unknown, _value: unknown, callback: (error?: Error) => void) => {
   if (formData.reqLink?.trim() || formData.remark?.trim()) {
     callback()
     return
   }
-  callback(new Error('需求单链接和需求备注至少完善一项'))
+  callback(new Error('需求单链接和处理备注至少完善一项'))
 }
 
 const rules: FormRules = {
@@ -150,6 +337,7 @@ async function handleSubmit() {
   try {
     await createRawRequirement({
       ...formData,
+      submitOrigin: 'internal',
       title: formData.title.trim(),
       description: formData.description?.trim() || undefined,
       businessLine: formData.businessLine?.trim() || undefined,
@@ -158,6 +346,30 @@ async function handleSubmit() {
       remark: formData.remark?.trim() || undefined,
       valueAssessment: formData.valueAssessment?.trim() || undefined,
       expectedOnlineDate: formData.expectedOnlineDate || undefined,
+      assessmentContext: {
+        ...assessmentForm,
+        projectName: assessmentForm.projectName?.trim() || undefined,
+        customerName: assessmentForm.customerName?.trim() || undefined,
+        contractNo: assessmentForm.contractNo?.trim() || undefined,
+        contractAmount: assessmentForm.contractAmount?.trim() || undefined,
+        deliveryRisk: assessmentForm.deliveryRisk || undefined,
+        paymentRisk: assessmentForm.paymentRisk || undefined,
+        acceptanceRisk: assessmentForm.acceptanceRisk || undefined,
+        securityOrComplianceRisk: assessmentForm.securityOrComplianceRisk || undefined,
+        majorIncidentRisk: assessmentForm.majorIncidentRisk || undefined,
+        govSupervision: assessmentForm.govSupervision || undefined,
+        strategicCustomer: assessmentForm.strategicCustomer || undefined,
+        coreProductLine: assessmentForm.coreProductLine || undefined,
+        projectType: assessmentForm.projectType?.trim() || undefined,
+        reusability: assessmentForm.reusability?.trim() || undefined,
+        benchmarkCase: assessmentForm.benchmarkCase || undefined,
+        contractScope: assessmentForm.contractScope?.trim() || undefined,
+        rigidDeliveryDate: assessmentForm.rigidDeliveryDate || undefined,
+        estimatedWorkload: assessmentForm.estimatedWorkload?.trim() || undefined,
+        businessOwner: assessmentForm.businessOwner?.trim() || undefined,
+        expectedOnlineTime: formData.expectedOnlineDate || undefined,
+        specialRemark: assessmentForm.specialRemark?.trim() || undefined,
+      },
     })
     ElMessage.success('需求提交成功')
     router.push('/raw-pool')
@@ -224,6 +436,32 @@ onMounted(() => {
 
 .form-group {
   margin-bottom: 22px;
+}
+
+.form-section {
+  margin: 28px 0 12px;
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.section-tip {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+
+.risk-grid {
+  margin-top: 4px;
 }
 
 .form-label {
@@ -348,6 +586,12 @@ onMounted(() => {
 
   .submit-view {
     padding: 20px 16px;
+  }
+}
+
+@media (max-width: 720px) {
+  .form-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

@@ -28,6 +28,9 @@ public class RawRequirement {
     @TableField("source")
     private String source;
 
+    @TableField("submit_origin")
+    private String submitOrigin;
+
     @TableField("proposer")
     private String proposer;
 

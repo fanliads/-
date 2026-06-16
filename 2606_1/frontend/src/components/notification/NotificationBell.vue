@@ -7,7 +7,9 @@
   >
     <template #reference>
       <el-badge :value="unreadCount" :hidden="unreadCount === 0" :max="99" class="notification-badge">
-        <el-icon :size="20" class="bell-icon"><Bell /></el-icon>
+        <div class="bell-trigger">
+          <el-icon :size="18" class="bell-icon"><Bell /></el-icon>
+        </div>
       </el-badge>
     </template>
 
@@ -143,13 +145,32 @@ onUnmounted(() => {
 <style lang="scss" scoped>
 .notification-badge {
   cursor: pointer;
+}
+
+.bell-trigger {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(77, 63, 47, 0.08);
+  box-shadow: 0 10px 20px rgba(54, 41, 29, 0.06);
+  transition: var(--transition);
 
   .bell-icon {
-    color: #666;
+    color: var(--text-secondary);
     cursor: pointer;
+  }
 
-    &:hover {
-      color: var(--el-color-primary);
+  &:hover {
+    transform: translateY(-1px);
+    border-color: rgba(31, 107, 92, 0.22);
+    background: rgba(255, 255, 255, 0.92);
+
+    .bell-icon {
+      color: var(--primary);
     }
   }
 }
@@ -160,37 +181,38 @@ onUnmounted(() => {
     align-items: center;
     justify-content: space-between;
     padding-bottom: 12px;
-    border-bottom: 1px solid #ebeef5;
+    border-bottom: 1px solid rgba(77, 63, 47, 0.08);
 
     .panel-title {
       font-size: 16px;
-      font-weight: 600;
-      color: #303133;
+      font-weight: 700;
+      color: var(--text-primary);
     }
   }
 
   .notification-list {
     max-height: 400px;
     overflow-y: auto;
-    margin: 0 -12px;
-    padding: 0;
+    margin: 0 -8px;
+    padding: 8px 0 0;
 
     .notification-item {
       display: flex;
       align-items: flex-start;
-      padding: 12px;
+      padding: 14px 12px;
+      border-radius: 14px;
       cursor: pointer;
-      transition: background-color 0.2s;
+      transition: var(--transition);
 
       &:hover {
-        background-color: #f5f7fa;
+        background-color: rgba(31, 107, 92, 0.05);
       }
 
       &.unread {
-        background-color: #ecf5ff;
+        background-color: rgba(31, 107, 92, 0.08);
 
         &:hover {
-          background-color: #d9ecff;
+          background-color: rgba(31, 107, 92, 0.12);
         }
       }
 
@@ -198,7 +220,7 @@ onUnmounted(() => {
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        background-color: var(--el-color-primary);
+        background-color: var(--primary);
         margin-top: 6px;
         margin-right: 10px;
         flex-shrink: 0;
@@ -210,8 +232,8 @@ onUnmounted(() => {
 
         .item-title {
           font-size: 14px;
-          color: #303133;
-          font-weight: 500;
+          color: var(--text-primary);
+          font-weight: 600;
           margin-bottom: 4px;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -220,7 +242,7 @@ onUnmounted(() => {
 
         .item-desc {
           font-size: 12px;
-          color: #909399;
+          color: var(--text-secondary);
           margin-bottom: 4px;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -229,7 +251,7 @@ onUnmounted(() => {
 
         .item-time {
           font-size: 12px;
-          color: #c0c4cc;
+          color: var(--text-tertiary);
         }
       }
     }
@@ -237,7 +259,7 @@ onUnmounted(() => {
     .empty-tip {
       text-align: center;
       padding: 32px 0;
-      color: #c0c4cc;
+      color: var(--text-tertiary);
       font-size: 14px;
     }
   }

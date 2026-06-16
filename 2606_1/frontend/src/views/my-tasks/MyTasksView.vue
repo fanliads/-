@@ -1,38 +1,40 @@
 <template>
   <div class="my-tasks-view">
-    <!-- 页面头部 -->
     <div class="page-header">
       <div class="header-left">
         <h1 class="page-title">我的待办</h1>
+        <p class="page-subtitle">优先处理当前待办，已处理记录按需展开查看。</p>
       </div>
       <div class="header-right">
-        <input class="search-box" placeholder="搜索..." />
+        <span class="refresh-status" :class="{ syncing: actionRefreshing }">
+          {{ refreshStatusText }}
+        </span>
       </div>
     </div>
 
-    <!-- 统计卡片 -->
     <div class="summary">
       <div class="summary-card"><div class="summary-k">待处理</div><div class="summary-v">{{ stats.pendingCount }}</div></div>
       <div class="summary-card"><div class="summary-k">今日已处理</div><div class="summary-v">{{ stats.todayDoneCount }}</div></div>
       <div class="summary-card"><div class="summary-k">本周已处理</div><div class="summary-v">{{ stats.weekDoneCount }}</div></div>
     </div>
 
-    <!-- 任务列表区域 -->
     <div class="content-scroll">
-      <!-- 待我处理 -->
       <div class="task-group">
-        <div class="group-label">待我处理（{{ pendingTotal }}）</div>
-        <div v-loading="loading" class="task-list">
+        <div class="group-header">
+          <div>
+            <div class="group-label">待我处理（{{ pendingTotal }}）</div>
+            <div class="group-tip">这里只展示当前需要你推进的事项，操作完成后会自动刷新。</div>
+          </div>
+        </div>
+        <div v-loading="pendingLoading" class="task-list">
           <template v-if="pendingList.length > 0">
             <div
               v-for="task in pendingList"
               :key="`${task.reqType}-${task.id}`"
               class="task-card"
             >
-              <!-- 左侧优先级色条 -->
               <div class="task-priority" :class="'task-' + (task.priority || 'p2').toLowerCase()"></div>
 
-              <!-- 任务主体 -->
               <div class="task-body">
                 <div class="task-title">{{ task.title }}</div>
                 <div class="task-meta">
@@ -42,23 +44,21 @@
                 </div>
               </div>
 
-              <!-- 倒计时 -->
               <div v-if="task.updatedTime" class="task-countdown" :class="{ safe: !isUrgent(task.updatedTime) }">
                 {{ formatTime(task.updatedTime) }}
               </div>
 
-              <!-- 操作按钮 -->
               <div class="task-actions">
                 <ActionButtons
                   :req-type="task.reqType"
                   :req-id="task.id"
                   :current-status="task.status"
-                  @action-done="loadPending"
+                  @action-done="handleActionDone"
                 />
               </div>
             </div>
           </template>
-          <el-empty v-else description="暂无待处理任务" />
+          <el-empty v-else description="当前没有待我处理事项" />
         </div>
         <div class="pagination-wrap" v-if="pendingTotal > 0">
           <el-pagination
@@ -71,37 +71,43 @@
         </div>
       </div>
 
-      <!-- 已处理 -->
-      <div class="task-group">
-        <div class="group-label">已处理</div>
-        <div v-loading="loading" class="task-list">
-          <template v-if="doneList.length > 0">
-            <div
-              v-for="task in doneList"
-              :key="`done-${task.reqType}-${task.id}`"
-              class="task-card done"
-            >
-              <div class="task-priority task-done-bar"></div>
-              <div class="task-body">
-                <div class="task-title">{{ task.title }}</div>
-                <div class="task-meta">
-                  <span>{{ task.reqNo }}</span>
-                  <span class="task-tag">{{ task.statusName }}</span>
-                  <span v-if="task.actionRequired">{{ task.actionRequired }}</span>
+      <div class="task-group secondary-group">
+        <button type="button" class="secondary-toggle" @click="toggleDoneSection">
+          <span>{{ doneExpanded ? '收起已处理记录' : `查看已处理记录（${stats.todayDoneCount} 今日 / ${doneTotal || stats.weekDoneCount} 条）` }}</span>
+          <span class="secondary-toggle-icon">{{ doneExpanded ? '−' : '+' }}</span>
+        </button>
+        <div v-if="doneExpanded" class="secondary-panel">
+          <div class="group-label">已处理</div>
+          <div class="group-tip">作为回顾记录保留，默认折叠，避免工作台首屏分散注意力。</div>
+          <div v-loading="doneLoading" class="task-list">
+            <template v-if="doneList.length > 0">
+              <div
+                v-for="task in doneList"
+                :key="`done-${task.reqType}-${task.id}`"
+                class="task-card done"
+              >
+                <div class="task-priority task-done-bar"></div>
+                <div class="task-body">
+                  <div class="task-title">{{ task.title }}</div>
+                  <div class="task-meta">
+                    <span>{{ task.reqNo }}</span>
+                    <span class="task-tag">{{ task.statusName }}</span>
+                    <span v-if="task.actionRequired">{{ task.actionRequired }}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </template>
-          <el-empty v-else description="暂无已处理记录" />
-        </div>
-        <div class="pagination-wrap" v-if="doneTotal > 0">
-          <el-pagination
-            v-model:current-page="donePage"
-            :page-size="pageSize"
-            :total="doneTotal"
-            layout="total, prev, pager, next"
-            @current-change="loadDone"
-          />
+            </template>
+            <el-empty v-else description="暂无已处理记录" />
+          </div>
+          <div class="pagination-wrap" v-if="doneTotal > 0">
+            <el-pagination
+              v-model:current-page="donePage"
+              :page-size="pageSize"
+              :total="doneTotal"
+              layout="total, prev, pager, next"
+              @current-change="loadDone"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -109,12 +115,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import ActionButtons from '@/components/workflow/ActionButtons.vue'
 import { getPendingTasks, getDoneTasks, getMyTaskStats, type MyTaskVO, type MyTaskStats } from '@/api/my-tasks'
 import dayjs from 'dayjs'
 
-const loading = ref(false)
+const pendingLoading = ref(false)
+const doneLoading = ref(false)
+const actionRefreshing = ref(false)
+const lastRefreshAt = ref<string>('')
 
 const stats = reactive<MyTaskStats>({
   pendingCount: 0,
@@ -129,8 +138,21 @@ const pendingTotal = ref(0)
 const doneList = ref<MyTaskVO[]>([])
 const donePage = ref(1)
 const doneTotal = ref(0)
+const doneExpanded = ref(false)
 
 const pageSize = 10
+
+const refreshStatusText = computed(() => {
+  if (actionRefreshing.value) {
+    return '正在同步最新处理结果...'
+  }
+
+  if (!lastRefreshAt.value) {
+    return '待办将自动保持最新'
+  }
+
+  return `最近刷新 ${dayjs(lastRefreshAt.value).format('HH:mm:ss')}`
+})
 
 async function loadStats() {
   try {
@@ -147,7 +169,7 @@ async function loadStats() {
 }
 
 async function loadPending() {
-  loading.value = true
+  pendingLoading.value = true
   try {
     const res = await getPendingTasks({ page: pendingPage.value, size: pageSize })
     const data = (res as any).data
@@ -158,12 +180,13 @@ async function loadPending() {
   } catch {
     pendingList.value = []
   } finally {
-    loading.value = false
+    pendingLoading.value = false
+    lastRefreshAt.value = dayjs().toISOString()
   }
 }
 
 async function loadDone() {
-  loading.value = true
+  doneLoading.value = true
   try {
     const res = await getDoneTasks({ page: donePage.value, size: pageSize })
     const data = (res as any).data
@@ -174,7 +197,28 @@ async function loadDone() {
   } catch {
     doneList.value = []
   } finally {
-    loading.value = false
+    doneLoading.value = false
+  }
+}
+
+async function handleActionDone() {
+  actionRefreshing.value = true
+  try {
+    await Promise.all([
+      loadStats(),
+      loadPending(),
+      doneExpanded.value ? loadDone() : Promise.resolve(),
+    ])
+  } finally {
+    actionRefreshing.value = false
+  }
+}
+
+async function toggleDoneSection() {
+  doneExpanded.value = !doneExpanded.value
+
+  if (doneExpanded.value && doneList.value.length === 0) {
+    await loadDone()
   }
 }
 
@@ -219,10 +263,33 @@ onMounted(() => {
     color: var(--text-primary);
   }
 
+  .page-subtitle {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
   .header-right {
     display: flex;
     align-items: center;
     gap: 16px;
+  }
+}
+
+.refresh-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(0, 113, 227, 0.08);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 500;
+
+  &.syncing {
+    background: rgba(255, 149, 0, 0.12);
+    color: #b56a00;
   }
 }
 
@@ -236,13 +303,26 @@ onMounted(() => {
   margin-bottom: 28px;
 }
 
+.group-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
 .group-label {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
-  margin-bottom: 12px;
+  margin-bottom: 6px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.group-tip {
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .task-card {
@@ -333,9 +413,50 @@ onMounted(() => {
   padding-top: 16px;
 }
 
+.secondary-group {
+  margin-top: 12px;
+}
+
+.secondary-toggle {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  transition: var(--transition);
+
+  &:hover {
+    border-color: var(--primary);
+    box-shadow: var(--shadow-hover);
+  }
+}
+
+.secondary-toggle-icon {
+  font-size: 18px;
+  line-height: 1;
+  color: var(--text-secondary);
+}
+
+.secondary-panel {
+  padding-top: 16px;
+}
+
 @media (max-width: 768px) {
   .page-header {
+    height: auto;
     padding: 0 16px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 16px;
+    padding-bottom: 16px;
   }
 
   .content-scroll {

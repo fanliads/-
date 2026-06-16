@@ -60,8 +60,8 @@
             <td>{{ row.reqNo }}</td>
             <td class="req-title">{{ row.title }}</td>
             <td>
-              <span class="status-tag" :class="getStatusClass(row.status)">
-                {{ row.statusName || RAW_STATUS_MAP[row.status] || row.status }}
+              <span class="status-tag" :class="getStatusClass(row.status, row.statusName)">
+                {{ getRawRequirementStatusLabel(row.status, row.statusName) }}
               </span>
             </td>
             <td>
@@ -100,7 +100,13 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { pageQueryRawRequirements } from '@/api/raw-requirement'
 import type { RawRequirementListVO } from '@/types/requirement'
-import { RAW_STATUS_MAP, PRIORITY_MAP, SOURCE_MAP } from '@/types/requirement'
+import {
+  RAW_STATUS_MAP,
+  PRIORITY_MAP,
+  SOURCE_MAP,
+  getRawRequirementStatusClass,
+  getRawRequirementStatusLabel,
+} from '@/types/requirement'
 
 
 const queryForm = reactive({
@@ -122,19 +128,18 @@ const selectAll = ref(false)
 
 const totalPages = computed(() => Math.ceil(total.value / queryForm.size) || 1)
 
-function getStatusClass(status: string): string {
+function getStatusClass(status: string, statusName?: string): string {
+  const rawClass = getRawRequirementStatusClass(status, statusName)
   const map: Record<string, string> = {
-    pending_evaluate: 'status-eval',
-    evaluating: 'status-eval',
-    pending_accept: 'status-eval',
-    accepted: 'status-dev',
-    in_design: 'status-dev',
-    in_dev: 'status-dev',
-    split: 'status-dev',
-    rejected: 'status-reject',
-    closed: 'status-closed',
+    'status-pending': 'status-eval',
+    'status-split': 'status-dev',
+    'status-progress': 'status-dev',
+    'status-online': 'status-closed',
+    'status-suspended': 'status-eval',
+    'status-rejected': 'status-reject',
+    'status-closed': 'status-closed',
   }
-  return map[status] || 'status-eval'
+  return map[rawClass] || 'status-eval'
 }
 
 function formatDate(dt: string): string {

@@ -32,6 +32,13 @@ public class RawRequirementController {
         return R.ok(id);
     }
 
+    @PostMapping("/external-submit")
+    @Operation(summary = "外部提报创建原始需求")
+    public R<Long> externalSubmit(@Valid @RequestBody RawRequirementCreateDTO dto) {
+        Long id = rawRequirementService.createExternalRawRequirement(dto);
+        return R.ok(id);
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "获取原始需求详情")
     public R<RawRequirementDetailVO> getDetail(@PathVariable Long id) {

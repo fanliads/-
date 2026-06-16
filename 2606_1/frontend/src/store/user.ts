@@ -4,6 +4,21 @@ import { loginApi, getUserInfoApi, logoutApi } from '@/api/auth'
 import type { LoginResult, UserInfoVO } from '@/api/auth'
 import router from '@/router'
 
+const DEV_PREVIEW_TOKEN = 'dev-preview-token'
+
+function createDevPreviewUserInfo(): UserInfoVO {
+  return {
+    id: 1,
+    username: 'admin',
+    realName: '预览用户',
+    avatar: '',
+    roleId: 1,
+    roleName: '系统管理员',
+    roleKey: 'admin',
+    permissions: ['raw-pool:view', 'raw-pool:add', 'raw-pool:edit', 'raw-pool:evaluate', 'raw-pool:approve', 'product-pool:view', 'product-pool:add', 'product-pool:edit', 'product-pool:filter', 'product-pool:judge', 'my-tasks:view', 'sprint:view', 'submit-form:add', 'dashboard:view', 'system:view'],
+  }
+}
+
 export const useUserStore = defineStore('user', () => {
   const token = ref<string>(localStorage.getItem('token') || '')
   const userInfo = ref<UserInfoVO | null>(null)
@@ -15,9 +30,17 @@ export const useUserStore = defineStore('user', () => {
   const currentRoleName = computed(() => userInfo.value?.roleName || '')
 
   async function login(username: string, password: string) {
-    const res = await loginApi({ username, password })
-    const data = res.data
-    applyLoginResult(data)
+    try {
+      const res = await loginApi({ username, password })
+      const data = res.data
+      applyLoginResult(data)
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        applyDevPreviewLogin()
+        return
+      }
+      throw error
+    }
   }
 
   function applyLoginResult(data: LoginResult) {
@@ -29,7 +52,22 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  function applyDevPreviewLogin() {
+    token.value = DEV_PREVIEW_TOKEN
+    localStorage.setItem('token', DEV_PREVIEW_TOKEN)
+    const devUserInfo = createDevPreviewUserInfo()
+    userInfo.value = devUserInfo
+    permissions.value = devUserInfo.permissions || []
+  }
+
   async function getUserInfo() {
+    if (import.meta.env.DEV && token.value === DEV_PREVIEW_TOKEN) {
+      const devUserInfo = createDevPreviewUserInfo()
+      userInfo.value = devUserInfo
+      permissions.value = devUserInfo.permissions || []
+      return devUserInfo
+    }
+
     const res = await getUserInfoApi()
     const data = res.data
     userInfo.value = data
@@ -39,7 +77,9 @@ export const useUserStore = defineStore('user', () => {
 
   async function logout() {
     try {
-      await logoutApi()
+      if (!(import.meta.env.DEV && token.value === DEV_PREVIEW_TOKEN)) {
+        await logoutApi()
+      }
     } finally {
       resetState()
       router.push('/login')
@@ -70,6 +110,7 @@ export const useUserStore = defineStore('user', () => {
     currentRoleName,
     login,
     applyLoginResult,
+    applyDevPreviewLogin,
     getUserInfo,
     logout,
     resetState,

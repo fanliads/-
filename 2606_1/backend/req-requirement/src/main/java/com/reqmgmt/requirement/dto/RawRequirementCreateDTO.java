@@ -19,6 +19,8 @@ public class RawRequirementCreateDTO {
 
     private String source;
 
+    private String submitOrigin;
+
     private String proposer;
 
     private String proposerContact;

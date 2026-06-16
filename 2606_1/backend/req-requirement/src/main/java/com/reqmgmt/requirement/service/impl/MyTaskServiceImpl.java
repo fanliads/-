@@ -27,6 +27,8 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class MyTaskServiceImpl implements MyTaskService {
+    private static final String RAW_STATUS_PENDING_JUDGEMENT = "pending_judgement";
+    private static final String RAW_STATUS_PENDING_SPLIT = "pending_split";
 
     private final RawRequirementMapper rawRequirementMapper;
     private final ProductRequirementMapper productRequirementMapper;
@@ -42,10 +44,10 @@ public class MyTaskServiceImpl implements MyTaskService {
         // 根据角色查询对应的待处理需求
         switch (roleKey) {
             case "market" -> {
-                // 市场部：自己创建的待补充需求
+                // 市场部：自己创建、仍处于待判定阶段的原始需求
                 LambdaQueryWrapper<RawRequirement> wrapper = new LambdaQueryWrapper<>();
                 wrapper.eq(RawRequirement::getCreateBy, currentUserId)
-                        .eq(RawRequirement::getStatus, "pending_evaluate")
+                        .eq(RawRequirement::getStatus, RAW_STATUS_PENDING_JUDGEMENT)
                         .orderByDesc(RawRequirement::getUpdateTime);
                 List<RawRequirement> list = rawRequirementMapper.selectList(wrapper);
                 for (RawRequirement r : list) {
@@ -53,9 +55,9 @@ public class MyTaskServiceImpl implements MyTaskService {
                 }
             }
             case "pm" -> {
-                // 项目经理：status=pending_evaluate 的原始需求
+                // 项目经理：待判定的原始需求
                 LambdaQueryWrapper<RawRequirement> wrapper = new LambdaQueryWrapper<>();
-                wrapper.eq(RawRequirement::getStatus, "pending_evaluate")
+                wrapper.eq(RawRequirement::getStatus, RAW_STATUS_PENDING_JUDGEMENT)
                         .orderByDesc(RawRequirement::getUpdateTime);
                 List<RawRequirement> list = rawRequirementMapper.selectList(wrapper);
                 for (RawRequirement r : list) {
@@ -63,9 +65,9 @@ public class MyTaskServiceImpl implements MyTaskService {
                 }
             }
             case "product_director" -> {
-                // 产品总监：status=pending_director 的原始需求
+                // 产品总监：待判定的原始需求（支持上收决策）
                 LambdaQueryWrapper<RawRequirement> wrapper = new LambdaQueryWrapper<>();
-                wrapper.eq(RawRequirement::getStatus, "pending_director")
+                wrapper.eq(RawRequirement::getStatus, RAW_STATUS_PENDING_JUDGEMENT)
                         .orderByDesc(RawRequirement::getUpdateTime);
                 List<RawRequirement> list = rawRequirementMapper.selectList(wrapper);
                 for (RawRequirement r : list) {
@@ -73,13 +75,13 @@ public class MyTaskServiceImpl implements MyTaskService {
                 }
             }
             case "product_leader" -> {
-                // 产品组长：status=pending_leader_filter 的产品需求
-                LambdaQueryWrapper<ProductRequirement> wrapper = new LambdaQueryWrapper<>();
-                wrapper.eq(ProductRequirement::getStatus, "pending_leader_filter")
-                        .orderByDesc(ProductRequirement::getUpdateTime);
-                List<ProductRequirement> list = productRequirementMapper.selectList(wrapper);
-                for (ProductRequirement r : list) {
-                    allTasks.add(toProductTaskVO(r, "过滤评估"));
+                // 产品组长：待拆分的原始需求
+                LambdaQueryWrapper<RawRequirement> wrapper = new LambdaQueryWrapper<>();
+                wrapper.eq(RawRequirement::getStatus, RAW_STATUS_PENDING_SPLIT)
+                        .orderByDesc(RawRequirement::getUpdateTime);
+                List<RawRequirement> list = rawRequirementMapper.selectList(wrapper);
+                for (RawRequirement r : list) {
+                    allTasks.add(toRawTaskVO(r, "确认拆分"));
                 }
             }
             case "product_manager" -> {
@@ -162,16 +164,16 @@ public class MyTaskServiceImpl implements MyTaskService {
             case "market" -> pendingCount = rawRequirementMapper.selectCount(
                     new LambdaQueryWrapper<RawRequirement>()
                             .eq(RawRequirement::getCreateBy, currentUserId)
-                            .eq(RawRequirement::getStatus, "pending_evaluate"));
+                            .eq(RawRequirement::getStatus, RAW_STATUS_PENDING_JUDGEMENT));
             case "pm" -> pendingCount = rawRequirementMapper.selectCount(
                     new LambdaQueryWrapper<RawRequirement>()
-                            .eq(RawRequirement::getStatus, "pending_evaluate"));
+                            .eq(RawRequirement::getStatus, RAW_STATUS_PENDING_JUDGEMENT));
             case "product_director" -> pendingCount = rawRequirementMapper.selectCount(
                     new LambdaQueryWrapper<RawRequirement>()
-                            .eq(RawRequirement::getStatus, "pending_director"));
-            case "product_leader" -> pendingCount = productRequirementMapper.selectCount(
-                    new LambdaQueryWrapper<ProductRequirement>()
-                            .eq(ProductRequirement::getStatus, "pending_leader_filter"));
+                            .eq(RawRequirement::getStatus, RAW_STATUS_PENDING_JUDGEMENT));
+            case "product_leader" -> pendingCount = rawRequirementMapper.selectCount(
+                    new LambdaQueryWrapper<RawRequirement>()
+                            .eq(RawRequirement::getStatus, RAW_STATUS_PENDING_SPLIT));
             case "product_manager" -> pendingCount = productRequirementMapper.selectCount(
                     new LambdaQueryWrapper<ProductRequirement>()
                             .in(ProductRequirement::getStatus, "pending_pm", "backlog", "researching", "designing")

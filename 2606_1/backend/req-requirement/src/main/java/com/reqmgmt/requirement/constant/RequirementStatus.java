@@ -19,15 +19,11 @@ public class RequirementStatus {
     public static final Map<String, String> PRODUCT_STATUS_MAP = new HashMap<>();
 
     static {
-        RAW_STATUS_MAP.put("pending_evaluate", "待评估");
-        RAW_STATUS_MAP.put("evaluating", "评估中");
-        RAW_STATUS_MAP.put("accepted", "已承接");
-        RAW_STATUS_MAP.put("pending_director", "待总监判定");
-        RAW_STATUS_MAP.put("pending_design", "待设计");
-        RAW_STATUS_MAP.put("designing", "设计中");
-        RAW_STATUS_MAP.put("designed", "已设计");
-        RAW_STATUS_MAP.put("developing", "开发中");
+        RAW_STATUS_MAP.put("pending_judgement", "待判定");
+        RAW_STATUS_MAP.put("pending_split", "待拆分");
+        RAW_STATUS_MAP.put("in_progress", "开发中");
         RAW_STATUS_MAP.put("online", "已上线");
+        RAW_STATUS_MAP.put("closed", "已关闭");
         RAW_STATUS_MAP.put("rejected", "已拒绝");
         RAW_STATUS_MAP.put("suspended", "已挂起");
 

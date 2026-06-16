@@ -21,6 +21,8 @@ public class RawRequirementDetailVO {
 
     private String source;
 
+    private String submitOrigin;
+
     private String proposer;
 
     private String proposerContact;

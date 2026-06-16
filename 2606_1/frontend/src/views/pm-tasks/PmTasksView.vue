@@ -1,11 +1,18 @@
 <template>
   <div class="pm-tasks-view">
+    <div class="sunset-banner">
+      <div class="sunset-banner__title">该页面已进入退出准备，仅保留只读预览</div>
+      <div class="sunset-banner__desc">
+        当前内容为演示数据，不代表正式产品能力。页面入口收口将由主线程统一处理，此处不再提供可提交或可持久化的 PM 分配操作。
+      </div>
+    </div>
+
     <!-- 工具栏 -->
     <div class="toolbar">
       <div class="filter-chip" :class="{ active: filterPriority === 'P0' }" @click="toggleFilter('P0')">P0</div>
       <div class="filter-chip" :class="{ active: filterPriority === 'P1' }" @click="toggleFilter('P1')">P1</div>
       <div class="filter-chip" :class="{ active: filterPriority === 'P2' }" @click="toggleFilter('P2')">P2</div>
-      <input class="search-box" v-model="searchKeyword" placeholder="搜索需求..." />
+      <input class="search-box" v-model="searchKeyword" placeholder="仅支持本页演示数据筛选" />
     </div>
 
     <!-- PM看板 -->
@@ -32,10 +39,8 @@
             v-for="req in pm.requirements"
             :key="req.id"
             class="card"
-            :class="{ dragging: draggingReqId === req.id }"
-            draggable="true"
-            @dragstart="onDragStart($event, req, pm.id)"
-            @dragend="onDragEnd"
+            :class="{ disabled: isReadonlyPreview }"
+            @click="showReadonlyToast"
           >
             <span class="card-priority" :class="`priority-${req.priority.toLowerCase()}`">{{ req.priority }}</span>
             <div class="card-title">{{ req.title }}</div>
@@ -70,6 +75,12 @@ interface PmGroup {
   avatarColor: string
   requirements: Requirement[]
 }
+
+/**
+ * 该页保留作为历史演示稿参考。
+ * 当前阶段已不再作为正式 PM 分配能力对外承诺，因此只保留只读预览。
+ */
+const isReadonlyPreview = true
 
 /** 模拟数据 */
 const pmList = ref<PmGroup[]>([
@@ -154,26 +165,10 @@ function toggleFilter(priority: string) {
   filterPriority.value = filterPriority.value === priority ? '' : priority
 }
 
-/** 拖拽 */
-const draggingReqId = ref<number | null>(null)
-const draggingReq = ref<Requirement | null>(null)
-const dragSourcePmId = ref<number | null>(null)
 const dragOverPmId = ref<number | null>(null)
 
-function onDragStart(_e: DragEvent, req: Requirement, pmId: number) {
-  draggingReqId.value = req.id
-  draggingReq.value = req
-  dragSourcePmId.value = pmId
-}
-
-function onDragEnd() {
-  draggingReqId.value = null
-  draggingReq.value = null
-  dragSourcePmId.value = null
-  dragOverPmId.value = null
-}
-
 function onDragOver(_e: DragEvent, pmId: number) {
+  if (isReadonlyPreview) return
   dragOverPmId.value = pmId
 }
 
@@ -183,21 +178,19 @@ function onDragLeave(pmId: number) {
   }
 }
 
-function onDrop(_e: DragEvent, targetPmId: number) {
+function onDrop(_e: DragEvent, _targetPmId: number) {
+  if (isReadonlyPreview) {
+    showReadonlyToast()
+    dragOverPmId.value = null
+    return
+  }
+
   dragOverPmId.value = null
-  if (!draggingReq.value || dragSourcePmId.value === targetPmId) return
+  return
+}
 
-  const sourcePm = pmList.value.find(p => p.id === dragSourcePmId.value)
-  const targetPm = pmList.value.find(p => p.id === targetPmId)
-  if (!sourcePm || !targetPm) return
-
-  const reqIndex = sourcePm.requirements.findIndex(r => r.id === draggingReq.value!.id)
-  if (reqIndex === -1) return
-
-  const [removed] = sourcePm.requirements.splice(reqIndex, 1)
-  targetPm.requirements.push(removed)
-
-  showToast(`✓ ${removed.title}：${sourcePm.name} → ${targetPm.name}`)
+function showReadonlyToast() {
+  showToast('该页面仅保留演示预览，正式 PM 分配能力已准备退出')
 }
 
 /** Toast */
@@ -218,6 +211,27 @@ function showToast(msg: string) {
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.sunset-banner {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 149, 0, 0.25);
+  background: rgba(255, 149, 0, 0.08);
+  border-radius: var(--radius);
+}
+
+.sunset-banner__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #8a5200;
+  margin-bottom: 4px;
+}
+
+.sunset-banner__desc {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #8a5200;
 }
 
 .toolbar {
@@ -319,7 +333,6 @@ function showToast(msg: string) {
   border-radius: var(--radius-sm);
   padding: 14px;
   box-shadow: var(--shadow);
-  cursor: grab;
   transition: all 0.2s;
 
   &:hover {
@@ -327,9 +340,8 @@ function showToast(msg: string) {
     transform: translateY(-1px);
   }
 
-  &.dragging {
-    opacity: 0.5;
-    transform: rotate(2deg);
+  &.disabled {
+    cursor: not-allowed;
   }
 }
 

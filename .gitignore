@@ -1,5 +1,6 @@
 .DS_Store
 Thumbs.db
+.~*
 
 # Common dependency and build outputs
 node_modules/

@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ProductRequirementServiceImpl extends ServiceImpl<ProductRequirementMapper, ProductRequirement> implements ProductRequirementService {
+    private static final String SUBMIT_ORIGIN_EXTERNAL = "external";
 
     private final RequirementLogMapper requirementLogMapper;
     private final RequirementCommentMapper requirementCommentMapper;
@@ -332,6 +333,9 @@ public class ProductRequirementServiceImpl extends ServiceImpl<ProductRequiremen
         if (rawReq == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "原始需求不存在");
         }
+        if (SUBMIT_ORIGIN_EXTERNAL.equalsIgnoreCase(rawReq.getSubmitOrigin()) && !"pending_split".equals(rawReq.getStatus())) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "外部提报需求需先承接后再拆分");
+        }
 
         if (dto.getItems() == null || dto.getItems().isEmpty()) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "请至少添加一条产品需求");
@@ -383,8 +387,9 @@ public class ProductRequirementServiceImpl extends ServiceImpl<ProductRequiremen
             splitIndex++;
         }
 
-        // 更新原始需求状态为"已拆分"
-        rawReq.setStatus("split");
+        // 拆分完成后，原始需求进入待拆分，由后续流转推进到执行阶段
+        String oldRawStatus = rawReq.getStatus();
+        rawReq.setStatus("pending_split");
         rawRequirementMapper.updateById(rawReq);
 
         // 记录原始需求日志
@@ -395,8 +400,8 @@ public class ProductRequirementServiceImpl extends ServiceImpl<ProductRequiremen
         rawLog.setOperatorName(currentUsername);
         rawLog.setAction("split");
         rawLog.setFieldName("status");
-        rawLog.setOldValue(rawReq.getStatus());
-        rawLog.setNewValue("split");
+        rawLog.setOldValue(oldRawStatus);
+        rawLog.setNewValue("pending_split");
         rawLog.setRemark("需求拆分为" + dto.getItems().size() + "条产品需求");
         requirementLogMapper.insert(rawLog);
 

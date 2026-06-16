@@ -1,13 +1,19 @@
 <template>
   <div class="progress-view">
+    <div class="sunset-banner">
+      <div class="sunset-banner__title">该页面已进入退出准备，仅保留演示展示</div>
+      <div class="sunset-banner__desc">
+        当前进度卡片全部基于静态演示数据，不作为正式进度管理能力对外使用。页面入口下线将由主线程统一处理。
+      </div>
+    </div>
+
     <!-- 工具栏 -->
     <div class="toolbar">
       <div
         v-for="chip in filterChips"
         :key="chip.key"
         class="filter-chip"
-        :class="{ active: activeFilters[chip.key] }"
-        @click="toggleFilter(chip.key)"
+        @click="showReadonlyToast"
       >
         {{ chip.label }} ▾
       </div>
@@ -20,6 +26,7 @@
         :key="item.id"
         class="progress-card"
         :class="{ risk: item.isRisk }"
+        @click="showReadonlyToast"
       >
         <div class="card-header">
           <div class="card-title">{{ item.title }}</div>
@@ -41,11 +48,13 @@
         </div>
       </div>
     </div>
+
+    <div class="toast" :class="{ show: toastVisible }">{{ toastMessage }}</div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref } from 'vue'
 
 interface ProgressItem {
   id: number
@@ -58,13 +67,16 @@ interface ProgressItem {
   isRisk: boolean
 }
 
-/** 模拟数据 */
+/**
+ * 该页仅作为历史演示视图保留，避免正式入口移除前出现空白页。
+ * 交互统一降级为只读提示，不再假装具备真实进度管理能力。
+ */
 const progressItems = ref<ProgressItem[]>([
   {
     id: 1,
     title: '台州各区县采购平台优化',
     percent: 10,
-    statusLabel: '待评估',
+    statusLabel: '待判定',
     expectedDate: '5-25',
     tag: '校园G端',
     daysLeft: 3,
@@ -94,7 +106,7 @@ const progressItems = ref<ProgressItem[]>([
     id: 4,
     title: '山东互联网+明厨亮灶项目',
     percent: 15,
-    statusLabel: '待总监判定',
+    statusLabel: '待判定',
     expectedDate: '6-11',
     tag: '市监G端',
     daysLeft: 18,
@@ -114,7 +126,7 @@ const progressItems = ref<ProgressItem[]>([
     id: 6,
     title: '南昌青山湖区智慧食堂项目系统修改',
     percent: 10,
-    statusLabel: '待评估',
+    statusLabel: '待判定',
     expectedDate: '5-31',
     tag: '校园G端',
     daysLeft: 9,
@@ -142,27 +154,52 @@ const progressItems = ref<ProgressItem[]>([
   },
 ])
 
-/** 筛选 */
 const filterChips = [
   { key: 'businessLine', label: '全部业务线' },
   { key: 'assignee', label: '全部负责人' },
   { key: 'riskFirst', label: '高风险优先' },
 ]
 
-const activeFilters = reactive<Record<string, boolean>>({
-  businessLine: false,
-  assignee: false,
-  riskFirst: false,
-})
+const toastVisible = ref(false)
+const toastMessage = ref('')
 
-function toggleFilter(key: string) {
-  activeFilters[key] = !activeFilters[key]
+function showReadonlyToast() {
+  showToast('该页面仅保留演示展示，正式进度看板能力已准备退出')
+}
+
+function showToast(message: string) {
+  toastMessage.value = message
+  toastVisible.value = true
+  setTimeout(() => {
+    toastVisible.value = false
+  }, 2500)
 }
 </script>
 
 <style lang="scss" scoped>
 .progress-view {
   height: 100%;
+}
+
+.sunset-banner {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 149, 0, 0.25);
+  background: rgba(255, 149, 0, 0.08);
+  border-radius: var(--radius);
+}
+
+.sunset-banner__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #8a5200;
+  margin-bottom: 4px;
+}
+
+.sunset-banner__desc {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #8a5200;
 }
 
 .toolbar {
@@ -290,6 +327,26 @@ function toggleFilter(key: string) {
 @media (max-width: 768px) {
   .progress-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+.toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1d1d1f;
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  z-index: 200;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+
+  &.show {
+    opacity: 1;
   }
 }
 </style>

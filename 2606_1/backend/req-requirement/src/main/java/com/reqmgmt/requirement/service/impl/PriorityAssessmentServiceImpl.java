@@ -19,6 +19,8 @@ import com.reqmgmt.requirement.service.ai.AIProvider;
 import com.reqmgmt.requirement.service.ai.PriorityAssessmentPayload;
 import com.reqmgmt.requirement.service.ai.PriorityAssessmentResult;
 import com.reqmgmt.requirement.vo.PriorityAssessmentVO;
+import com.reqmgmt.system.entity.SysUser;
+import com.reqmgmt.system.service.SysUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,6 +40,8 @@ public class PriorityAssessmentServiceImpl implements PriorityAssessmentService 
 
     private static final String REQ_TYPE = "raw";
     private static final String ACTION = "ai_priority_assessment";
+    private static final Long EXTERNAL_OPERATOR_ID = 0L;
+    private static final String EXTERNAL_OPERATOR_NAME = "外部提报用户";
     private static final String LEVEL_P0 = "P0";
     private static final String LEVEL_P1 = "P1";
     private static final String LEVEL_P2 = "P2";
@@ -49,11 +53,15 @@ public class PriorityAssessmentServiceImpl implements PriorityAssessmentService 
             "govSupervision", "strategicCustomer", "coreProductLine", "projectType", "reusability",
             "benchmarkCase", "contractScope", "rigidDeliveryDate", "estimatedWorkload", "businessOwner", "specialRemark"
     );
+    private static final List<String> CRITICAL_CONTEXT_FIELDS = List.of(
+            "projectName", "customerName", "projectType", "rigidDeliveryDate"
+    );
 
     private final RawRequirementMapper rawRequirementMapper;
     private final RequirementLogMapper requirementLogMapper;
     private final AIProvider aiProvider;
     private final ObjectMapper objectMapper;
+    private final SysUserService sysUserService;
 
     @Value("${ai.priority.rules-text:按固定业务规则输出一级A类（P0）、一级B类（P1）、二级（P2）、三级（P3），AI仅做解释增强。}")
     private String rulesText;
@@ -101,6 +109,7 @@ public class PriorityAssessmentServiceImpl implements PriorityAssessmentService 
             vo.setOverrideFlag(requirement.getOverrideFlag() != null && requirement.getOverrideFlag() == 1);
             vo.setOverrideReason(requirement.getOverrideReason());
             vo.setOverrideTime(requirement.getOverrideTime());
+            vo.setOverrideBy(resolveUserDisplayName(requirement.getOverrideBy()));
         } else {
             vo.setPriority(latest.getNewValue());
             vo.setPriorityLabel(toLevelLabel(latest.getNewValue()));
@@ -124,6 +133,7 @@ public class PriorityAssessmentServiceImpl implements PriorityAssessmentService 
         PriorityAssessmentContextDTO effectiveContext = mergeContext(parseContext(rawRequirement.getAiAssessmentContext()), overrideContext);
         String contextJson = writeContext(effectiveContext);
         List<String> missingFields = collectMissingFields(rawRequirement, effectiveContext);
+        boolean incomplete = hasCriticalMissingFields(missingFields);
 
         RuleEvaluation evaluation = evaluateRule(effectiveContext);
         PriorityAssessmentResult aiResult = aiProvider.assessPriority(PriorityAssessmentPayload.builder()
@@ -141,7 +151,7 @@ public class PriorityAssessmentServiceImpl implements PriorityAssessmentService 
                 .rulesText(rulesText)
                 .build());
 
-        String explanation = buildExplanation(evaluation, aiResult, missingFields);
+        String explanation = buildExplanation(evaluation, aiResult, missingFields, incomplete);
         persistAssessment(rawRequirement, contextJson, evaluation, explanation, aiResult, missingFields, triggerSource);
 
         PriorityAssessmentVO vo = new PriorityAssessmentVO();
@@ -156,7 +166,7 @@ public class PriorityAssessmentServiceImpl implements PriorityAssessmentService 
         vo.setReason(explanation);
         vo.setTraceSummary(aiResult.getTraceSummary());
         vo.setSource(StrUtil.blankToDefault(aiResult.getSource(), "rule-engine"));
-        vo.setSuccess(true);
+        vo.setSuccess(!incomplete);
         vo.setMissingFields(missingFields);
         vo.setOverrideFlag(rawRequirement.getOverrideFlag() != null && rawRequirement.getOverrideFlag() == 1);
         vo.setAssessedAt(LocalDateTime.now());
@@ -186,8 +196,8 @@ public class PriorityAssessmentServiceImpl implements PriorityAssessmentService 
         RequirementLog log = new RequirementLog();
         log.setReqType(REQ_TYPE);
         log.setReqId(rawRequirement.getId());
-        log.setOperatorId(SecurityUtils.getCurrentUserId());
-        log.setOperatorName(SecurityUtils.getCurrentUsername());
+        log.setOperatorId(resolveOperatorId());
+        log.setOperatorName(resolveOperatorName());
         log.setAction(ACTION);
         log.setFieldName(StrUtil.blankToDefault(aiResult.getSource(), triggerSource));
         log.setOldValue(writeMeta(triggerSource, evaluation, aiResult, missingFields));
@@ -196,9 +206,16 @@ public class PriorityAssessmentServiceImpl implements PriorityAssessmentService 
         requirementLogMapper.insert(log);
     }
 
-    private String buildExplanation(RuleEvaluation evaluation, PriorityAssessmentResult aiResult, List<String> missingFields) {
+    private String buildExplanation(RuleEvaluation evaluation, PriorityAssessmentResult aiResult,
+                                    List<String> missingFields, boolean incomplete) {
         StringBuilder sb = new StringBuilder();
+        if (incomplete) {
+            sb.append("信息不足，当前按已知字段给出暂定分级");
+        }
         if (!evaluation.ruleHits().isEmpty()) {
+            if (!sb.isEmpty()) {
+                sb.append("；");
+            }
             sb.append("命中规则：").append(String.join("；", evaluation.ruleHits()));
         }
         if (StrUtil.isNotBlank(evaluation.strategyHint())) {
@@ -255,6 +272,13 @@ public class PriorityAssessmentServiceImpl implements PriorityAssessmentService 
         return missing;
     }
 
+    private boolean hasCriticalMissingFields(List<String> missingFields) {
+        if (missingFields == null || missingFields.isEmpty()) {
+            return false;
+        }
+        return missingFields.stream().anyMatch(CRITICAL_CONTEXT_FIELDS::contains);
+    }
+
     private RuleEvaluation evaluateRule(PriorityAssessmentContextDTO context) {
         List<String> hits = new ArrayList<>();
         if (isYes(context.getDeliveryRisk()) || isYes(context.getPaymentRisk()) || isYes(context.getAcceptanceRisk())) {
@@ -274,6 +298,9 @@ public class PriorityAssessmentServiceImpl implements PriorityAssessmentService 
         if (isYes(context.getStrategicCustomer())) {
             hits.add("战略项目/标杆客户");
         }
+        if (containsAnyKeyword(context.getProjectType(), "战略项目", "标杆项目")) {
+            hits.add("战略项目");
+        }
         if (isYes(context.getCoreProductLine())) {
             hits.add("核心产品线迭代");
         }
@@ -285,7 +312,7 @@ public class PriorityAssessmentServiceImpl implements PriorityAssessmentService 
         if (containsKeyword(context.getProjectType(), "常规营收")) {
             hits.add("常规营收项目");
         }
-        if (isYes(context.getReusability())) {
+        if (containsAnyKeyword(context.getReusability(), "可复用", "复用", "技术建设")) {
             hits.add("可复用技术建设");
         }
         if (!hits.isEmpty()) {
@@ -296,10 +323,10 @@ public class PriorityAssessmentServiceImpl implements PriorityAssessmentService 
         if (containsKeyword(context.getProjectType(), "专属定制")) {
             hits.add("专属定制");
         }
-        if (isYes(context.getBenchmarkCase())) {
+        if (isYes(context.getBenchmarkCase()) || containsAnyKeyword(context.getBenchmarkCase(), "未签约样板", "样板")) {
             hits.add("未签约样板");
         }
-        if (!isYes(context.getRigidDeliveryDate())) {
+        if (!hasRigidDeliveryDate(context.getRigidDeliveryDate())) {
             hits.add("无刚性节点");
         }
         return new RuleEvaluation(LEVEL_P3, "错峰处理、不占用主线资源、不加急", hits);
@@ -395,6 +422,50 @@ public class PriorityAssessmentServiceImpl implements PriorityAssessmentService 
 
     private boolean containsKeyword(String value, String keyword) {
         return StrUtil.isNotBlank(value) && StrUtil.containsIgnoreCase(value, keyword);
+    }
+
+    private boolean containsAnyKeyword(String value, String... keywords) {
+        if (StrUtil.isBlank(value) || keywords == null || keywords.length == 0) {
+            return false;
+        }
+        for (String keyword : keywords) {
+            if (StrUtil.containsIgnoreCase(value, keyword)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasRigidDeliveryDate(String value) {
+        if (StrUtil.isBlank(value)) {
+            return false;
+        }
+        String normalized = value.trim().toLowerCase();
+        return !Arrays.asList("否", "no", "false", "0", "n", "无", "未确定", "待定").contains(normalized);
+    }
+
+    private Long resolveOperatorId() {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        return currentUserId != null ? currentUserId : EXTERNAL_OPERATOR_ID;
+    }
+
+    private String resolveOperatorName() {
+        String currentUsername = SecurityUtils.getCurrentUsername();
+        return StrUtil.isNotBlank(currentUsername) ? currentUsername : EXTERNAL_OPERATOR_NAME;
+    }
+
+    private String resolveUserDisplayName(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        if (EXTERNAL_OPERATOR_ID.equals(userId)) {
+            return EXTERNAL_OPERATOR_NAME;
+        }
+        SysUser user = sysUserService.getById(userId);
+        if (user == null) {
+            return String.valueOf(userId);
+        }
+        return StrUtil.blankToDefault(user.getRealName(), user.getUsername());
     }
 
     private record RuleEvaluation(String level, String strategyHint, List<String> ruleHits) {

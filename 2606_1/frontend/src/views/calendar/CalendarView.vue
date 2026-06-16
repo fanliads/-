@@ -52,6 +52,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import dayjs from 'dayjs'
 import { pageQueryRawRequirements } from '@/api/raw-requirement'
 import type { RawRequirementListVO } from '@/types/requirement'
+import { normalizeRawRequirementStatus } from '@/types/requirement'
 
 interface CalEvent {
   id: number
@@ -155,9 +156,7 @@ const calendarCells = computed(() => {
 })
 
 function getEventClass(evt: CalEvent): string {
-  // 已完成状态用绿色
-  const doneStatuses = ['accepted', 'split', 'released', 'closed']
-  if (doneStatuses.includes(evt.status)) return 'event-done'
+  if (['online', 'closed', 'rejected'].includes(normalizeRawRequirementStatus(evt.status))) return 'event-done'
   // 按优先级
   const map: Record<string, string> = {
     P0: 'event-p0',

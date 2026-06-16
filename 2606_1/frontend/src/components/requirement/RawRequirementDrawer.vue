@@ -11,7 +11,12 @@
       <div class="drawer-header">
         <div>
           <div class="drawer-id">{{ detail?.reqNo || '' }}</div>
-          <div class="drawer-title">{{ detail?.title || '' }}</div>
+          <div class="drawer-title-row">
+            <div class="drawer-title">{{ detail?.title || '' }}</div>
+            <span v-if="detail?.submitOrigin" class="origin-tag" :class="detail.submitOrigin === 'external' ? 'origin-external' : 'origin-internal'">
+              {{ detail.submitOrigin === 'external' ? '外部提报' : '内部提交' }}
+            </span>
+          </div>
         </div>
         <button class="btn btn-ghost" @click="handleClose">关闭</button>
       </div>
@@ -30,7 +35,7 @@
                 <div class="info-item">
                   <div class="info-label">当前状态</div>
                   <div class="info-value">
-                    <span class="status-tag" :class="getStatusClass(detail.status)">{{ detail.statusName || RAW_STATUS_MAP[detail.status] }}</span>
+                    <span class="status-tag" :class="getStatusClass(detail.status, detail.statusName)">{{ getRawStatusLabel(detail.status, detail.statusName) }}</span>
                   </div>
                 </div>
                 <div class="info-item">
@@ -49,8 +54,12 @@
                       </div>
                       <div v-if="detail.latestPriorityAssessment.systemLevelLabel" class="ai-subline">系统判定：{{ detail.latestPriorityAssessment.systemLevelLabel }}</div>
                       <div v-if="detail.latestPriorityAssessment.overrideFlag && detail.latestPriorityAssessment.overrideReason" class="ai-subline">人工覆盖：{{ detail.latestPriorityAssessment.overrideReason }}</div>
+                      <div v-if="overrideMetaText" class="ai-subline">覆盖信息：{{ overrideMetaText }}</div>
                       <div v-if="detail.latestPriorityAssessment.strategyHint" class="ai-subline">处理策略：{{ detail.latestPriorityAssessment.strategyHint }}</div>
                       <div v-if="detail.latestPriorityAssessment.ruleHits?.length" class="ai-subline">命中规则：{{ detail.latestPriorityAssessment.ruleHits.join('；') }}</div>
+                      <div v-if="detail.latestPriorityAssessment.missingFields?.length" class="ai-missing">
+                        缺失字段：{{ formatMissingFields(detail.latestPriorityAssessment.missingFields) }}
+                      </div>
                       <div class="ai-reason">{{ detail.latestPriorityAssessment.reason || '暂无解释摘要' }}</div>
                     </template>
                     <template v-else>
@@ -117,8 +126,9 @@
 
             <!-- 需求描述 -->
             <div class="section">
-              <div class="section-title">原始需求描述</div>
-              <div class="desc-content">{{ detail.description || '暂无描述' }}</div>
+              <div class="section-title">需求描述</div>
+              <div class="section-tip">主正文，用于说明这条原始需求本身要解决什么问题。</div>
+              <div class="desc-content">{{ detail.description || '暂无需求描述' }}</div>
             </div>
 
             <div v-if="businessArchiveSections.length" class="section">
@@ -147,9 +157,9 @@
                     <span v-else>-</span>
                   </div>
                 </div>
-                <div class="info-item">
-                  <div class="info-label">备注</div>
-                  <div class="info-value">{{ detail.remark || '-' }}</div>
+                <div class="info-item info-item-wide">
+                  <div class="info-label">处理备注</div>
+                  <div class="info-value info-value-prewrap">{{ detail.remark || '暂无处理备注' }}</div>
                 </div>
               </div>
             </div>
@@ -194,8 +204,8 @@
             </div>
           </el-tab-pane>
 
-          <!-- 补充内容 -->
-          <el-tab-pane label="补充内容" name="supplements">
+          <!-- 追加记录 -->
+          <el-tab-pane label="追加记录" name="supplements">
             <div class="supplement-list">
               <div v-for="sup in supplements" :key="sup.id" class="timeline-item">
                 <div class="supplement-header">
@@ -206,7 +216,7 @@
                 <div v-if="sup.attachment" class="supplement-attachment">附件: {{ sup.attachment }}</div>
                 <div class="log-time">{{ sup.createTime ? sup.createTime.substring(0, 16).replace('T', ' ') : '' }}</div>
               </div>
-              <el-empty v-if="supplements.length === 0" description="暂无补充内容" />
+              <el-empty v-if="supplements.length === 0" description="暂无追加记录" />
             </div>
             <div style="margin-top: 12px">
               <button class="btn btn-primary" @click="$emit('openSupplement', requirementId)">添加补充</button>
@@ -223,7 +233,7 @@ import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getRawRequirementDetail, getRawRequirementLogs, getRawRequirementComments, addRawRequirementComment, getRawRequirementSupplements, reassessRawRequirementPriority, overrideRawRequirementPriority } from '@/api/raw-requirement'
 import type { RawRequirementDetailVO, RequirementLogVO, CommentVO, SupplementVO, PriorityAssessmentContextDTO } from '@/types/requirement'
-import { RAW_STATUS_MAP, PRIORITY_MAP, SOURCE_MAP, REQ_TYPE_MAP } from '@/types/requirement'
+import { getRawRequirementStatusClass, getRawRequirementStatusLabel, PRIORITY_MAP, SOURCE_MAP, REQ_TYPE_MAP } from '@/types/requirement'
 
 const props = defineProps<{
   visible: boolean
@@ -324,14 +334,28 @@ const businessArchiveSections = computed(() => {
     .filter((section) => section.items.length > 0)
 })
 
+const overrideMetaText = computed(() => {
+  if (!detail.value?.latestPriorityAssessment?.overrideFlag) {
+    return ''
+  }
+  const by = detail.value.latestPriorityAssessment.overrideBy || '未知用户'
+  const time = detail.value.latestPriorityAssessment.overrideTime
+    ? detail.value.latestPriorityAssessment.overrideTime.substring(0, 16).replace('T', ' ')
+    : ''
+  return [by, time].filter(Boolean).join(' · ')
+})
+
 function handleClose() {
   emit('update:visible', false)
 }
 
-function getStatusClass(status: string): string {
-  if (status === 'pending_pm_eval' || status === 'PENDING_PM_EVAL') return 'status-eval'
-  if (status === 'pending_director' || status === 'PENDING_DIRECTOR') return 'status-director'
-  return 'status-eval'
+function getStatusClass(status?: string, statusName?: string): string {
+  return getRawRequirementStatusClass(status, statusName)
+}
+
+function getRawStatusLabel(status?: string, statusName?: string) {
+  if (!status && !statusName) return '-'
+  return getRawRequirementStatusLabel(status, statusName)
 }
 
 function getPriorityLabel(priority?: string) {
@@ -349,6 +373,35 @@ function getPriorityClass(priority?: string) {
   if (normalized === 'P1') return 'priority-p1'
   if (normalized === 'P2') return 'priority-p2'
   return 'priority-p3'
+}
+
+function formatMissingFields(fields?: string[]) {
+  if (!fields?.length) return '-'
+  const labelMap: Record<string, string> = {
+    projectName: '项目名称',
+    customerName: '客户名称',
+    contractNo: '合同编号',
+    contractAmount: '合同金额',
+    deliveryRisk: '履约风险',
+    paymentRisk: '回款风险',
+    acceptanceRisk: '验收风险',
+    securityOrComplianceRisk: '安全/合规风险',
+    majorIncidentRisk: '重大故障风险',
+    govSupervision: '省级督办',
+    strategicCustomer: '战略客户/标杆客户',
+    coreProductLine: '核心产品线',
+    projectType: '项目类型',
+    reusability: '可复用性',
+    benchmarkCase: '是否样板',
+    contractScope: '合同范围',
+    rigidDeliveryDate: '刚性交付日期',
+    estimatedWorkload: '预估工时',
+    businessOwner: '商务负责人',
+    specialRemark: '特殊备注',
+    title: '需求标题',
+    description: '需求描述',
+  }
+  return fields.map((field) => labelMap[field] || field).join('、')
 }
 
 async function loadDetail() {
@@ -391,7 +444,7 @@ async function submitComment() {
 async function reassessPriority() {
   if (!props.requirementId) return
   try {
-    const context: PriorityAssessmentContextDTO = {
+    const context: PriorityAssessmentContextDTO = assessmentContext.value || {
       projectName: detail.value?.projectName,
       specialRemark: detail.value?.remark,
       expectedOnlineTime: detail.value?.expectedOnlineDate,
@@ -462,6 +515,32 @@ watch(() => props.visible, (val) => {
   color: var(--text-primary);
 }
 
+.drawer-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.origin-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.origin-external {
+  color: #a14a00;
+  background: rgba(255, 149, 0, 0.12);
+}
+
+.origin-internal {
+  color: #13693b;
+  background: rgba(52, 199, 89, 0.12);
+}
+
 // ===== 抽屉body =====
 .drawer-body {
   padding: 20px 24px;
@@ -518,6 +597,13 @@ watch(() => props.visible, (val) => {
   letter-spacing: 0.5px;
 }
 
+.section-tip {
+  margin-top: -2px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
 .info-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -543,6 +629,10 @@ watch(() => props.visible, (val) => {
 .info-value {
   font-size: 13px;
   color: var(--text-primary);
+}
+
+.info-value-prewrap {
+  white-space: pre-wrap;
 }
 
 .ai-assessment {
@@ -588,6 +678,12 @@ watch(() => props.visible, (val) => {
   white-space: pre-wrap;
 }
 
+.ai-missing {
+  font-size: 12px;
+  color: #b75c00;
+  line-height: 1.6;
+}
+
 .btn-mini {
   align-self: flex-start;
   padding: 6px 12px;
@@ -602,8 +698,13 @@ watch(() => props.visible, (val) => {
   font-weight: 600;
 }
 
-.status-eval { background: rgba(0, 113, 227, 0.10); color: var(--primary); }
-.status-director { background: rgba(255, 149, 0, 0.10); color: #b75c00; }
+.status-pending { background: rgba(0, 113, 227, 0.10); color: var(--primary); }
+.status-split { background: rgba(255, 149, 0, 0.10); color: #b75c00; }
+.status-progress { background: rgba(52, 199, 89, 0.10); color: #248a3d; }
+.status-online { background: rgba(88, 86, 214, 0.12); color: #4f46b5; }
+.status-closed { background: rgba(120, 120, 128, 0.12); color: #5c5c61; }
+.status-suspended { background: rgba(255, 159, 10, 0.12); color: #b56a00; }
+.status-rejected { background: rgba(255, 59, 48, 0.10); color: #c23030; }
 
 .desc-content {
   padding: 12px 14px;

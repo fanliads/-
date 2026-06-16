@@ -1,5 +1,19 @@
 <template>
-  <div class="dashboard-view">
+  <div v-if="!isCurrentStageOpen" class="disabled-page">
+    <div class="disabled-card">
+      <div class="disabled-badge">暂未开放</div>
+      <h2 class="disabled-title">数据看板已从当前阶段正式入口移出</h2>
+      <p class="disabled-desc">
+        当前产品先聚焦需求流转与处理闭环，统计看板暂不作为对外承诺能力开放。
+      </p>
+      <div class="disabled-actions">
+        <button class="action-btn action-btn-primary" @click="router.push('/raw-pool')">前往原始需求池</button>
+        <button class="action-btn" @click="router.push('/my-tasks')">前往我的待办</button>
+      </div>
+    </div>
+  </div>
+
+  <div v-else class="dashboard-view">
     <!-- KPI 行 -->
     <div class="kpi-row">
       <div v-for="kpi in kpiData" :key="kpi.label" class="kpi-card">
@@ -70,6 +84,10 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+const isCurrentStageOpen = false
 
 /** KPI 数据 */
 const kpiData = ref([
@@ -81,11 +99,11 @@ const kpiData = ref([
 
 /** 饼图数据 */
 const pieData = ref([
-  { label: '待评估', percent: 30, color: 'var(--primary)' },
-  { label: '进行中', percent: 20, color: 'var(--success)' },
-  { label: '已完成', percent: 35, color: 'var(--warning)' },
+  { label: '待判定', percent: 30, color: 'var(--primary)' },
+  { label: '开发中', percent: 20, color: 'var(--success)' },
+  { label: '已上线', percent: 35, color: 'var(--warning)' },
   { label: '已拒绝', percent: 10, color: 'var(--danger)' },
-  { label: '挂起', percent: 5, color: '#e8e8ed' },
+  { label: '已挂起', percent: 5, color: '#e8e8ed' },
 ])
 
 /** 柱状图数据 */
@@ -107,6 +125,69 @@ const valueData = ref([
 </script>
 
 <style lang="scss" scoped>
+.disabled-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+.disabled-card {
+  width: min(560px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: var(--shadow);
+}
+
+.disabled-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(0, 113, 227, 0.08);
+  color: var(--primary, #0071e3);
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.disabled-title {
+  margin: 0 0 12px;
+  font-size: 24px;
+  color: var(--text-primary);
+}
+
+.disabled-desc {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.disabled-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.action-btn-primary {
+  border-color: transparent;
+  background: var(--primary, #0071e3);
+  color: #fff;
+}
+
 .dashboard-view {
   max-width: 1200px;
 }
@@ -342,6 +423,14 @@ const valueData = ref([
 
 /* 响应式 */
 @media (max-width: 768px) {
+  .disabled-card {
+    padding: 24px;
+  }
+
+  .disabled-title {
+    font-size: 20px;
+  }
+
   .kpi-row {
     grid-template-columns: 1fr 1fr;
   }

@@ -27,6 +27,11 @@ export function createRawRequirement(data: RawRequirementCreateDTO) {
   return post<ApiResponse<number>>(`/${BASE_URL}`, data)
 }
 
+/** 外部提报创建原始需求 */
+export function createExternalRawRequirement(data: RawRequirementCreateDTO) {
+  return post<ApiResponse<number>>(`/${BASE_URL}/external-submit`, data)
+}
+
 /** 获取原始需求详情 */
 export function getRawRequirementDetail(id: number) {
   return get<ApiResponse<RawRequirementDetailVO>>(`/${BASE_URL}/${id}`)

@@ -20,6 +20,8 @@ public class RawRequirementListVO {
 
     private String source;
 
+    private String submitOrigin;
+
     private String proposer;
 
     private String projectName;

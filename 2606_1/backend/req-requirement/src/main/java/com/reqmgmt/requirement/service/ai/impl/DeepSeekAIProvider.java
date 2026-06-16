@@ -10,7 +10,6 @@ import com.reqmgmt.requirement.service.ai.PriorityAssessmentResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 
@@ -18,13 +17,13 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 @Slf4j
-@Primary
 @Component
 @RequiredArgsConstructor
 public class DeepSeekAIProvider implements AIProvider {
@@ -49,6 +48,9 @@ public class DeepSeekAIProvider implements AIProvider {
     @Value("${ai.priority.max-tokens:800}")
     private int maxTokens;
 
+    @Value("${ai.priority.retry-max:1}")
+    private int retryMax;
+
     @Override
     public PriorityAssessmentResult assessPriority(PriorityAssessmentPayload payload) {
         if (!enabled || StrUtil.isBlank(apiKey)) {
@@ -60,58 +62,91 @@ public class DeepSeekAIProvider implements AIProvider {
                     .build();
         }
 
-        try {
-            Map<String, Object> body = new LinkedHashMap<>();
-            body.put("model", model);
-            body.put("max_tokens", maxTokens);
-            body.put("messages", List.of(
-                    Map.of("role", "system", "content", "你是需求分级解释助手。不要修改系统分级，只输出JSON。"),
-                    Map.of("role", "user", "content", buildPrompt(payload))
-            ));
-            body.put("response_format", Map.of("type", "json_object"));
+        int attempts = Math.max(1, retryMax + 1);
+        for (int attempt = 1; attempt <= attempts; attempt++) {
+            try {
+                Map<String, Object> body = new LinkedHashMap<>();
+                body.put("model", model);
+                body.put("max_tokens", maxTokens);
+                body.put("messages", List.of(
+                        Map.of("role", "system", "content", "你是需求分级解释助手。不要修改系统分级，只输出JSON。"),
+                        Map.of("role", "user", "content", buildPrompt(payload))
+                ));
+                body.put("response_format", Map.of("type", "json_object"));
 
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(normalizeUrl(baseUrl) + "/chat/completions"))
-                    .timeout(Duration.ofMillis(timeoutMs))
-                    .header(HttpHeaders.CONTENT_TYPE, "application/json")
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
-                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)))
-                    .build();
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(normalizeUrl(baseUrl) + "/chat/completions"))
+                        .timeout(Duration.ofMillis(timeoutMs))
+                        .header(HttpHeaders.CONTENT_TYPE, "application/json")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                        .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)))
+                        .build();
 
-            HttpResponse<String> response = HttpClient.newHttpClient()
-                    .send(request, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<String> response = HttpClient.newHttpClient()
+                        .send(request, HttpResponse.BodyHandlers.ofString());
 
-            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                    if (attempt < attempts && isRetryableStatus(response.statusCode())) {
+                        log.warn("DeepSeek 响应异常，准备重试, reqId={}, attempt={}, status={}",
+                                payload.getRequirementId(), attempt, response.statusCode());
+                        continue;
+                    }
+                    return PriorityAssessmentResult.builder()
+                            .success(false)
+                            .source("deepseek")
+                            .reason("DeepSeek 返回非成功状态")
+                            .traceSummary("http_status=" + response.statusCode())
+                            .build();
+                }
+
+                JsonNode root = objectMapper.readTree(response.body());
+                String content = root.path("choices").path(0).path("message").path("content").asText("");
+                Map<String, Object> result = objectMapper.readValue(content, new TypeReference<>() {});
+                Object missingFields = result.get("missingFields");
+                return PriorityAssessmentResult.builder()
+                        .success(true)
+                        .priority(payload.getCurrentLevel())
+                        .reason(String.valueOf(result.getOrDefault("summary", "")))
+                        .traceSummary(String.valueOf(result.getOrDefault("traceSummary", "")))
+                        .source("deepseek")
+                        .rawTraceId(root.path("id").asText(""))
+                        .missingFields(missingFields instanceof List<?> list ? list.stream().map(String::valueOf).toList() : List.of())
+                        .build();
+            } catch (HttpTimeoutException e) {
+                if (attempt < attempts) {
+                    log.warn("DeepSeek 调用超时，准备重试, reqId={}, attempt={}, timeoutMs={}",
+                            payload.getRequirementId(), attempt, timeoutMs);
+                    continue;
+                }
                 return PriorityAssessmentResult.builder()
                         .success(false)
                         .source("deepseek")
-                        .reason("DeepSeek 返回非成功状态")
-                        .traceSummary("http_status=" + response.statusCode())
+                        .reason("DeepSeek 调用超时")
+                        .traceSummary("timeout")
+                        .build();
+            } catch (Exception e) {
+                if (attempt < attempts && isRetryableException(e)) {
+                    log.warn("DeepSeek 调用失败，准备重试, reqId={}, attempt={}, error={}",
+                            payload.getRequirementId(), attempt, sanitizeExceptionMessage(e));
+                    continue;
+                }
+                log.warn("DeepSeek 解释增强失败, reqId={}, model={}, baseUrl={}, error={}",
+                        payload.getRequirementId(), model, sanitizeUrl(baseUrl), sanitizeExceptionMessage(e));
+                return PriorityAssessmentResult.builder()
+                        .success(false)
+                        .source("deepseek")
+                        .reason("DeepSeek 调用失败")
+                        .traceSummary(sanitizeExceptionMessage(e))
                         .build();
             }
-
-            JsonNode root = objectMapper.readTree(response.body());
-            String content = root.path("choices").path(0).path("message").path("content").asText("");
-            Map<String, Object> result = objectMapper.readValue(content, new TypeReference<>() {});
-            Object missingFields = result.get("missingFields");
-            return PriorityAssessmentResult.builder()
-                    .success(true)
-                    .priority(payload.getCurrentLevel())
-                    .reason(String.valueOf(result.getOrDefault("summary", "")))
-                    .traceSummary(String.valueOf(result.getOrDefault("traceSummary", "")))
-                    .source("deepseek")
-                    .rawTraceId(root.path("id").asText(""))
-                    .missingFields(missingFields instanceof List<?> list ? list.stream().map(String::valueOf).toList() : List.of())
-                    .build();
-        } catch (Exception e) {
-            log.warn("DeepSeek 解释增强失败, reqId={}", payload.getRequirementId(), e);
-            return PriorityAssessmentResult.builder()
-                    .success(false)
-                    .source("deepseek")
-                    .reason("DeepSeek 调用失败")
-                    .traceSummary(e.getClass().getSimpleName() + ": " + e.getMessage())
-                    .build();
         }
+
+        return PriorityAssessmentResult.builder()
+                .success(false)
+                .source("deepseek")
+                .reason("DeepSeek 调用失败")
+                .traceSummary("retry_exhausted")
+                .build();
     }
 
     private String buildPrompt(PriorityAssessmentPayload payload) throws Exception {
@@ -146,5 +181,26 @@ public class DeepSeekAIProvider implements AIProvider {
 
     private String normalizeUrl(String value) {
         return value != null && value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
+    }
+
+    private boolean isRetryableStatus(int statusCode) {
+        return statusCode == 408 || statusCode == 429 || statusCode >= 500;
+    }
+
+    private boolean isRetryableException(Exception e) {
+        return e instanceof java.io.IOException || e instanceof InterruptedException;
+    }
+
+    private String sanitizeExceptionMessage(Exception e) {
+        String message = e.getClass().getSimpleName() + ": " + StrUtil.blankToDefault(e.getMessage(), "");
+        return StrUtil.replace(message, apiKey, "***");
+    }
+
+    private String sanitizeUrl(String value) {
+        if (StrUtil.isBlank(value)) {
+            return "";
+        }
+        URI uri = URI.create(normalizeUrl(value));
+        return uri.getScheme() + "://" + uri.getHost();
     }
 }

@@ -14,6 +14,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.http.HttpMethod;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -30,12 +31,28 @@ import java.util.stream.Collectors;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    private static final String EXTERNAL_SUBMIT_PATH = "/api/raw-requirements/external-submit";
+    private static final String LOGIN_PATH = "/api/auth/login";
+    private static final String REGISTER_PATH = "/api/auth/register";
+
     private final JwtUtils jwtUtils;
     private final SysUserService sysUserService;
 
     public JwtAuthenticationFilter(JwtUtils jwtUtils, @Lazy SysUserService sysUserService) {
         this.jwtUtils = jwtUtils;
         this.sysUserService = sysUserService;
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+        if (HttpMethod.OPTIONS.matches(request.getMethod())) {
+            return true;
+        }
+        if (LOGIN_PATH.equals(path) || REGISTER_PATH.equals(path)) {
+            return true;
+        }
+        return HttpMethod.POST.matches(request.getMethod()) && EXTERNAL_SUBMIT_PATH.equals(path);
     }
 
     @Override

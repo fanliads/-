@@ -24,6 +24,18 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false },
   },
   {
+    path: '/external-submit',
+    name: 'ExternalSubmit',
+    component: () => import('@/views/external-submit/ExternalSubmitView.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/external-submit/result',
+    name: 'ExternalSubmitResult',
+    component: () => import('@/views/external-submit/ExternalSubmitResultView.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
     path: '/',
     component: () => import('@/layouts/MainLayout.vue'),
     redirect: '/raw-pool',
@@ -32,8 +44,8 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'dashboard',
         name: 'Dashboard',
-        component: () => import('@/views/dashboard/DashboardView.vue'),
-        meta: { title: '数据看板', icon: 'DataBoard' },
+        redirect: '/raw-pool',
+        meta: { title: '数据看板', icon: 'DataBoard', hidden: true, stageStatus: 'disabled' },
       },
       {
         path: 'kanban',
@@ -63,7 +75,7 @@ const routes: RouteRecordRaw[] = [
         path: 'submit',
         name: 'Submit',
         component: () => import('@/views/submit/SubmitView.vue'),
-        meta: { title: '新建需求', icon: 'Plus' },
+        meta: { title: '新建需求', icon: 'Plus', hidden: true, entryMode: 'secondary' },
       },
       {
         path: 'sprint',
@@ -95,8 +107,8 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'settings',
         name: 'Settings',
-        component: () => import('@/views/settings/SettingsView.vue'),
-        meta: { title: '系统设置', icon: 'Setting' },
+        redirect: '/raw-pool',
+        meta: { title: '系统设置', icon: 'Setting', hidden: true, stageStatus: 'disabled' },
       },
     ],
   },

@@ -17,6 +17,7 @@ import com.reqmgmt.requirement.vo.ActionVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import cn.hutool.core.util.StrUtil;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -28,6 +29,10 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class WorkflowServiceImpl implements WorkflowService {
+    private static final String SUBMIT_ORIGIN_EXTERNAL = "external";
+    private static final Long SYSTEM_OPERATOR_ID = 0L;
+    private static final String SYSTEM_OPERATOR_NAME = "系统";
+
 
     private final RawRequirementMapper rawRequirementMapper;
     private final ProductRequirementMapper productRequirementMapper;
@@ -43,25 +48,32 @@ public class WorkflowServiceImpl implements WorkflowService {
 
     static {
         // 原始需求流转配置
-        RAW_FLOW_CONFIG.put("pending_evaluate", List.of(
-                Map.of("actionName", "评估承接", "toStatus", "pending_director", "roles", List.of("pm"), "needApproval", false),
+        RAW_FLOW_CONFIG.put("pending_judgement", List.of(
+                Map.of("actionName", "确认推进", "toStatus", "pending_split", "roles", List.of("pm", "product_director"), "needApproval", false),
                 Map.of("actionName", "拒绝", "toStatus", "rejected", "roles", List.of("pm"), "needApproval", true),
                 Map.of("actionName", "挂起", "toStatus", "suspended", "roles", List.of("pm"), "needApproval", true)
         ));
-        RAW_FLOW_CONFIG.put("pending_director", List.of(
-                Map.of("actionName", "审批通过-拆分", "toStatus", "pending_leader_filter", "roles", List.of("product_director"), "needApproval", false),
-                Map.of("actionName", "转项目评估", "toStatus", "pending_evaluate", "roles", List.of("product_director"), "needApproval", false),
-                Map.of("actionName", "拒绝", "toStatus", "rejected", "roles", List.of("product_director"), "needApproval", true),
-                Map.of("actionName", "挂起", "toStatus", "suspended", "roles", List.of("product_director"), "needApproval", true)
+        RAW_FLOW_CONFIG.put("pending_split", List.of(
+                Map.of("actionName", "进入开发", "toStatus", "in_progress", "roles", List.of("pm", "product_director", "product_leader"), "needApproval", false),
+                Map.of("actionName", "挂起", "toStatus", "suspended", "roles", List.of("pm", "product_director", "product_leader"), "needApproval", true),
+                Map.of("actionName", "拒绝", "toStatus", "rejected", "roles", List.of("pm", "product_director"), "needApproval", true)
         ));
-        RAW_FLOW_CONFIG.put("pending_leader_filter", List.of(
-                Map.of("actionName", "确认接收", "toStatus", "pending_pm", "roles", List.of("product_leader"), "needApproval", false),
-                Map.of("actionName", "挂起", "toStatus", "suspended", "roles", List.of("product_leader"), "needApproval", true)
+        RAW_FLOW_CONFIG.put("in_progress", List.of(
+                Map.of("actionName", "标记上线", "toStatus", "online", "roles", List.of("pm", "product_manager", "product_leader"), "needApproval", false),
+                Map.of("actionName", "关闭", "toStatus", "closed", "roles", List.of("pm", "product_manager", "product_leader"), "needApproval", true),
+                Map.of("actionName", "挂起", "toStatus", "suspended", "roles", List.of("pm", "product_manager", "product_leader"), "needApproval", true)
+        ));
+        RAW_FLOW_CONFIG.put("online", List.of(
+                Map.of("actionName", "关闭", "toStatus", "closed", "roles", List.of("pm", "product_manager", "product_leader"), "needApproval", false),
+                Map.of("actionName", "挂起", "toStatus", "suspended", "roles", List.of("pm", "product_manager", "product_leader"), "needApproval", true)
         ));
         RAW_FLOW_CONFIG.put("suspended", List.of(
-                Map.of("actionName", "恢复", "toStatus", "pending_evaluate", "roles", List.of("pm", "product_director", "product_leader"), "needApproval", false)
+                Map.of("actionName", "恢复到待判定", "toStatus", "pending_judgement", "roles", List.of("pm", "product_director", "product_leader"), "needApproval", false),
+                Map.of("actionName", "恢复到待拆分", "toStatus", "pending_split", "roles", List.of("pm", "product_director", "product_leader"), "needApproval", false),
+                Map.of("actionName", "恢复到开发中", "toStatus", "in_progress", "roles", List.of("pm", "product_director", "product_leader"), "needApproval", false)
         ));
         RAW_FLOW_CONFIG.put("rejected", List.of());
+        RAW_FLOW_CONFIG.put("closed", List.of());
 
         // 产品需求流转配置
         PRODUCT_FLOW_CONFIG.put("pending_pm", List.of(
@@ -106,9 +118,9 @@ public class WorkflowServiceImpl implements WorkflowService {
      * 状态名称映射
      */
     private static final Map<String, String> STATUS_NAME_MAP = Map.ofEntries(
-            Map.entry("pending_evaluate", "待评估"),
-            Map.entry("pending_director", "待总监审批"),
-            Map.entry("pending_leader_filter", "待组长过滤"),
+            Map.entry("pending_judgement", "待判定"),
+            Map.entry("pending_split", "待拆分"),
+            Map.entry("in_progress", "开发中"),
             Map.entry("pending_pm", "待产品经理处理"),
             Map.entry("backlog", "待办"),
             Map.entry("researching", "调研中"),
@@ -133,10 +145,11 @@ public class WorkflowServiceImpl implements WorkflowService {
         rawReq.setTitle(dto.getTitle());
         rawReq.setDescription(dto.getDescription());
         rawReq.setSource(dto.getSource());
+        rawReq.setSubmitOrigin(StrUtil.blankToDefault(dto.getSubmitOrigin(), "internal"));
         rawReq.setProposer(dto.getProposer());
         rawReq.setProjectName(dto.getProjectName());
         rawReq.setPriority(dto.getPriority() != null ? dto.getPriority() : "P2");
-        rawReq.setStatus("pending_evaluate");
+        rawReq.setStatus("pending_judgement");
         rawReq.setCreateBy(currentUserId);
         rawReq.setBusinessLine(dto.getBusinessLine());
         rawReq.setProductDefinition(dto.getProductDefinition());
@@ -150,12 +163,12 @@ public class WorkflowServiceImpl implements WorkflowService {
         rawRequirementMapper.insert(rawReq);
 
         // 记录操作日志
-        saveLog(rawReq.getId(), "raw", "submit", null, "pending_evaluate", currentUserId, "提交新需求");
+        saveLog(rawReq.getId(), "raw", "submit", null, "pending_judgement", currentUserId, "提交新需求");
 
         // 自动通知项目经理角色（这里简化处理：通知所有pm角色用户）
         // 实际项目中应查询pm角色的用户列表，这里发送给占位用户ID
-        sendNotification(null, "新需求待评估",
-                String.format("新需求「%s」已提交，请及时评估", dto.getTitle()),
+        sendNotification(null, "新需求待判定",
+                String.format("新需求「%s」已提交，请及时判定", dto.getTitle()),
                 "workflow", "raw", rawReq.getId());
 
         Map<String, Object> result = new HashMap<>();
@@ -177,6 +190,9 @@ public class WorkflowServiceImpl implements WorkflowService {
             @SuppressWarnings("unchecked")
             List<String> roles = (List<String>) action.get("roles");
             if (roles.contains(currentRole)) {
+                if ("raw".equals(reqType) && !isRawActionAllowed(reqId, currentStatus, (String) action.get("toStatus"))) {
+                    continue;
+                }
                 ActionVO vo = new ActionVO();
                 vo.setActionName((String) action.get("actionName"));
                 vo.setToStatus((String) action.get("toStatus"));
@@ -193,6 +209,10 @@ public class WorkflowServiceImpl implements WorkflowService {
         Long currentUserId = SecurityUtils.getCurrentUserId();
         String currentRole = SecurityUtils.getCurrentRoleKey();
         String currentStatus = getCurrentStatus(dto.getReqType(), dto.getReqId());
+
+        if ("raw".equals(dto.getReqType()) && !isRawActionAllowed(dto.getReqId(), currentStatus, dto.getToStatus())) {
+            throw new RuntimeException("当前需求不支持该操作");
+        }
 
         // 1. 校验流转合法性
         Map<String, List<Map<String, Object>>> config = "product".equals(dto.getReqType()) ? PRODUCT_FLOW_CONFIG : RAW_FLOW_CONFIG;
@@ -308,14 +328,29 @@ public class WorkflowServiceImpl implements WorkflowService {
         }
     }
 
+    private boolean isRawActionAllowed(Long reqId, String currentStatus, String toStatus) {
+        RawRequirement rawReq = rawRequirementMapper.selectById(reqId);
+        if (rawReq == null) {
+            throw new RuntimeException("需求不存在");
+        }
+        boolean external = SUBMIT_ORIGIN_EXTERNAL.equalsIgnoreCase(rawReq.getSubmitOrigin());
+        if (external && "pending_judgement".equals(currentStatus)) {
+            return "pending_split".equals(toStatus) || "rejected".equals(toStatus) || "suspended".equals(toStatus);
+        }
+        if (external && "pending_split".equals(currentStatus)) {
+            return !"pending_judgement".equals(toStatus);
+        }
+        return true;
+    }
+
     /**
      * 获取下一个处理人角色
      */
     private String getNextHandlerRole(String toStatus, String reqType) {
         return switch (toStatus) {
-            case "pending_evaluate" -> "pm";
-            case "pending_director" -> "product_director";
-            case "pending_leader_filter" -> "product_leader";
+            case "pending_judgement" -> "pm";
+            case "pending_split" -> "product_director";
+            case "in_progress" -> "product_manager";
             case "pending_pm", "backlog", "researching", "designing" -> "product_manager";
             case "pending_confirm" -> "product_leader";
             case "value_review" -> "product_leader";
@@ -351,8 +386,21 @@ public class WorkflowServiceImpl implements WorkflowService {
         log.setReqType(requirementType);
         log.setAction(action);
         log.setOldValue(oldValue);
-        log.setNewValue(newValue + (remark != null && !remark.isEmpty() ? " | " + remark : ""));
-        log.setOperatorId(operatorId);
+        log.setNewValue(newValue);
+        log.setRemark(remark);
+        log.setOperatorId(operatorId != null ? operatorId : SYSTEM_OPERATOR_ID);
+        log.setOperatorName(resolveOperatorName(operatorId));
         requirementLogMapper.insert(log);
+    }
+
+    private String resolveOperatorName(Long operatorId) {
+        String currentUsername = SecurityUtils.getCurrentUsername();
+        if (StrUtil.isNotBlank(currentUsername)) {
+            return currentUsername;
+        }
+        if (operatorId != null && operatorId.equals(SYSTEM_OPERATOR_ID)) {
+            return SYSTEM_OPERATOR_NAME;
+        }
+        return SYSTEM_OPERATOR_NAME;
     }
 }

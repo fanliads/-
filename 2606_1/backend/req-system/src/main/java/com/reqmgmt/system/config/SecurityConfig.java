@@ -15,8 +15,10 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 
 /**
@@ -29,20 +31,8 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    /**
-     * 安全过滤链配置
-     */
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-            // 禁用CSRF（前后端分离，使用JWT）
-            .csrf(AbstractHttpConfigurer::disable)
-            // 无状态会话
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            // CORS配置
-            .cors(Customizer.withDefaults())
-            // 异常处理
-            .exceptionHandling(ex -> ex
+    private void applyExceptionHandling(HttpSecurity http) throws Exception {
+        http.exceptionHandling(ex -> ex
                 .authenticationEntryPoint((request, response, authException) -> {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     response.setContentType("application/json;charset=UTF-8");
@@ -55,7 +45,39 @@ public class SecurityConfig {
                     R<Void> result = R.fail(403, "没有访问权限");
                     response.getWriter().write(new ObjectMapper().writeValueAsString(result));
                 })
-            )
+        );
+    }
+
+    /**
+     * 外部提报匿名入口使用独立安全链，避免被主认证链误拦截。
+     */
+    @Bean
+    @Order(1)
+    public SecurityFilterChain externalSubmitFilterChain(HttpSecurity http) throws Exception {
+        http
+            .securityMatcher(new AntPathRequestMatcher("/api/raw-requirements/external-submit", HttpMethod.POST.name()))
+            .csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .cors(Customizer.withDefaults())
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+
+        applyExceptionHandling(http);
+        return http.build();
+    }
+
+    /**
+     * 安全过滤链配置
+     */
+    @Bean
+    @Order(2)
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            // 禁用CSRF（前后端分离，使用JWT）
+            .csrf(AbstractHttpConfigurer::disable)
+            // 无状态会话
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // CORS配置
+            .cors(Customizer.withDefaults())
             // 接口权限配置
             .authorizeHttpRequests(auth -> auth
                 // 放行登录注册接口
@@ -73,6 +95,7 @@ public class SecurityConfig {
             // 在UsernamePasswordAuthenticationFilter之前添加JWT过滤器
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
+        applyExceptionHandling(http);
         return http.build();
     }
 

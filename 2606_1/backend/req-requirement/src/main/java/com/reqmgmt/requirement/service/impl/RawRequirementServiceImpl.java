@@ -31,6 +31,11 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class RawRequirementServiceImpl extends ServiceImpl<RawRequirementMapper, RawRequirement> implements RawRequirementService {
+    private static final String SUBMIT_ORIGIN_INTERNAL = "internal";
+    private static final String SUBMIT_ORIGIN_EXTERNAL = "external";
+    private static final Long EXTERNAL_CREATOR_ID = 0L;
+    private static final String EXTERNAL_DEFAULT_SOURCE = "external";
+    private static final String EXTERNAL_DEFAULT_NAME = "外部提报用户";
 
     private final RequirementLogMapper requirementLogMapper;
     private final RequirementCommentMapper requirementCommentMapper;
@@ -47,19 +52,12 @@ public class RawRequirementServiceImpl extends ServiceImpl<RawRequirementMapper,
     private static final Map<String, String> SUPPLEMENT_TYPE_MAP = new LinkedHashMap<>();
 
     static {
-        STATUS_NAME_MAP.put("pending_evaluate", "待评估");
-        STATUS_NAME_MAP.put("evaluating", "评估中");
-        STATUS_NAME_MAP.put("pending_accept", "待承接");
-        STATUS_NAME_MAP.put("accepted", "已承接");
-        STATUS_NAME_MAP.put("pending_director", "待产品总监判定");
-        STATUS_NAME_MAP.put("pending_design", "待设计");
-        STATUS_NAME_MAP.put("designing", "设计中");
-        STATUS_NAME_MAP.put("designed", "已设计");
-        STATUS_NAME_MAP.put("developing", "开发中");
+        STATUS_NAME_MAP.put("pending_judgement", "待判定");
+        STATUS_NAME_MAP.put("pending_split", "待拆分");
+        STATUS_NAME_MAP.put("in_progress", "开发中");
         STATUS_NAME_MAP.put("online", "已上线");
         STATUS_NAME_MAP.put("rejected", "已拒绝");
         STATUS_NAME_MAP.put("suspended", "已挂起");
-        STATUS_NAME_MAP.put("split", "已拆分待跟进");
         STATUS_NAME_MAP.put("closed", "已关闭");
 
         ACTION_NAME_MAP.put("create", "创建");
@@ -79,27 +77,41 @@ public class RawRequirementServiceImpl extends ServiceImpl<RawRequirementMapper,
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long createRawRequirement(RawRequirementCreateDTO dto) {
+        return doCreateRawRequirement(dto, false);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long createExternalRawRequirement(RawRequirementCreateDTO dto) {
+        dto.setSubmitOrigin(SUBMIT_ORIGIN_EXTERNAL);
+        return doCreateRawRequirement(dto, true);
+    }
+
+    private Long doCreateRawRequirement(RawRequirementCreateDTO dto, boolean externalSubmit) {
         if (StrUtil.isAllBlank(dto.getReqLink(), dto.getRemark())) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "需求单链接和需求备注至少完善一项");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "需求单链接和处理备注至少完善一项");
         }
 
         RawRequirement entity = new RawRequirement();
         BeanUtil.copyProperties(dto, entity);
 
         if (StrUtil.isBlank(entity.getSource())) {
-            entity.setSource("内部");
+            entity.setSource(externalSubmit ? EXTERNAL_DEFAULT_SOURCE : "内部");
+        }
+        if (StrUtil.isBlank(entity.getSubmitOrigin())) {
+            entity.setSubmitOrigin(externalSubmit ? SUBMIT_ORIGIN_EXTERNAL : SUBMIT_ORIGIN_INTERNAL);
         }
         if (StrUtil.isBlank(entity.getProposer())) {
-            entity.setProposer(SecurityUtils.getCurrentUsername());
+            entity.setProposer(resolveOperatorName(externalSubmit));
         }
         if (StrUtil.isBlank(entity.getRegisterName())) {
-            entity.setRegisterName(SecurityUtils.getCurrentUsername());
+            entity.setRegisterName(resolveOperatorName(externalSubmit));
         }
 
         // 生成编号 RAW-YYYYMMDD-NNN
         entity.setReqNo(generateReqNo());
-        entity.setStatus("pending_evaluate");
-        entity.setCreateBy(SecurityUtils.getCurrentUserId());
+        entity.setStatus("pending_judgement");
+        entity.setCreateBy(resolveOperatorId(externalSubmit));
         if (entity.getPriority() == null) {
             entity.setPriority("P2");
         }
@@ -166,6 +178,9 @@ public class RawRequirementServiceImpl extends ServiceImpl<RawRequirementMapper,
         }
         if (dto.getSource() != null) {
             updateWrapper.set(RawRequirement::getSource, dto.getSource());
+        }
+        if (dto.getSubmitOrigin() != null) {
+            updateWrapper.set(RawRequirement::getSubmitOrigin, dto.getSubmitOrigin());
         }
         if (dto.getProposer() != null) {
             updateWrapper.set(RawRequirement::getProposer, dto.getProposer());
@@ -558,6 +573,7 @@ public class RawRequirementServiceImpl extends ServiceImpl<RawRequirementMapper,
         fieldMap.put("title", new String[]{existing.getTitle(), dto.getTitle()});
         fieldMap.put("description", new String[]{existing.getDescription(), dto.getDescription()});
         fieldMap.put("source", new String[]{existing.getSource(), dto.getSource()});
+        fieldMap.put("submitOrigin", new String[]{existing.getSubmitOrigin(), dto.getSubmitOrigin()});
         fieldMap.put("proposer", new String[]{existing.getProposer(), dto.getProposer()});
         fieldMap.put("proposerContact", new String[]{existing.getProposerContact(), dto.getProposerContact()});
         fieldMap.put("projectName", new String[]{existing.getProjectName(), dto.getProjectName()});
@@ -604,8 +620,8 @@ public class RawRequirementServiceImpl extends ServiceImpl<RawRequirementMapper,
         RequirementLog log = new RequirementLog();
         log.setReqType(REQ_TYPE);
         log.setReqId(reqId);
-        log.setOperatorId(SecurityUtils.getCurrentUserId());
-        log.setOperatorName(SecurityUtils.getCurrentUsername());
+        log.setOperatorId(resolveCurrentOperatorId());
+        log.setOperatorName(resolveCurrentOperatorName());
         log.setAction(action);
         log.setFieldName(fieldName);
         log.setOldValue(oldValue);
@@ -620,5 +636,31 @@ public class RawRequirementServiceImpl extends ServiceImpl<RawRequirementMapper,
         } catch (Exception e) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "AI评定上下文保存失败");
         }
+    }
+
+    private Long resolveOperatorId(boolean externalSubmit) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId != null) {
+            return currentUserId;
+        }
+        return externalSubmit ? EXTERNAL_CREATOR_ID : EXTERNAL_CREATOR_ID;
+    }
+
+    private String resolveOperatorName(boolean externalSubmit) {
+        String currentUsername = SecurityUtils.getCurrentUsername();
+        if (StrUtil.isNotBlank(currentUsername)) {
+            return currentUsername;
+        }
+        return externalSubmit ? EXTERNAL_DEFAULT_NAME : EXTERNAL_DEFAULT_NAME;
+    }
+
+    private Long resolveCurrentOperatorId() {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        return currentUserId != null ? currentUserId : EXTERNAL_CREATOR_ID;
+    }
+
+    private String resolveCurrentOperatorName() {
+        String currentUsername = SecurityUtils.getCurrentUsername();
+        return StrUtil.isNotBlank(currentUsername) ? currentUsername : EXTERNAL_DEFAULT_NAME;
     }
 }

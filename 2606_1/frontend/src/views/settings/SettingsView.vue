@@ -1,5 +1,19 @@
 <template>
-  <div class="settings-view">
+  <div v-if="!isCurrentStageOpen" class="disabled-page">
+    <div class="disabled-card">
+      <div class="disabled-badge">暂未开放</div>
+      <h2 class="disabled-title">系统设置已从当前阶段正式入口移出</h2>
+      <p class="disabled-desc">
+        当前阶段先收敛到需求处理主链路，这里的配置能力暂不对正式用户开放，避免把原型态管理页误当成可用后台。
+      </p>
+      <div class="disabled-actions">
+        <button class="action-btn action-btn-primary" @click="router.push('/raw-pool')">前往原始需求池</button>
+        <button class="action-btn" @click="router.push('/my-tasks')">前往我的待办</button>
+      </div>
+    </div>
+  </div>
+
+  <div v-else class="settings-view">
     <!-- 顶部 Tab 切换 -->
     <div class="settings-header">
       <div class="view-tabs">
@@ -170,7 +184,7 @@
       <div class="dialog-form">
         <div class="form-item">
           <label class="form-label">源状态</label>
-          <input v-model="workflowForm.fromStatus" class="form-input" placeholder="如：待评估" />
+          <input v-model="workflowForm.fromStatus" class="form-input" placeholder="如：待判定" />
         </div>
         <div class="form-item">
           <label class="form-label">目标状态</label>
@@ -182,7 +196,7 @@
         </div>
         <div class="form-item">
           <label class="form-label">操作名称</label>
-          <input v-model="workflowForm.actionName" class="form-input" placeholder="如：评估通过" />
+          <input v-model="workflowForm.actionName" class="form-input" placeholder="如：确认推进" />
         </div>
         <div class="form-item">
           <label class="form-label">是否需审批</label>
@@ -311,9 +325,13 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getFlowConfig } from '@/api/workflow'
 import type { FlowConfigNode } from '@/api/workflow'
+
+const router = useRouter()
+const isCurrentStageOpen = false
 
 // ==================== Tab 配置 ====================
 const tabs = [
@@ -337,11 +355,11 @@ interface WorkflowRow {
 }
 
 const rawWorkflowData = ref<WorkflowRow[]>([
-  { id: 1, fromStatus: '待评估', toStatus: '评估中', roles: ['产品经理'], actionName: '开始评估', needApproval: false },
-  { id: 2, fromStatus: '评估中', toStatus: '已评估', roles: ['产品经理', '开发组长'], actionName: '评估通过', needApproval: true },
-  { id: 3, fromStatus: '评估中', toStatus: '已拒绝', roles: ['产品经理'], actionName: '拒绝', needApproval: false },
-  { id: 4, fromStatus: '已评估', toStatus: '待评估', roles: ['管理员'], actionName: '退回', needApproval: false },
-  { id: 5, fromStatus: '待评估', toStatus: '挂起', roles: ['产品经理'], actionName: '挂起', needApproval: false },
+  { id: 1, fromStatus: '待判定', toStatus: '待拆分', roles: ['产品经理', '产品总监'], actionName: '确认推进', needApproval: false },
+  { id: 2, fromStatus: '待判定', toStatus: '已拒绝', roles: ['产品经理'], actionName: '拒绝', needApproval: true },
+  { id: 3, fromStatus: '待判定', toStatus: '已挂起', roles: ['产品经理'], actionName: '挂起', needApproval: true },
+  { id: 4, fromStatus: '待拆分', toStatus: '开发中', roles: ['产品经理', '产品总监', '产品组长'], actionName: '进入开发', needApproval: false },
+  { id: 5, fromStatus: '开发中', toStatus: '已上线', roles: ['产品经理', '产品负责人'], actionName: '标记上线', needApproval: false },
 ])
 
 const productWorkflowData = ref<WorkflowRow[]>([
@@ -620,6 +638,69 @@ loadFlowConfig()
 </script>
 
 <style lang="scss" scoped>
+.disabled-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+.disabled-card {
+  width: min(560px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: var(--shadow);
+}
+
+.disabled-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(0, 113, 227, 0.08);
+  color: var(--primary, #0071e3);
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.disabled-title {
+  margin: 0 0 12px;
+  font-size: 24px;
+  color: var(--text-primary);
+}
+
+.disabled-desc {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.disabled-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.action-btn-primary {
+  border-color: transparent;
+  background: var(--primary, #0071e3);
+  color: #fff;
+}
+
 .settings-view {
   max-width: 1200px;
 }
@@ -895,6 +976,14 @@ loadFlowConfig()
 
 /* 响应式 */
 @media (max-width: 768px) {
+  .disabled-card {
+    padding: 24px;
+  }
+
+  .disabled-title {
+    font-size: 20px;
+  }
+
   .panel-header {
     flex-direction: column;
     align-items: flex-start;
