@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>需求管理平台 - 看板视图</title>
+<style>
+  :root {
+    --bg: #f5f5f7;
+    --surface: #ffffff;
+    --text-primary: #1d1d1f;
+    --text-secondary: #86868b;
+    --border: rgba(0,0,0,0.08);
+    --primary: #0071e3;
+    --primary-hover: #0077ed;
+    --success: #34c759;
+    --warning: #ff9500;
+    --danger: #ff3b30;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
+    --shadow-hover: 0 4px 12px rgba(0,0,0,0.08), 0 16px 32px rgba(0,0,0,0.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.5;
+    overflow: hidden;
+  }
+  .layout { display: flex; height: 100vh; }
+  .sidebar {
+    width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 20px 0;
+  }
+  .logo { padding: 0 24px 24px; font-size: 18px; font-weight: 600; letter-spacing: -0.5px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 24px; margin: 2px 12px;
+    border-radius: var(--radius-sm); cursor: pointer;
+    color: var(--text-secondary); text-decoration: none; font-size: 13px;
+    transition: all 0.2s;
+  }
+  .nav-item:hover, .nav-item.active {
+    background: rgba(0,113,227,0.08); color: var(--primary); font-weight: 500;
+  }
+  .nav-icon { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; }
+
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .header {
+    height: 64px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 32px;
+  }
+  .header-left { display: flex; align-items: center; gap: 24px; }
+  .view-tabs {
+    display: flex; gap: 4px; background: var(--bg); padding: 4px; border-radius: var(--radius-sm);
+  }
+  .view-tab {
+    padding: 6px 16px; border-radius: 6px; font-size: 13px; cursor: pointer;
+    color: var(--text-secondary); text-decoration: none; border: none; background: transparent;
+  }
+  .view-tab.active { background: var(--surface); color: var(--text-primary); font-weight: 500; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .search-box {
+    width: 240px; padding: 8px 14px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--bg); font-size: 13px;
+    outline: none; transition: border 0.2s;
+  }
+  .search-box:focus { border-color: var(--primary); }
+  .btn {
+    padding: 8px 18px; border-radius: var(--radius-sm); border: none; cursor: pointer;
+    font-size: 13px; font-weight: 500; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-hover); }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: #e8e8ed; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--text-secondary); }
+
+  .toolbar {
+    padding: 16px 32px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  }
+  .filter-chip {
+    padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border);
+    background: var(--surface); font-size: 13px; color: var(--text-secondary); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .filter-chip:hover { border-color: var(--primary); color: var(--primary); }
+
+  .board-scroll { flex: 1; overflow-x: auto; padding: 0 32px 24px; }
+  .board {
+    display: flex; gap: 16px; min-width: max-content;
+  }
+  .column {
+    width: 280px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .column-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 4px;
+  }
+  .column-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+  .column-count {
+    background: var(--bg); padding: 2px 8px; border-radius: 10px;
+    font-size: 11px; color: var(--text-secondary); font-weight: 500;
+  }
+  .column-body {
+    background: rgba(0,0,0,0.02); border-radius: var(--radius); padding: 10px;
+    display: flex; flex-direction: column; gap: 8px; min-height: 120px;
+  }
+  .card {
+    background: var(--surface); border-radius: var(--radius-sm); padding: 14px;
+    box-shadow: var(--shadow); cursor: grab; transition: all 0.2s; position: relative;
+    border: 1px solid transparent;
+  }
+  .card:hover { box-shadow: var(--shadow-hover); transform: translateY(-1px); }
+  .card.dragging { opacity: 0.5; transform: rotate(2deg); }
+  .column-body.drag-over { background: rgba(0,113,227,0.06); border: 2px dashed var(--primary); border-radius: var(--radius); }
+  .status-toast {
+    position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
+    background: var(--text-primary); color: #fff; padding: 12px 24px; border-radius: var(--radius-sm);
+    font-size: 13px; z-index: 200; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+  }
+  .status-toast.show { opacity: 1; }
+  .card-badge {
+    position: absolute; top: 10px; right: 10px; width: 8px; height: 8px;
+    border-radius: 50%; background: var(--danger);
+  }
+  .card-priority {
+    display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px;
+    font-weight: 600; margin-bottom: 8px;
+  }
+  .priority-p0 { background: rgba(255,59,48,0.10); color: var(--danger); }
+  .priority-p1 { background: rgba(255,149,0,0.10); color: #b75c00; }
+  .priority-p2 { background: rgba(255,204,0,0.12); color: #9a7d00; }
+  .priority-p3 { background: rgba(142,142,147,0.12); color: var(--text-secondary); }
+  .card-title { font-size: 14px; font-weight: 500; line-height: 1.4; margin-bottom: 10px; }
+  .card-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-secondary); }
+  .card-avatar { width: 22px; height: 22px; border-radius: 50%; background: #e8e8ed; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+  .card-tag {
+    padding: 2px 8px; border-radius: 4px; font-size: 11px; background: rgba(0,113,227,0.08); color: var(--primary);
+  }
+
+  .drawer-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.25); opacity: 0; visibility: hidden;
+    transition: all 0.3s; z-index: 100;
+  }
+  .drawer-overlay.open { opacity: 1; visibility: visible; }
+  .drawer {
+    position: fixed; right: 0; top: 0; bottom: 0; width: 640px; background: var(--surface);
+    box-shadow: -8px 0 32px rgba(0,0,0,0.08); transform: translateX(100%);
+    transition: transform 0.35s cubic-bezier(0.32,0.72,0,1); z-index: 101;
+    display: flex; flex-direction: column;
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer-header {
+    padding: 20px 28px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .drawer-id { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+  .drawer-title { font-size: 18px; font-weight: 600; }
+  .drawer-actions { display: flex; gap: 8px; }
+  .drawer-body { flex: 1; overflow-y: auto; padding: 24px 28px; }
+  .drawer-section { margin-bottom: 28px; }
+  .drawer-section-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .info-item { display: flex; flex-direction: column; gap: 4px; }
+  .info-label { font-size: 12px; color: var(--text-secondary); }
+  .info-value { font-size: 13px; font-weight: 500; }
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500;
+  }
+  .status-eval { background: rgba(0,113,227,0.10); color: var(--primary); }
+  .status-dev { background: rgba(52,199,89,0.10); color: #248a3d; }
+  .drawer-footer { padding: 16px 28px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+  .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--primary); color: var(--primary); }
+  .btn-danger { background: rgba(255,59,48,0.08); color: var(--danger); }
+  .btn-success { background: rgba(52,199,89,0.10); color: #248a3d; }
+
+  .supplement-timeline { display: flex; flex-direction: column; gap: 12px; }
+  .supplement-item {
+    padding: 12px 16px; border-left: 3px solid var(--primary);
+    background: rgba(0,113,227,0.03); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  }
+  .supplement-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .supplement-author { font-size: 13px; font-weight: 500; }
+  .supplement-time { font-size: 11px; color: var(--text-secondary); }
+  .supplement-type {
+    display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px;
+    background: rgba(0,113,227,0.08); color: var(--primary); margin-bottom: 6px;
+  }
+  .supplement-text { font-size: 13px; line-height: 1.6; }
+
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .tab { padding: 10px 16px; font-size: 13px; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 500; }
+
+  .comment-box {
+    border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px;
+    background: var(--bg); min-height: 80px; font-size: 13px; outline: none;
+    resize: vertical; width: 100%;
+  }
+  .comment-box:focus { border-color: var(--primary); }
+
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .board-scroll { padding: 0 16px 16px; }
+    .column { width: 260px; }
+    .drawer { width: 100%; }
+    .header { padding: 0 16px; }
+    .toolbar { padding: 12px 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="logo">需求管理平台</div>
+    <a href="kanban.html" class="nav-item active"><span class="nav-icon">&#9638;</span>看板视图</a>
+    <a href="sprint.html" class="nav-item"><span class="nav-icon">&#8634;</span>迭代版本</a>
+    <a href="raw-pool.html" class="nav-item"><span class="nav-icon">&#9993;</span>原始需求池</a>
+    <a href="product-pool.html" class="nav-item"><span class="nav-icon">&#9776;</span>产品需求池</a>
+    <a href="dashboard.html" class="nav-item"><span class="nav-icon">&#9733;</span>数据看板</a>
+  </aside>
+
+  <main class="main">
+    <header class="header">
+      <div class="header-left">
+        <div class="view-tabs">
+          <a href="kanban.html" class="view-tab active">看板</a>
+          <a href="calendar.html" class="view-tab">日历</a>
+          <a href="priority.html" class="view-tab">优先级</a>
+          <a href="pm-tasks.html" class="view-tab">产品经理任务</a>
+          <a href="sprint.html" class="view-tab">迭代版本</a>
+          <a href="progress.html" class="view-tab">进度看板</a>
+        </div>
+      </div>
+      <div class="header-right">
+        <input class="search-box" placeholder="搜索需求编号、标题...">
+        <a href="submit-form.html" class="btn btn-primary" target="_blank">+ 新建需求</a>
+        <div class="avatar">PM</div>
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <div class="filter-chip">业务线 &#9662;</div>
+      <div class="filter-chip">优先级 &#9662;</div>
+      <div class="filter-chip">负责人 &#9662;</div>
+      <div class="filter-chip">迭代版本 &#9662;</div>
+    </div>
+
+    <div class="board-scroll">
+      <div class="board" id="kanbanBoard">
+        <div class="column">
+          <div class="column-header"><span class="column-title">待项目经理评估</span><span class="column-count">3</span></div>
+          <div class="column-body" data-status="待项目经理评估">
+            <div class="card" draggable="true" data-id="RAW-20260520-001" onclick="openDrawer('RAW-20260520-001', '台州各区县采购平台优化')">
+              <span class="card-badge"></span>
+              <span class="card-priority priority-p1">P1</span>
+              <div class="card-title">台州各区县采购平台优化</div>
+              <div class="card-meta"><div class="card-avatar">饭</div><span>5-25 截止</span><span class="card-tag">校园G端</span></div>
+            </div>
+            <div class="card" draggable="true" data-id="RAW-20260520-002" onclick="openDrawer('RAW-20260520-002', '南昌青山湖区智慧食堂项目系统修改')">
+              <span class="card-priority priority-p0">P0</span>
+              <div class="card-title">南昌青山湖区智慧食堂项目系统修改</div>
+              <div class="card-meta"><div class="card-avatar">饭</div><span>5-31 截止</span><span class="card-tag">校园G端</span></div>
+            </div>
+            <div class="card" draggable="true" data-id="RAW-20260520-004" onclick="openDrawer('RAW-20260520-004', '嘉兴市仓储屏系统优化')">
+              <span class="card-priority priority-p2">P2</span>
+              <div class="card-title">嘉兴市仓储屏系统优化</div>
+              <div class="card-meta"><div class="card-avatar">饭</div><span>5-30 截止</span><span class="card-tag">校园G端</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="column-header"><span class="column-title">待产品总监判定</span><span class="column-count">1</span></div>
+          <div class="column-body" data-status="待产品总监判定">
+            <div class="card" draggable="true" data-id="RAW-20260520-003" onclick="openDrawer('RAW-20260520-003', '山东互联网+明厨亮灶项目')">
+              <span class="card-badge"></span>
+              <span class="card-priority priority-p1">P1</span>
+              <div class="card-title">山东互联网+明厨亮灶项目</div>
+              <div class="card-meta"><div class="card-avatar">郑</div><span>6-11 截止</span><span class="card-tag">市监G端</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="column-header"><span class="column-title">待产品组长过滤</span><span class="column-count">2</span></div>
+          <div class="column-body" data-status="待产品组长过滤">
+            <div class="card" draggable="true" data-id="PRD-20260515-002">
+              <span class="card-priority priority-p1">P1</span>
+              <div class="card-title">采购平台供应商入驻流程优化</div>
+              <div class="card-meta"><div class="card-avatar">李</div><span>6-15 截止</span><span class="card-tag">校园G端</span></div>
+            </div>
+            <div class="card" draggable="true" data-id="PRD-20260516-003">
+              <span class="card-priority priority-p2">P2</span>
+              <div class="card-title">仓储屏数据同步延迟优化</div>
+              <div class="card-meta"><div class="card-avatar">王</div><span>6-20 截止</span><span class="card-tag">校园G端</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="column-header"><span class="column-title">待产品经理接手</span><span class="column-count">1</span></div>
+          <div class="column-body" data-status="待产品经理接手">
+            <div class="card" draggable="true" data-id="PRD-20260519-007">
+              <span class="card-priority priority-p1">P1</span>
+              <div class="card-title">校园食堂菜谱营养分析模块</div>
+              <div class="card-meta"><div class="card-avatar">陈</div><span>6-25 截止</span><span class="card-tag">校园G端</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="column-header"><span class="column-title">待办需求</span><span class="column-count">1</span></div>
+          <div class="column-body" data-status="待办需求">
+            <div class="card" draggable="true" data-id="PRD-20260517-008">
+              <span class="card-priority priority-p2">P2</span>
+              <div class="card-title">供应商评价体系建设</div>
+              <div class="card-meta"><div class="card-avatar">吴</div><span>7-01 截止</span><span class="card-tag">校园G端</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="column-header"><span class="column-title">调研中</span><span class="column-count">1</span></div>
+          <div class="column-body" data-status="调研中">
+            <div class="card" draggable="true" data-id="PRD-20260518-009">
+              <span class="card-badge"></span>
+              <span class="card-priority priority-p1">P1</span>
+              <div class="card-title">区域教育局数据驾驶舱需求调研</div>
+              <div class="card-meta"><div class="card-avatar">郑</div><span>6-08 截止</span><span class="card-tag">市监G端</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="column-header"><span class="column-title">设计中</span><span class="column-count">3</span></div>
+          <div class="column-body" data-status="设计中">
+            <div class="card" draggable="true" data-id="PRD-20260518-001">
+              <span class="card-priority priority-p0">P0</span>
+              <div class="card-title">智慧食堂支付通道扩容</div>
+              <div class="card-meta"><div class="card-avatar">陈</div><span>5-28 截止</span><span class="card-tag">校园G端</span></div>
+            </div>
+            <div class="card" draggable="true" data-id="PRD-20260515-010">
+              <span class="card-priority priority-p1">P1</span>
+              <div class="card-title">明厨亮灶视频AI识别升级</div>
+              <div class="card-meta"><div class="card-avatar">郑</div><span>6-05 截止</span><span class="card-tag">市监G端</span></div>
+            </div>
+            <div class="card" draggable="true" data-id="PRD-20260510-005">
+              <span class="card-priority priority-p2">P2</span>
+              <div class="card-title">仓储屏UI交互改版</div>
+              <div class="card-meta"><div class="card-avatar">刘</div><span>6-18 截止</span><span class="card-tag">校园G端</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="column-header"><span class="column-title">等待用户确认</span><span class="column-count">1</span></div>
+          <div class="column-body" data-status="等待用户确认">
+            <div class="card" draggable="true" data-id="PRD-20260512-011">
+              <span class="card-priority priority-p1">P1</span>
+              <div class="card-title">学校订餐系统家长端优化</div>
+              <div class="card-meta"><div class="card-avatar">陈</div><span>6-02 截止</span><span class="card-tag">校园G端</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="column-header"><span class="column-title">研发中</span><span class="column-count">2</span></div>
+          <div class="column-body" data-status="研发中">
+            <div class="card" draggable="true" data-id="PRD-20260510-006">
+              <span class="card-priority priority-p1">P1</span>
+              <div class="card-title">教育局数据报表导出功能</div>
+              <div class="card-meta"><div class="card-avatar">张</div><span>5-22 截止</span><span class="card-tag">校园G端</span></div>
+            </div>
+            <div class="card" draggable="true" data-id="PRD-20260512-007">
+              <span class="card-priority priority-p2">P2</span>
+              <div class="card-title">监管大屏实时数据对接</div>
+              <div class="card-meta"><div class="card-avatar">赵</div><span>6-01 截止</span><span class="card-tag">市监G端</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="column-header"><span class="column-title">测试中</span><span class="column-count">1</span></div>
+          <div class="column-body" data-status="测试中">
+            <div class="card" draggable="true" data-id="PRD-20260508-012">
+              <span class="card-priority priority-p0">P0</span>
+              <div class="card-title">食堂消费流水对账优化</div>
+              <div class="card-meta"><div class="card-avatar">周</div><span>5-21 截止</span><span class="card-tag">校园G端</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="column-header"><span class="column-title">已上线</span><span class="column-count">1</span></div>
+          <div class="column-body" data-status="已上线">
+            <div class="card" draggable="true" data-id="PRD-20260501-013">
+              <span class="card-priority priority-p1">P1</span>
+              <div class="card-title">供应商资质审核流程</div>
+              <div class="card-meta"><div class="card-avatar">吴</div><span>已上线</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="column-header"><span class="column-title">已关闭</span><span class="column-count">1</span></div>
+          <div class="column-body" data-status="已关闭">
+            <div class="card" draggable="true" data-id="PRD-20260420-014" style="opacity:0.7;">
+              <span class="card-priority priority-p3">P3</span>
+              <div class="card-title">旧版采购报表迁移</div>
+              <div class="card-meta"><div class="card-avatar">张</div><span>已关闭</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div>
+      <div class="drawer-id" id="drawerId">RAW-20260520-001</div>
+      <div class="drawer-title" id="drawerTitle">台州各区县采购平台优化</div>
+    </div>
+    <div class="drawer-actions">
+      <span class="status-badge status-eval" id="drawerStatus">待项目经理评估</span>
+      <button class="btn btn-ghost" onclick="closeDrawer()">关闭</button>
+    </div>
+  </div>
+  <div class="drawer-body">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab(this, 'tab-overview')">概览</div>
+      <div class="tab" onclick="switchTab(this, 'tab-timeline')">流转记录</div>
+      <div class="tab" onclick="switchTab(this, 'tab-comments')">评论</div>
+    </div>
+
+    <div id="tab-overview" class="tab-content">
+      <div class="drawer-section">
+        <div class="drawer-section-title">基础信息</div>
+        <div class="info-grid">
+          <div class="info-item"><div class="info-label">来源</div><div class="info-value">商务</div></div>
+          <div class="info-item"><div class="info-label">提出人</div><div class="info-value">饭粒</div></div>
+          <div class="info-item"><div class="info-label">提出日期</div><div class="info-value">2026-05-19</div></div>
+          <div class="info-item"><div class="info-label">关联项目</div><div class="info-value">台州各区县教育局</div></div>
+          <div class="info-item"><div class="info-label">需求单链接</div><div class="info-value"><a href="#">金蝶云文档</a></div></div>
+          <div class="info-item"><div class="info-label">当前处理人</div><div class="info-value">项目经理-张三</div></div>
+        </div>
+      </div>
+
+      <div class="drawer-section">
+        <div class="drawer-section-title">原始需求描述</div>
+        <p style="font-size:13px;line-height:1.7;color:var(--text-primary);">台州各区县教育局反馈，现有采购平台在供应商入驻环节审核周期过长，希望能优化审核流程，支持批量导入和自动资质核验。</p>
+      </div>
+
+      <div class="drawer-section">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div class="drawer-section-title" style="margin:0;">内容补充</div>
+          <button class="btn btn-ghost" style="padding:4px 12px;font-size:12px;" onclick="alert('弹出补充内容弹窗：选择补充类型并填写内容')">+ 补充内容</button>
+        </div>
+        <div class="supplement-timeline">
+          <div class="supplement-item">
+            <div class="supplement-header">
+              <span class="supplement-author">项目经理-张三</span>
+              <span class="supplement-time">2026-05-20 14:32</span>
+            </div>
+            <span class="supplement-type">客户背景补充</span>
+            <div class="supplement-text">经与台州教育局电话沟通，当前审核平均耗时7个工作日，主要卡在人工核对营业执照和食品经营许可证环节。客户期望压缩至2个工作日内。</div>
+          </div>
+          <div class="supplement-item">
+            <div class="supplement-header">
+              <span class="supplement-author">项目经理-张三</span>
+              <span class="supplement-time">2026-05-20 16:10</span>
+            </div>
+            <span class="supplement-type">技术细节补充</span>
+            <div class="supplement-text">建议接入天眼查/企查查API进行企业资质自动核验，可减少80%人工审核工作量。需评估接口成本。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-timeline" class="tab-content" style="display:none;">
+      <div class="supplement-timeline">
+        <div class="supplement-item">
+          <div class="supplement-header"><span class="supplement-author">饭粒</span><span class="supplement-time">2026-05-19 09:15</span></div>
+          <div class="supplement-text">提交原始需求单</div>
+        </div>
+        <div class="supplement-item">
+          <div class="supplement-header"><span class="supplement-author">系统</span><span class="supplement-time">2026-05-19 09:15</span></div>
+          <div class="supplement-text">需求单状态变更为「待项目经理评估」，通知项目经理-张三</div>
+        </div>
+        <div class="supplement-item">
+          <div class="supplement-header"><span class="supplement-author">项目经理-张三</span><span class="supplement-time">2026-05-20 14:32</span></div>
+          <div class="supplement-text">补充内容：客户背景补充</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-comments" class="tab-content" style="display:none;">
+      <div style="margin-bottom:16px;">
+        <div style="padding:12px;background:#f5f5f7;border-radius:8px;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-weight:500;font-size:13px;">项目经理-张三</span><span style="font-size:11px;color:var(--text-secondary);">2026-05-20 14:35</span></div>
+          <div style="font-size:13px;">已补充客户背景和技术细节，请产品总监评估时参考。</div>
+        </div>
+      </div>
+      <textarea class="comment-box" placeholder="输入评论，@提及同事..."></textarea>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px;"><button class="btn btn-primary">发送</button></div>
+    </div>
+  </div>
+  <div class="drawer-footer">
+    <button class="btn btn-danger">拒绝</button>
+    <button class="btn btn-ghost">挂起</button>
+    <button class="btn btn-success">承接</button>
+  </div>
+</div>
+
+<div class="status-toast" id="statusToast"></div>
+
+<script>
+/* === Drawer === */
+function openDrawer(id, title) {
+  document.getElementById('drawerId').textContent = id;
+  document.getElementById('drawerTitle').textContent = title;
+  document.getElementById('drawerOverlay').classList.add('open');
+  document.getElementById('drawer').classList.add('open');
+}
+function closeDrawer() {
+  document.getElementById('drawerOverlay').classList.remove('open');
+  document.getElementById('drawer').classList.remove('open');
+}
+function switchTab(el, id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+  document.getElementById(id).style.display = 'block';
+}
+
+/* === Drag & Drop === */
+let draggedCard = null;
+let dragSourceBody = null;
+
+function showToast(msg) {
+  const toast = document.getElementById('statusToast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+function updateColumnCount(col) {
+  const count = col.querySelectorAll('.card').length;
+  const countEl = col.querySelector('.column-count');
+  if (countEl) countEl.textContent = count;
+}
+
+// Card drag events
+document.querySelectorAll('.card[draggable]').forEach(card => {
+  card.addEventListener('dragstart', function(e) {
+    draggedCard = this;
+    dragSourceBody = this.parentElement;
+    this.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', this.dataset.id || '');
+  });
+  card.addEventListener('dragend', function() {
+    this.classList.remove('dragging');
+    document.querySelectorAll('.column-body').forEach(b => b.classList.remove('drag-over'));
+    draggedCard = null;
+  });
+});
+
+// Column body drop events
+document.querySelectorAll('.column-body').forEach(body => {
+  body.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    this.classList.add('drag-over');
+  });
+  body.addEventListener('dragleave', function() {
+    this.classList.remove('drag-over');
+  });
+  body.addEventListener('drop', function(e) {
+    e.preventDefault();
+    this.classList.remove('drag-over');
+    if (!draggedCard) return;
+    const newStatus = this.dataset.status;
+    const oldStatus = dragSourceBody.dataset.status;
+    if (oldStatus === newStatus) return;
+    this.appendChild(draggedCard);
+    updateColumnCount(dragSourceBody.closest('.column'));
+    updateColumnCount(this.closest('.column'));
+    const title = draggedCard.querySelector('.card-title')?.textContent || '需求';
+    showToast('✓ ' + title + '：' + oldStatus + ' → ' + newStatus);
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>系统设置 - 优先级规则配置</title>
+<style>
+  :root {
+    --bg: #f5f5f7;
+    --surface: #ffffff;
+    --surface-soft: #f8fbff;
+    --text-primary: #1d1d1f;
+    --text-secondary: #86868b;
+    --border: rgba(0, 0, 0, 0.08);
+    --primary: #0071e3;
+    --success: #34c759;
+    --warning: #ff9500;
+    --danger: #ff3b30;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.05);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 24px;
+  }
+  .settings-view {
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+  .settings-header {
+    margin-bottom: 16px;
+  }
+  .view-tabs, .sub-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .view-tab {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-secondary);
+    padding: 8px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .view-tab.active {
+    background: rgba(0,113,227,0.10);
+    color: var(--primary);
+    border-color: rgba(0,113,227,0.16);
+  }
+  .settings-content {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .tab-panel {
+    padding: 20px;
+  }
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .panel-title {
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .panel-subtitle {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+  .btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); }
+  .btn-danger { background: rgba(255,59,48,0.08); color: var(--danger); }
+  .grid {
+    display: grid;
+    grid-template-columns: 1.5fr 0.9fr;
+    gap: 18px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .card-head {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+  }
+  .card-title { font-size: 15px; font-weight: 700; }
+  .card-desc { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+  .card-body { padding: 18px; }
+  .field { margin-bottom: 16px; }
+  .label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+  .input, .textarea, select {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-soft);
+    padding: 12px 14px;
+    font-size: 14px;
+    outline: none;
+  }
+  .textarea {
+    min-height: 420px;
+    resize: vertical;
+    line-height: 1.7;
+    font-family: "SFMono-Regular", Consolas, monospace;
+  }
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .tag-ok { background: rgba(52,199,89,0.12); color: #248a3d; }
+  .tag-warn { background: rgba(255,149,0,0.14); color: #9a6200; }
+  .tips {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .tip {
+    background: #f8fbff;
+    border: 1px solid rgba(0,113,227,0.1);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .tip-k { font-size: 11px; color: var(--primary); margin-bottom: 4px; font-weight: 700; }
+  .tip-v { font-size: 12px; color: #4f5965; line-height: 1.7; }
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .data-table th, .data-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+  }
+  .data-table th {
+    color: var(--text-secondary);
+    font-weight: 600;
+    background: #fafbfd;
+  }
+  .code-tag {
+    display: inline-block;
+    background: #f3f6fa;
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+  .sample {
+    background: #0f1724;
+    color: #d7e4ff;
+    border-radius: 14px;
+    padding: 14px;
+    font-size: 12px;
+    line-height: 1.75;
+    white-space: pre-line;
+  }
+  .insight {
+    background: linear-gradient(180deg, #fff9f1, #fff);
+    border: 1px solid rgba(255,149,0,0.12);
+    border-radius: 14px;
+    padding: 14px;
+  }
+  .insight ul { padding-left: 18px; font-size: 12px; line-height: 1.8; color: #5b5b62; }
+  .mini-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .metric {
+    background: linear-gradient(180deg, #eef6ff, #fff);
+    border: 1px solid rgba(0,113,227,0.12);
+    border-radius: 14px;
+    padding: 14px;
+  }
+  .metric-k { font-size: 11px; color: #57708f; margin-bottom: 6px; }
+  .metric-v { font-size: 20px; font-weight: 700; color: var(--primary); }
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1d1d1f;
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 10px;
+    opacity: 0;
+    transition: opacity 0.25s;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<div class="settings-view">
+  <div class="settings-header">
+    <div class="view-tabs">
+      <button class="view-tab">状态流配置</button>
+      <button class="view-tab">业务线管理</button>
+      <button class="view-tab">标签管理</button>
+      <button class="view-tab">用户管理</button>
+      <button class="view-tab active">AI 配置</button>
+    </div>
+  </div>
+
+  <div class="settings-content">
+    <div class="tab-panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">AI 配置</div>
+          <div class="panel-subtitle">将优先级规则维护和模型接入配置都并入现有系统设置页，而不是额外新建导航页面。</div>
+        </div>
+        <div class="sub-tabs">
+          <button class="view-tab active" onclick="switchSubTab('rules', this)">优先级规则</button>
+          <button class="view-tab" onclick="switchSubTab('model', this)">模型接入</button>
+        </div>
+      </div>
+
+      <div id="rulesTab">
+        <div class="grid">
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <div class="card-title">优先级规则正文</div>
+                <div class="card-desc">业务负责维护自然语言规则，系统在判级时自动读取当前生效版本。</div>
+              </div>
+              <span class="tag tag-ok">当前生效 · V3.4</span>
+            </div>
+            <div class="card-body">
+              <div class="field">
+                <label class="label">规则名称</label>
+                <input class="input" value="原始需求优先级定级规则 - 2026 Q2 校准版">
+              </div>
+              <div class="field">
+                <label class="label">规则正文</label>
+                <textarea class="textarea"># 优先级定级原则
+
+## P0
+- 明确影响已签约客户上线、验收或回款
+- 预计 7 天内必须推进，否则会产生重大商务或交付风险
+- 涉及核心生产事故、严重合规问题、重大舆情风险
+
+## P1
+- 对重点客户或重点项目有明确业务价值
+- 不立即处理不会导致事故，但会明显影响项目节奏、客户满意度或关键指标
+- 多方催办，且期望上线时间明确
+
+## P2
+- 常规优化需求，价值明确但时效性一般
+- 主要影响体验、效率或局部流程
+- 没有明确紧急约束，适合纳入正常排期
+
+## P3
+- 改进建议、长期规划项、表达较模糊的方向性诉求
+- 当前缺少明确业务价值或优先推动理由
+- 没有上线时间压力，也不影响存量项目推进
+
+## 判定补充说明
+- 若描述中出现“已签约客户”“月底验收”“影响回款”“监管检查”“生产故障”等关键词，需要优先审查是否进入 P0 / P1
+- 若信息不足，不要硬判高优，默认更偏向 P2，并提示需要人工复核</textarea>
+              </div>
+              <div class="tips">
+                <div class="tip"><div class="tip-k">编写建议</div><div class="tip-v">每个级别尽量给出明确条件，不要只写“很重要”“比较紧急”。</div></div>
+                <div class="tip"><div class="tip-k">减少歧义</div><div class="tip-v">“重点客户”之类模糊词，最好补充判断范围与触发条件。</div></div>
+                <div class="tip"><div class="tip-k">利于模型理解</div><div class="tip-v">建议按 P0-P3 分层，搭配时效、影响面、典型信号描述。</div></div>
+              </div>
+              <div class="toolbar">
+                <span class="tag tag-warn">系统提示词模板固定，不对普通业务用户开放</span>
+                <div style="display:flex;gap:10px;">
+                  <button class="btn btn-ghost" onclick="showToast('已保存为草稿，当前未生效')">保存草稿</button>
+                  <button class="btn btn-primary" onclick="showToast('规则已发布为 V3.4，后续 AI 判级将自动读取新版本')">保存并生效</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            <div class="mini-metrics">
+              <div class="metric"><div class="metric-k">当前生效版本</div><div class="metric-v">V3.4</div></div>
+              <div class="metric"><div class="metric-k">近 7 日人工改写率</div><div class="metric-v">12%</div></div>
+              <div class="metric"><div class="metric-k">今日 AI 判级数</div><div class="metric-v">24</div></div>
+              <div class="metric"><div class="metric-k">降级待补充</div><div class="metric-v">2</div></div>
+            </div>
+
+            <div class="card">
+              <div class="card-head">
+                <div>
+                  <div class="card-title">版本记录</div>
+                  <div class="card-desc">直接沿用设置页里的管理面板风格。</div>
+                </div>
+              </div>
+              <div class="card-body" style="padding:0;">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>版本</th>
+                      <th>更新时间</th>
+                      <th>更新人</th>
+                      <th>说明</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><span class="code-tag">V3.4</span></td>
+                      <td>2026-06-08 10:24</td>
+                      <td>陈总监</td>
+                      <td>新增验收 / 回款 / 检查类规则，收紧 P0 范围</td>
+                    </tr>
+                    <tr>
+                      <td><span class="code-tag">V3.3</span></td>
+                      <td>2026-06-04 18:10</td>
+                      <td>王产品</td>
+                      <td>补充“签约客户”口径，但未区分交付时点</td>
+                    </tr>
+                    <tr>
+                      <td><span class="code-tag">V3.2</span></td>
+                      <td>2026-06-01 09:40</td>
+                      <td>陈总监</td>
+                      <td>首次要求 AI 输出命中规则摘要</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head">
+                <div>
+                  <div class="card-title">推荐规则写法</div>
+                  <div class="card-desc">帮助业务写出模型更容易理解的规则。</div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="sample">推荐格式：
+
+1. 先分级定义 P0 / P1 / P2 / P3
+2. 每级写清：
+   - 业务影响
+   - 时间约束
+   - 典型触发信号
+3. 再写补充规则：
+   - 信息不足如何处理
+   - 冲突条件如何取高
+   - 哪些词不应单独决定高优</div>
+              </div>
+            </div>
+
+            <div class="insight">
+              <div class="card-title" style="margin-bottom:10px;">误判高发提醒</div>
+              <ul>
+                <li>“领导关注”经常被过度放大，但没有交付约束时不应直接升到 P0。</li>
+                <li>“客户催办”需要结合签约状态、验收节点和回款影响判断。</li>
+                <li>描述过短的需求容易被模型用关键词猜测，建议在原始需求池补充上下文后再重判。</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="modelTab" style="display:none;">
+        <div class="grid">
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <div class="card-title">模型接入配置</div>
+                <div class="card-desc">将 API Key、Base URL、模型名等技术参数与业务规则分离管理。</div>
+              </div>
+              <span class="tag tag-ok">已启用</span>
+            </div>
+            <div class="card-body">
+              <div class="field"><label class="label">模型供应商</label><select><option selected>OpenAI Compatible</option><option>OpenAI</option><option>Azure OpenAI</option></select></div>
+              <div class="field"><label class="label">Base URL</label><input class="input" value="https://api.example.com/v1"></div>
+              <div class="field"><label class="label">API Key</label><input class="input" value="sk-********************************"></div>
+              <div class="field"><label class="label">模型名称</label><input class="input" value="gpt-4.1-mini"></div>
+              <div class="field"><label class="label">超时（秒）</label><input class="input" value="30"></div>
+              <div class="toolbar">
+                <button class="btn btn-ghost" onclick="showToast('已执行连通性测试（演示）')">测试连接</button>
+                <button class="btn btn-primary" onclick="showToast('模型接入配置已保存')">保存配置</button>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            <div class="card">
+              <div class="card-head"><div><div class="card-title">说明</div><div class="card-desc">这一块应该和规则配置并列存在于系统设置中。</div></div></div>
+              <div class="card-body" style="font-size:12px;color:#5a6573;line-height:1.8;">
+                业务规则由产品/管理员维护，模型接入参数由技术或管理员维护。两者分开，才能既支持规则频繁调整，又避免 API Key 和模型配置暴露给普通业务用户。
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+function switchSubTab(tab, btn) {
+  document.querySelectorAll('.sub-tabs .view-tab').forEach(node => node.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('rulesTab').style.display = tab === 'rules' ? 'block' : 'none';
+  document.getElementById('modelTab').style.display = tab === 'model' ? 'block' : 'none';
+}
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.style.opacity = '1';
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer = setTimeout(() => toast.style.opacity = '0', 2400);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>需求管理平台 - 产品需求池</title>
+<style>
+  :root {
+    --bg: #f5f5f7; --surface: #ffffff; --text-primary: #1d1d1f; --text-secondary: #86868b;
+    --border: rgba(0,0,0,0.08); --primary: #0071e3; --primary-hover: #0077ed;
+    --success: #34c759; --warning: #ff9500; --danger: #ff3b30;
+    --radius: 12px; --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--text-primary); font-size: 14px; line-height: 1.5; overflow: hidden;
+  }
+  .layout { display: flex; height: 100vh; }
+  .sidebar {
+    width: 220px; background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 20px 0;
+  }
+  .logo { padding: 0 24px 24px; font-size: 18px; font-weight: 600; letter-spacing: -0.5px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 12px; padding: 10px 24px; margin: 2px 12px;
+    border-radius: var(--radius-sm); cursor: pointer; color: var(--text-secondary); text-decoration: none; font-size: 13px; transition: all 0.2s;
+  }
+  .nav-item:hover, .nav-item.active { background: rgba(0,113,227,0.08); color: var(--primary); font-weight: 500; }
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .header {
+    height: 64px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 32px;
+  }
+  .header-left { display: flex; align-items: center; gap: 24px; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .search-box { width: 240px; padding: 8px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg); font-size: 13px; outline: none; }
+  .btn { padding: 8px 18px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-success { background: rgba(52,199,89,0.10); color: #248a3d; }
+  .btn-danger { background: rgba(255,59,48,0.08); color: var(--danger); }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: #e8e8ed; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--text-secondary); }
+  .filter-chip { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); font-size: 13px; color: var(--text-secondary); cursor: pointer; }
+
+  .content-scroll { flex: 1; overflow-y: auto; padding: 24px 32px; }
+  .pool-section { margin-bottom: 24px; }
+  .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .section-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .section-title { font-size: 14px; font-weight: 600; }
+  .section-count { font-size: 12px; color: var(--text-secondary); background: var(--bg); padding: 2px 10px; border-radius: 10px; }
+  .table-wrap { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .data-table th { text-align: left; padding: 12px 16px; background: var(--bg); font-weight: 600; color: var(--text-secondary); font-size: 12px; border-bottom: 1px solid var(--border); }
+  .data-table td { padding: 14px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: rgba(0,113,227,0.02); }
+  .req-title { font-weight: 500; margin-bottom: 4px; }
+  .req-desc { font-size: 12px; color: var(--text-secondary); }
+  .status-tag { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+  .status-filter { background: rgba(0,113,227,0.10); color: var(--primary); }
+  .status-dispatch { background: rgba(52,199,89,0.10); color: #248a3d; }
+  .status-hold { background: rgba(142,142,147,0.10); color: var(--text-secondary); }
+  .action-group { display: flex; gap: 6px; }
+  .parent-link { font-family: monospace; font-size: 11px; color: var(--primary); text-decoration: none; cursor: pointer; }
+  .parent-link:hover { text-decoration: underline; }
+
+  /* Raw Requirement Preview Drawer */
+  .preview-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.2); z-index: 500; opacity: 0; visibility: hidden; transition: all 0.3s; }
+  .preview-overlay.open { opacity: 1; visibility: visible; }
+  .preview-drawer {
+    position: fixed; top: 0; right: -560px; width: 560px; height: 100vh;
+    background: var(--surface); box-shadow: -8px 0 32px rgba(0,0,0,0.12);
+    z-index: 600; transition: right 0.35s cubic-bezier(0.4,0,0.2,1);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .preview-drawer.open { right: 0; }
+  .preview-header {
+    padding: 20px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+  .preview-header-left { display: flex; align-items: center; gap: 12px; }
+  .preview-raw-id { font-family: monospace; font-size: 12px; color: var(--text-secondary); background: var(--bg); padding: 2px 10px; border-radius: 4px; }
+  .preview-title { font-size: 16px; font-weight: 600; }
+  .preview-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary); padding: 4px 8px; border-radius: 4px; transition: all 0.2s; }
+  .preview-close:hover { background: var(--bg); color: var(--text-primary); }
+  .preview-body { flex: 1; overflow-y: auto; padding: 24px; }
+  .preview-section { margin-bottom: 24px; }
+  .preview-section-title { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+  .preview-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .preview-info-item { }
+  .preview-info-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 2px; }
+  .preview-info-value { font-size: 13px; font-weight: 500; }
+  .preview-desc { font-size: 13px; line-height: 1.8; color: var(--text-primary); background: var(--bg); padding: 16px; border-radius: var(--radius-sm); }
+  .preview-status { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+  .preview-status-eval { background: rgba(0,113,227,0.10); color: var(--primary); }
+  .preview-status-design-wait { background: rgba(255,149,0,0.10); color: #c77800; }
+  .preview-status-dev { background: rgba(52,199,89,0.10); color: #248a3d; }
+  .preview-status-empty { background: rgba(142,142,147,0.10); color: var(--text-secondary); }
+  .preview-priority-tag { display: inline-block; padding: 2px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+  .preview-p0 { background: rgba(255,59,48,0.10); color: var(--danger); }
+  .preview-p1 { background: rgba(255,149,0,0.10); color: #b75c00; }
+  .preview-p2 { background: rgba(255,204,0,0.12); color: #9a7d00; }
+  .preview-related-prds { display: flex; flex-direction: column; gap: 8px; }
+  .preview-prd-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--bg); border-radius: var(--radius-sm); font-size: 13px; }
+  .preview-prd-id { font-family: monospace; font-size: 11px; color: var(--primary); }
+  .preview-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; flex-shrink: 0; }
+  .editable { position: relative; cursor: pointer; border-bottom: 1px dashed rgba(0,113,227,0.3); padding-bottom: 1px; transition: border-color 0.2s; }
+  .editable:hover { border-bottom-color: var(--primary); }
+  .editable::after { content: "\270E"; font-size: 10px; color: var(--primary); opacity: 0; margin-left: 4px; transition: opacity 0.2s; }
+  .editable:hover::after { opacity: 1; }
+  .inline-select { padding: 3px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: transparent; font-size: 12px; color: var(--text-primary); cursor: pointer; appearance: auto; }
+  .inline-select:hover { border-color: var(--primary); }
+  .inline-input { padding: 3px 8px; border-radius: var(--radius-sm); border: 1px solid transparent; background: transparent; font-size: 12px; color: var(--text-primary); width: 100%; transition: border-color 0.2s; }
+  .inline-input:hover, .inline-input:focus { border-color: var(--primary); outline: none; }
+  .type-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+  .type-optimize { background: rgba(0,113,227,0.08); color: var(--primary); }
+  .type-issue { background: rgba(255,149,0,0.10); color: #c77800; }
+  .type-defect { background: rgba(255,59,48,0.08); color: var(--danger); }
+  .type-plan { background: rgba(52,199,89,0.10); color: #248a3d; }
+  .sprint-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; background: rgba(0,113,227,0.06); color: var(--text-secondary); border: 1px dashed var(--border); cursor: pointer; }
+  .sprint-tag:hover { border-color: var(--primary); color: var(--primary); }
+  .view-toggle { display: flex; gap: 2px; background: var(--bg); border-radius: var(--radius-sm); padding: 2px; }
+  .view-toggle-btn { padding: 5px 12px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-weight: 500; color: var(--text-secondary); background: transparent; transition: all 0.2s; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .view-toggle-btn.active { background: var(--surface); color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .group-row td { background: rgba(0,113,227,0.03); cursor: pointer; transition: background 0.2s; }
+  .group-row:hover td { background: rgba(0,113,227,0.06) !important; }
+  .group-header { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 13px; }
+  .group-arrow { font-size: 10px; color: var(--text-secondary); transition: transform 0.2s; display: inline-block; }
+  .group-arrow.collapsed { transform: rotate(-90deg); }
+  .group-raw-id { font-family: monospace; font-size: 11px; color: var(--text-secondary); }
+  .split-badge { font-size: 11px; color: var(--primary); background: rgba(0,113,227,0.08); padding: 1px 8px; border-radius: 10px; font-weight: 500; }
+  .child-row td:first-child { padding-left: 32px; }
+  .child-row td { border-left: 3px solid rgba(0,113,227,0.12); }
+  .child-row td:first-child { border-left: 3px solid rgba(0,113,227,0.12); }
+  .flat-view .child-row td:first-child { padding-left: 16px; border-left: none; }
+  .flat-view .child-row td { border-left: none; }
+  .direct-badge { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 500; background: rgba(52,199,89,0.10); color: #248a3d; margin-left: 6px; vertical-align: middle; }
+  .standalone-row td { border-left: 3px solid rgba(52,199,89,0.18); }
+  .standalone-row td:first-child { border-left: 3px solid rgba(52,199,89,0.18); }
+  .no-raw { color: var(--text-secondary); font-size: 12px; }
+  .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.35); display: none; align-items: center; justify-content: center; z-index: 1000; }
+  .modal-overlay.show { display: flex; }
+  .modal { background: var(--surface); border-radius: var(--radius); width: 640px; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+  .modal-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .modal-title { font-size: 16px; font-weight: 600; }
+  .modal-close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--text-secondary); padding: 4px; }
+  .modal-body { padding: 20px 24px; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+  .form-group { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+  .form-label .required { color: var(--danger); margin-left: 2px; }
+  .form-input { width: 100%; padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 13px; outline: none; transition: border-color 0.2s; }
+  .form-input:focus { border-color: var(--primary); }
+  .form-select { width: 100%; padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 13px; outline: none; appearance: auto; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-hint { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
+  .assign-section { margin-top: 16px; padding: 12px 16px; background: var(--bg); border-radius: var(--radius-sm); }
+  .assign-info { font-size: 12px; color: var(--warning); margin-top: 6px; display: none; }
+  .assign-info.show { display: block; }
+
+  /* Filter Bar */
+  .filter-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 32px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .filter-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; white-space: nowrap; }
+  .filter-group { display: flex; align-items: center; gap: 6px; }
+  .filter-group-label { font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
+  .filter-select { padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 12px; background: var(--surface); color: var(--text-primary); cursor: pointer; outline: none; min-width: 80px; transition: border-color 0.2s; }
+  .filter-select:hover { border-color: var(--primary); }
+  .filter-select.active { border-color: var(--primary); background: rgba(0,113,227,0.04); color: var(--primary); font-weight: 500; }
+  .filter-divider { width: 1px; height: 20px; background: var(--border); }
+  .filter-clear { font-size: 12px; color: var(--primary); cursor: pointer; background: none; border: none; padding: 4px 8px; border-radius: 4px; transition: all 0.2s; }
+  .filter-clear:hover { background: rgba(0,113,227,0.06); }
+  .filter-count { font-size: 11px; color: var(--text-secondary); background: var(--bg); padding: 2px 8px; border-radius: 10px; }
+
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .header { padding: 0 16px; }
+    .content-scroll { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="logo">需求管理平台</div>
+    <a href="kanban.html" class="nav-item"><span>&#9638;</span>看板视图</a>
+    <a href="sprint.html" class="nav-item"><span>&#8634;</span>迭代版本</a>
+    <a href="raw-pool.html" class="nav-item"><span>&#9993;</span>原始需求池</a>
+    <a href="product-pool.html" class="nav-item active"><span>&#9776;</span>产品需求池</a>
+    <a href="dashboard.html" class="nav-item"><span>&#9733;</span>数据看板</a>
+  </aside>
+
+  <main class="main">
+    <header class="header">
+      <div class="header-left">
+        <h1 style="font-size:16px;font-weight:600;">产品需求池</h1>
+        <div class="view-toggle">
+          <button class="view-toggle-btn active" onclick="switchView('grouped')">☷ 按原始需求分组</button>
+          <button class="view-toggle-btn" onclick="switchView('flat')">☰ 打散展示</button>
+        </div>
+      </div>
+      <div class="header-right">
+        <input class="search-box" placeholder="搜索产品需求..." oninput="activeFilters.search=this.value;render()">
+        <button class="btn btn-primary" onclick="openCreateModal()">+ 新建产品需求</button>
+        <div class="avatar">PM</div>
+      </div>
+    </header>
+
+    <!-- 筛选栏 -->
+    <div class="filter-bar" id="filterBar">
+      <span class="filter-label">筛选：</span>
+      <div class="filter-group">
+        <span class="filter-group-label">优先级</span>
+        <select class="filter-select" id="flt_priority" onchange="applyFilters()">
+          <option value="">全部</option><option>P0</option><option>P1</option><option>P2</option><option>P3</option>
+        </select>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-group-label">业务线</span>
+        <select class="filter-select" id="flt_biz" onchange="applyFilters()">
+          <option value="">全部</option><option>校园G端</option><option>校园B端</option><option>智慧食堂</option>
+        </select>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-group-label">需求类型</span>
+        <select class="filter-select" id="flt_type" onchange="applyFilters()">
+          <option value="">全部</option><option>优化迭代</option><option>问题转需求</option><option>设计缺陷</option><option>规划功能</option>
+        </select>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-group-label">迭代版本</span>
+        <select class="filter-select" id="flt_sprint" onchange="applyFilters()">
+          <option value="">全部</option><option value="__none__">未关联</option><option>v2.4.0</option><option>v2.5.0</option><option>v3.0.0</option>
+        </select>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-group-label">创建人</span>
+        <select class="filter-select" id="flt_creator" onchange="applyFilters()">
+          <option value="">全部</option><option>系统拆分</option><option>当前用户</option><option>张产品</option><option>李组长</option>
+        </select>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-group-label">处理人</span>
+        <select class="filter-select" id="flt_handler" onchange="applyFilters()">
+          <option value="">全部</option><option>陈经理</option><option>张产品</option><option>李组长</option><option>当前用户</option>
+        </select>
+      </div>
+      <div class="filter-divider"></div>
+      <button class="filter-clear" onclick="clearFilters()">清除筛选</button>
+      <span class="filter-count" id="filterCount"></span>
+    </div>
+
+    <div class="content-scroll" id="poolContainer">
+      <!-- 内容通过 JS 动态渲染 -->
+    </div>
+  </main>
+</div>
+
+<!-- 新建产品需求弹窗 -->
+<div class="modal-overlay" id="createModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">新建产品需求</span>
+      <button class="modal-close" onclick="closeCreateModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">需求标题<span class="required">*</span></label>
+        <input class="form-input" id="f_title" placeholder="输入产品需求标题">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">优先级</label>
+          <select class="form-select" id="f_priority">
+            <option>P1</option><option>P0</option><option>P2</option><option>P3</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">业务线</label>
+          <select class="form-select" id="f_biz">
+            <option>校园G端</option><option>校园B端</option><option>智慧食堂</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">需求类型</label>
+          <select class="form-select" id="f_type">
+            <option>优化迭代</option><option>问题转需求</option><option>设计缺陷</option><option>规划功能</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">迭代版本</label>
+          <select class="form-select" id="f_sprint">
+            <option value="">暂不关联</option><option>v2.4.0</option><option>v2.5.0</option><option>v3.0.0</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">PRD地址</label>
+        <input class="form-input" id="f_prd" placeholder="输入 PRD 文档链接（可选）">
+      </div>
+      <div class="assign-section">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">处理人（产品经理）</label>
+          <select class="form-select" id="f_handler" onchange="checkAssign()">
+            <option value="自己">自己（当前登录人）</option>
+            <option value="陈经理">陈经理</option>
+            <option value="张产品">张产品</option>
+            <option value="李组长">李组长</option>
+          </select>
+          <div class="form-hint">创建人：当前登录人（自动填充，不可修改）</div>
+          <div class="assign-info" id="assignInfo">⚠ 处理人与创建人不一致，创建后需产品组长/产品总监确认转发并指派任务。</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" style="background:var(--bg);color:var(--text-secondary)" onclick="closeCreateModal()">取消</button>
+      <button class="btn btn-primary" onclick="submitCreate()">创建</button>
+    </div>
+  </div>
+</div>
+
+<!-- 原始需求预览抽屉 -->
+<div class="preview-overlay" id="previewOverlay" onclick="closeRawPreview()"></div>
+<div class="preview-drawer" id="previewDrawer">
+  <div class="preview-header">
+    <div class="preview-header-left">
+      <span class="preview-raw-id" id="previewRawId">RAW-000000-000</span>
+    </div>
+    <button class="preview-close" onclick="closeRawPreview()">&times;</button>
+  </div>
+  <div class="preview-body" id="previewBody">
+    <!-- 动态填充 -->
+  </div>
+  <div class="preview-footer">
+    <a href="raw-pool.html" class="btn" style="background:var(--bg);color:var(--text-secondary);text-decoration:none;">↗ 在原始需求池中打开</a>
+    <button class="btn btn-primary" onclick="closeRawPreview()">关闭</button>
+  </div>
+</div>
+
+<script>
+  const DATA = [
+    { section: '待指派', color: 'var(--warning)', rawGroups: [],
+      standalone: [
+        { id: 'PRD-20260525-010', title: '供应商评价维度扩展', priority: 'P2', biz: '校园G端', type: '规划功能', prd: '', sprint: '', creator: '张产品', handler: '陈经理', direct: true }
+      ], hasAction: true, actionType: 'assign' },
+    { section: '待产品组长过滤', color: 'var(--primary)', rawGroups: [
+      { rawId: 'RAW-20260515-006', rawTitle: '采购平台供应商入驻流程优化及仓储同步改造', children: [
+        { id: 'PRD-20260515-002', title: '采购平台供应商入驻流程优化', priority: 'P1', biz: '校园G端', type: '优化迭代', prd: '', sprint: '', creator: '系统拆分', handler: '陈经理', direct: false },
+        { id: 'PRD-20260516-003', title: '仓储屏数据同步延迟优化', priority: 'P2', biz: '校园G端', type: '问题转需求', prd: '', sprint: '', creator: '系统拆分', handler: '陈经理', direct: false }
+      ]},
+      { rawId: 'RAW-20260520-011', rawTitle: '校园支付对账系统升级', children: [
+        { id: 'PRD-20260520-005', title: '支付对账报表生成功能', priority: 'P1', biz: '智慧食堂', type: '规划功能', prd: '', sprint: '', creator: '系统拆分', handler: '张产品', direct: false },
+        { id: 'PRD-20260520-006', title: '对账异常自动预警', priority: 'P2', biz: '智慧食堂', type: '优化迭代', prd: '', sprint: '', creator: '系统拆分', handler: '张产品', direct: false },
+        { id: 'PRD-20260521-007', title: '历史对账记录查询', priority: 'P3', biz: '校园G端', type: '优化迭代', prd: '', sprint: '', creator: '系统拆分', handler: '陈经理', direct: false }
+      ]}
+    ], standalone: [
+      { id: 'PRD-20260524-009', title: '学生端消息通知优化', priority: 'P1', biz: '校园B端', type: '优化迭代', prd: '', sprint: '', creator: '李组长', handler: '李组长', direct: true }
+    ], hasAction: true, actionType: 'dispatch' },
+    { section: '已分发', color: 'var(--success)', rawGroups: [
+      { rawId: 'RAW-20260518-001', rawTitle: '智慧食堂多场景支付能力建设', children: [
+        { id: 'PRD-20260518-001', title: '智慧食堂支付通道扩容', priority: 'P0', biz: '校园G端', type: '规划功能', prd: 'https://docs.example.com/prd/001', sprint: 'v2.4.0', creator: '系统拆分', handler: '陈经理', direct: false },
+        { id: 'PRD-20260518-004', title: '教育局数据报表导出功能', priority: 'P1', biz: '校园G端', type: '优化迭代', prd: '', sprint: 'v2.5.0', creator: '系统拆分', handler: '张产品', direct: false }
+      ]}
+    ], standalone: [], hasAction: false },
+    { section: '已挂起', color: 'var(--text-secondary)', rawGroups: [
+      { rawId: 'RAW-20260510-009', rawTitle: '家校互通平台统一改造', children: [
+        { id: 'PRD-20260512-007', title: '家校互通消息推送改造', priority: 'P3', biz: '校园B端', type: '问题转需求', prd: '', sprint: '', creator: '系统拆分', handler: '张产品', direct: false }
+      ]}
+    ], standalone: [], hasAction: false }
+  ];
+
+  const priorityOptions = ['P0','P1','P2','P3'];
+  const bizOptions = ['校园G端','校园B端','智慧食堂'];
+  const typeOptions = ['优化迭代','问题转需求','设计缺陷','规划功能'];
+  const sprintOptions = ['v2.4.0','v2.5.0','v3.0.0'];
+  const handlerOptions = ['陈经理','张产品','李组长'];
+
+  let currentView = 'grouped';
+  let collapsedGroups = {};
+  let activeFilters = { priority: '', biz: '', type: '', sprint: '', creator: '', handler: '', search: '' };
+
+  function applyFilters() {
+    activeFilters.priority = document.getElementById('flt_priority').value;
+    activeFilters.biz = document.getElementById('flt_biz').value;
+    activeFilters.type = document.getElementById('flt_type').value;
+    activeFilters.sprint = document.getElementById('flt_sprint').value;
+    activeFilters.creator = document.getElementById('flt_creator').value;
+    activeFilters.handler = document.getElementById('flt_handler').value;
+    // 高亮激活的筛选器
+    ['priority','biz','type','sprint','creator','handler'].forEach(key => {
+      const el = document.getElementById('flt_' + key);
+      el.classList.toggle('active', el.value !== '');
+    });
+    render();
+  }
+
+  function clearFilters() {
+    ['priority','biz','type','sprint','creator','handler'].forEach(key => {
+      document.getElementById('flt_' + key).value = '';
+      document.getElementById('flt_' + key).classList.remove('active');
+    });
+    document.querySelector('.search-box').value = '';
+    activeFilters = { priority: '', biz: '', type: '', sprint: '', creator: '', handler: '', search: '' };
+    render();
+  }
+
+  function matchesFilter(c) {
+    const f = activeFilters;
+    if (f.priority && c.priority !== f.priority) return false;
+    if (f.biz && c.biz !== f.biz) return false;
+    if (f.type && c.type !== f.type) return false;
+    if (f.creator && c.creator !== f.creator) return false;
+    if (f.handler && c.handler !== f.handler) return false;
+    if (f.sprint === '__none__' && c.sprint) return false;
+    if (f.sprint && f.sprint !== '__none__' && c.sprint !== f.sprint) return false;
+    if (f.search) {
+      const q = f.search.toLowerCase();
+      if (!c.id.toLowerCase().includes(q) && !c.title.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  }
+
+  function updateFilterCount(total, filtered) {
+    const el = document.getElementById('filterCount');
+    const hasFilter = Object.values(activeFilters).some(v => v !== '');
+    el.textContent = hasFilter ? `显示 ${filtered} / ${total} 条` : `共 ${total} 条`;
+  }
+
+  function selectOpts(options, selected) {
+    return options.map(o => `<option${o===selected?' selected':''}>${o}</option>`).join('');
+  }
+
+  function renderRow(c, hasAction, actionType, isStandalone) {
+    const sprintCell = c.sprint
+      ? `<select class="inline-select">${selectOpts(sprintOptions, c.sprint)}</select>`
+      : `<span class="sprint-tag">+ 关联迭代</span>`;
+    const rawTitleCell = c.direct
+      ? `<span class="editable">${c.title}</span><span class="direct-badge">直接创建</span>`
+      : `<span class="editable">${c.title}</span>`;
+    const rawLinkCell = c.direct
+      ? `<span class="no-raw">—</span>`
+      : `<a class="parent-link" onclick="openRawPreview('${c._rawId || ''}')">${c._rawId || ''} &#128065;</a>`;
+    let actionCell = '';
+    if (hasAction && actionType === 'dispatch') {
+      actionCell = `<td><div class="action-group"><button class="btn btn-success" style="padding:4px 12px;font-size:12px">通过并分发</button><button class="btn btn-danger" style="padding:4px 12px;font-size:12px">挂起</button></div></td>`;
+    } else if (hasAction && actionType === 'assign') {
+      actionCell = `<td><div class="action-group"><button class="btn btn-success" style="padding:4px 12px;font-size:12px">确认指派</button><button class="btn" style="padding:4px 12px;font-size:12px;background:var(--bg)">转发</button></div></td>`;
+    }
+    const rowClass = isStandalone ? 'standalone-row' : 'child-row';
+    return `<tr class="${rowClass}">
+      <td><span style="font-family:monospace;font-size:12px;color:var(--text-secondary)">${c.id}</span></td>
+      <td>${rawTitleCell}</td>
+      <td><select class="inline-select">${selectOpts(priorityOptions, c.priority)}</select></td>
+      <td><select class="inline-select">${selectOpts(bizOptions, c.biz)}</select></td>
+      <td>${rawLinkCell}</td>
+      <td><select class="inline-select">${selectOpts(typeOptions, c.type)}</select></td>
+      <td><input class="inline-input" placeholder="输入PRD链接..." value="${c.prd}"></td>
+      <td>${sprintCell}</td>
+      <td><span style="font-size:12px">${c.creator}</span></td>
+      <td><select class="inline-select">${selectOpts(handlerOptions, c.handler)}</select></td>
+      ${actionCell}
+    </tr>`;
+  }
+
+  function theadHtml(hasAction) {
+    const actionTh = hasAction ? '<th style="width:130px">操作</th>' : '';
+    return `<thead><tr>
+      <th style="width:130px">产品需求编号</th>
+      <th style="min-width:150px">需求标题</th>
+      <th style="width:75px">优先级</th>
+      <th style="width:90px">业务线</th>
+      <th style="width:110px">原始需求链接</th>
+      <th style="width:100px">需求类型</th>
+      <th style="width:130px">PRD地址</th>
+      <th style="width:100px">迭代版本</th>
+      <th style="width:70px">创建人</th>
+      <th style="width:90px">处理人</th>
+      ${actionTh}
+    </tr></thead>`;
+  }
+
+  function colCount(hasAction) { return hasAction ? 11 : 10; }
+
+  function getAllItems() {
+    const items = [];
+    DATA.forEach(sec => {
+      sec.rawGroups.forEach(g => g.children.forEach(c => { c._rawId = g.rawId; c._section = sec.section; items.push(c); }));
+      (sec.standalone || []).forEach(c => { c._rawId = ''; c._section = sec.section; items.push(c); });
+    });
+    return items;
+  }
+
+  function renderGrouped() {
+    let html = '';
+    let totalCount = 0, filteredCount = 0;
+    DATA.forEach(sec => {
+      const groupedCount = sec.rawGroups.reduce((s,g) => s + g.children.length, 0);
+      const standaloneCount = (sec.standalone || []).length;
+      totalCount += groupedCount + standaloneCount;
+      // 筛选后的分组数据
+      const filteredGroups = sec.rawGroups.map(g => {
+        const fc = g.children.filter(c => matchesFilter(c));
+        return { ...g, filteredChildren: fc };
+      }).filter(g => g.filteredChildren.length > 0);
+      const filteredStandalone = (sec.standalone || []).filter(c => matchesFilter(c));
+      const secFiltered = filteredGroups.reduce((s,g) => s + g.filteredChildren.length, 0) + filteredStandalone.length;
+      filteredCount += secFiltered;
+      if (secFiltered === 0) return;
+      html += `<div class="pool-section">
+        <div class="section-header">
+          <span class="section-dot" style="background:${sec.color}"></span>
+          <span class="section-title">${sec.section}</span>
+          <span class="section-count">${secFiltered}</span>
+        </div>
+        <div class="table-wrap" style="overflow-x:auto">
+          <table class="data-table" style="min-width:1200px">
+            ${theadHtml(sec.hasAction)}`;
+      filteredGroups.forEach(g => {
+        const collapsed = collapsedGroups[g.rawId];
+        g.filteredChildren.forEach(c => c._rawId = g.rawId);
+        html += `<tr class="group-row" onclick="toggleGroup('${g.rawId}')">
+          <td colspan="${colCount(sec.hasAction)}" style="padding:10px 16px">
+            <div class="group-header">
+              <span class="group-arrow ${collapsed?'collapsed':''}">▼</span>
+              <span class="group-raw-id">${g.rawId}</span>
+              <span>${g.rawTitle}</span>
+              <span class="split-badge">拆分 ${g.filteredChildren.length} 条</span>
+            </div>
+          </td>
+        </tr>`;
+        if (!collapsed) {
+          g.filteredChildren.forEach(c => { html += renderRow(c, sec.hasAction, sec.actionType, false); });
+        }
+      });
+      filteredStandalone.forEach(c => {
+        html += renderRow(c, sec.hasAction, sec.actionType, true);
+      });
+      html += `</table></div></div>`;
+    });
+    updateFilterCount(totalCount, filteredCount);
+    return html;
+  }
+
+  function renderFlat() {
+    let html = '';
+    let totalCount = 0, filteredCount = 0;
+    DATA.forEach(sec => {
+      const allItems = [];
+      sec.rawGroups.forEach(g => g.children.forEach(c => { c._rawId = g.rawId; allItems.push(c); }));
+      (sec.standalone || []).forEach(c => { c._rawId = ''; allItems.push(c); });
+      totalCount += allItems.length;
+      const filtered = allItems.filter(c => matchesFilter(c));
+      filteredCount += filtered.length;
+      if (filtered.length === 0) return;
+      html += `<div class="pool-section">
+        <div class="section-header">
+          <span class="section-dot" style="background:${sec.color}"></span>
+          <span class="section-title">${sec.section}</span>
+          <span class="section-count">${filtered.length}</span>
+        </div>
+        <div class="table-wrap flat-view" style="overflow-x:auto">
+          <table class="data-table" style="min-width:1200px">
+            ${theadHtml(sec.hasAction)}`;
+      filtered.forEach(c => { html += renderRow(c, sec.hasAction, sec.actionType, c.direct); });
+      html += `</table></div></div>`;
+    });
+    updateFilterCount(totalCount, filteredCount);
+    return html;
+  }
+
+  function render() {
+    document.getElementById('poolContainer').innerHTML = currentView === 'grouped' ? renderGrouped() : renderFlat();
+  }
+
+  function switchView(view) {
+    currentView = view;
+    document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.textContent.includes(view === 'grouped' ? '分组' : '打散'));
+    });
+    render();
+  }
+
+  // === 原始需求预览 ===
+  const RAW_DATA = {
+    'RAW-20260515-006': {
+      id: 'RAW-20260515-006', title: '采购平台供应商入驻流程优化及仓储同步改造',
+      biz: '校园G端', status: '评估中', priority: 'P1',
+      registerer: '饭粒', proposer: '陈明', proposeTime: '2026-05-15',
+      pm: '陈经理', projMgr: '张三', urgent: '是', urgentReason: '客户要求6月前上线',
+      project: '台州各区县教育局', expectOnline: '2026-06-15',
+      remark: '供应商入驻审核周期过长，需优化流程，同时支持在线投标功能，并对接财务系统实现自动对账。仓储屏数据同步延迟问题亟需解决。',
+      prdDef: '待补充详细产品需求定义，需与各业务线产品经理确认后完善',
+      value: '4.2分 · 6条评估',
+      relatedPrds: [
+        { id: 'PRD-20260515-002', title: '采购平台供应商入驻流程优化', priority: 'P1' },
+        { id: 'PRD-20260516-003', title: '仓储屏数据同步延迟优化', priority: 'P2' }
+      ]
+    },
+    'RAW-20260520-011': {
+      id: 'RAW-20260520-011', title: '校园支付对账系统升级',
+      biz: '智慧食堂', status: '待设计', priority: 'P1',
+      registerer: '饭粒', proposer: '李丽', proposeTime: '2026-05-20',
+      pm: '张产品', projMgr: '李强', urgent: '否', urgentReason: '—',
+      project: '校园支付平台', expectOnline: '2026-07-30',
+      remark: '现有对账系统无法支撑多场景支付，需升级为支持微信/支付宝/校园卡多渠道对账，并提供自动异常预警。',
+      prdDef: '包含支付对账报表生成、对账异常自动预警、历史对账记录查询三个模块',
+      value: '3.8分 · 4条评估',
+      relatedPrds: [
+        { id: 'PRD-20260520-005', title: '支付对账报表生成功能', priority: 'P1' },
+        { id: 'PRD-20260520-006', title: '对账异常自动预警', priority: 'P2' },
+        { id: 'PRD-20260521-007', title: '历史对账记录查询', priority: 'P3' }
+      ]
+    },
+    'RAW-20260518-001': {
+      id: 'RAW-20260518-001', title: '智慧食堂多场景支付能力建设',
+      biz: '校园G端', status: '开发中', priority: 'P0',
+      registerer: '王磊', proposer: '赵丹', proposeTime: '2026-05-18',
+      pm: '陈经理', projMgr: '王军', urgent: '是', urgentReason: '项目验收节点临近',
+      project: '智慧食堂项目', expectOnline: '2026-06-30',
+      remark: '需要建设多场景支付能力，包括线上支付、扫码支付、校园卡支付等，并配套数据报表导出功能。',
+      prdDef: '支付通道扩容 + 教育局数据报表导出，已完成产品定义',
+      value: '4.5分 · 8条评估',
+      relatedPrds: [
+        { id: 'PRD-20260518-001', title: '智慧食堂支付通道扩容', priority: 'P0' },
+        { id: 'PRD-20260518-004', title: '教育局数据报表导出功能', priority: 'P1' }
+      ]
+    },
+    'RAW-20260510-009': {
+      id: 'RAW-20260510-009', title: '家校互通平台统一改造',
+      biz: '校园B端', status: '挂起', priority: 'P3',
+      registerer: '饭粒', proposer: '刘洋', proposeTime: '2026-05-10',
+      pm: '张产品', projMgr: '未分配', urgent: '否', urgentReason: '—',
+      project: '家校互通平台', expectOnline: '—',
+      remark: '现有多个家校互通系统并行，需统一为一个平台，整合消息推送、作业管理、家长通知等功能。',
+      prdDef: '待重新评估，目前挂起状态',
+      value: '2.8分 · 3条评估',
+      relatedPrds: [
+        { id: 'PRD-20260512-007', title: '家校互通消息推送改造', priority: 'P3' }
+      ]
+    }
+  };
+
+  function openRawPreview(rawId) {
+    const data = RAW_DATA[rawId];
+    if (!data) { alert('未找到原始需求数据：' + rawId); return; }
+
+    document.getElementById('previewRawId').textContent = data.id;
+
+    const statusMap = { '评估中': 'eval', '待设计': 'design-wait', '开发中': 'dev', '挂起': 'empty', '空': 'empty' };
+    const statusCls = 'preview-status-' + (statusMap[data.status] || 'empty');
+    const pCls = 'preview-p' + data.priority.toLowerCase().replace('p','');
+
+    let prdList = '';
+    data.relatedPrds.forEach(p => {
+      prdList += '<div class="preview-prd-item"><span class="preview-prd-id">' + p.id + '</span><span style="flex:1">' + p.title + '</span><span class="preview-priority-tag ' + ('preview-p' + p.priority.toLowerCase().replace('p','')) + '">' + p.priority + '</span></div>';
+    });
+
+    document.getElementById('previewBody').innerHTML =
+      '<div class="preview-section"><div class="preview-title">' + data.title + '</div></div>'
+      + '<div class="preview-section"><div class="preview-section-title">基本信息</div>'
+      + '<div class="preview-info-grid">'
+      + '<div class="preview-info-item"><div class="preview-info-label">当前状态</div><div class="preview-info-value"><span class="preview-status ' + statusCls + '">' + data.status + '</span></div></div>'
+      + '<div class="preview-info-item"><div class="preview-info-label">优先级</div><div class="preview-info-value"><span class="preview-priority-tag ' + pCls + '">' + data.priority + '</span></div></div>'
+      + '<div class="preview-info-item"><div class="preview-info-label">业务线</div><div class="preview-info-value">' + data.biz + '</div></div>'
+      + '<div class="preview-info-item"><div class="preview-info-label">产品经理</div><div class="preview-info-value">' + data.pm + '</div></div>'
+      + '<div class="preview-info-item"><div class="preview-info-label">项目经理</div><div class="preview-info-value">' + data.projMgr + '</div></div>'
+      + '<div class="preview-info-item"><div class="preview-info-label">是否加急</div><div class="preview-info-value" style="color:' + (data.urgent==='是'?'var(--danger)':'inherit') + '">' + data.urgent + '</div></div>'
+      + '<div class="preview-info-item"><div class="preview-info-label">登记人</div><div class="preview-info-value">' + data.registerer + '</div></div>'
+      + '<div class="preview-info-item"><div class="preview-info-label">提出人</div><div class="preview-info-value">' + data.proposer + '</div></div>'
+      + '<div class="preview-info-item"><div class="preview-info-label">提出时间</div><div class="preview-info-value">' + data.proposeTime + '</div></div>'
+      + '<div class="preview-info-item"><div class="preview-info-label">期望上线</div><div class="preview-info-value">' + data.expectOnline + '</div></div>'
+      + '<div class="preview-info-item"><div class="preview-info-label">关联项目</div><div class="preview-info-value">' + data.project + '</div></div>'
+      + '<div class="preview-info-item"><div class="preview-info-label">价值量化评估</div><div class="preview-info-value">' + data.value + '</div></div>'
+      + (data.urgent==='是' ? '<div class="preview-info-item" style="grid-column:span 2"><div class="preview-info-label">加急原因</div><div class="preview-info-value" style="color:var(--warning)">' + data.urgentReason + '</div></div>' : '')
+      + '</div></div>'
+      + '<div class="preview-section"><div class="preview-section-title">需求备注</div><div class="preview-desc">' + data.remark + '</div></div>'
+      + '<div class="preview-section"><div class="preview-section-title">产品需求定义</div><div class="preview-desc">' + data.prdDef + '</div></div>'
+      + '<div class="preview-section"><div class="preview-section-title">关联产品需求（' + data.relatedPrds.length + ' 条）</div><div class="preview-related-prds">' + prdList + '</div></div>';
+
+    document.getElementById('previewOverlay').classList.add('open');
+    document.getElementById('previewDrawer').classList.add('open');
+  }
+
+  function closeRawPreview() {
+    document.getElementById('previewOverlay').classList.remove('open');
+    document.getElementById('previewDrawer').classList.remove('open');
+  }
+
+  function toggleGroup(rawId) {
+    collapsedGroups[rawId] = !collapsedGroups[rawId];
+    render();
+  }
+
+  // === 新建弹窗 ===
+  function openCreateModal() {
+    document.getElementById('createModal').classList.add('show');
+    document.getElementById('f_title').value = '';
+    document.getElementById('f_prd').value = '';
+    document.getElementById('f_handler').value = '自己';
+    checkAssign();
+  }
+  function closeCreateModal() {
+    document.getElementById('createModal').classList.remove('show');
+  }
+  function checkAssign() {
+    const handler = document.getElementById('f_handler').value;
+    const info = document.getElementById('assignInfo');
+    info.classList.toggle('show', handler !== '自己');
+  }
+  function submitCreate() {
+    const title = document.getElementById('f_title').value.trim();
+    if (!title) { alert('请输入需求标题'); return; }
+    const handler = document.getElementById('f_handler').value;
+    const isSelf = handler === '自己';
+    const newItem = {
+      id: 'PRD-' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-' + String(Math.floor(Math.random()*900)+100),
+      title: title,
+      priority: document.getElementById('f_priority').value,
+      biz: document.getElementById('f_biz').value,
+      type: document.getElementById('f_type').value,
+      prd: document.getElementById('f_prd').value,
+      sprint: document.getElementById('f_sprint').value,
+      creator: '当前用户',
+      handler: isSelf ? '当前用户' : handler,
+      direct: true
+    };
+    if (isSelf) {
+      // 创建人=处理人：进入待产品组长过滤
+      const filterSec = DATA.find(s => s.section === '待产品组长过滤');
+      filterSec.standalone = filterSec.standalone || [];
+      filterSec.standalone.push(newItem);
+    } else {
+      // 创建人≠处理人：进入待指派
+      const assignSec = DATA.find(s => s.section === '待指派');
+      assignSec.standalone = assignSec.standalone || [];
+      assignSec.standalone.push(newItem);
+    }
+    closeCreateModal();
+    render();
+  }
+
+  render();
+</script>
+</body>
+</html>

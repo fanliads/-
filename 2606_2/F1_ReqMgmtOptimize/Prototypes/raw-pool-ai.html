@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>原始需求池 - AI 判级原型</title>
+<style>
+  :root {
+    --bg: #f5f5f7;
+    --surface: #ffffff;
+    --surface-soft: #f8fbff;
+    --text-primary: #1d1d1f;
+    --text-secondary: #86868b;
+    --border: rgba(0, 0, 0, 0.08);
+    --primary: #0071e3;
+    --success: #34c759;
+    --warning: #ff9500;
+    --danger: #ff3b30;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.05);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 24px;
+  }
+  .raw-pool-view {
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+  .toolbar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 14px;
+  }
+  .toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .page-title { font-size: 24px; font-weight: 700; }
+  .page-subtitle { color: var(--text-secondary); font-size: 13px; margin-top: 4px; }
+  .search-box {
+    width: 260px;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 13px;
+  }
+  .btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-soft { background: rgba(0,113,227,0.08); color: var(--primary); }
+  .btn-danger { background: rgba(255,59,48,0.08); color: var(--danger); }
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .mode-switch {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+  }
+  .mode-btn {
+    padding: 6px 14px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .mode-btn.active {
+    background: rgba(0,113,227,0.1);
+    color: var(--primary);
+    font-weight: 700;
+  }
+  .filter-chip {
+    padding: 7px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .filter-chip.active { background: rgba(0,113,227,0.08); color: var(--primary); }
+  .filter-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: var(--shadow);
+    margin-bottom: 14px;
+  }
+  .filter-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .filter-item label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+  .filter-item input, .filter-item select {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    font-size: 12px;
+  }
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 14px 16px;
+  }
+  .summary-k { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+  .summary-v { font-size: 24px; font-weight: 700; }
+  .pool-scroll {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .compact-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .compact-item, .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .compact-main {
+    display: grid;
+    grid-template-columns: 1.8fr 0.9fr 0.8fr 0.8fr 0.95fr 1fr auto;
+    gap: 16px;
+    align-items: center;
+    padding: 16px 18px;
+  }
+  .title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .desc { font-size: 12px; color: var(--text-secondary); line-height: 1.7; }
+  .field-k { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
+  .field-v { font-size: 13px; font-weight: 500; }
+  .priority-tag, .status-tag, .info-badge, .source-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .priority-p0 { background: rgba(255,59,48,0.10); color: var(--danger); }
+  .priority-p1 { background: rgba(255,149,0,0.12); color: #a55b00; }
+  .priority-p2 { background: rgba(255,204,0,0.14); color: #8f7500; }
+  .status-eval { background: rgba(0,113,227,0.10); color: var(--primary); }
+  .status-director { background: rgba(255,149,0,0.12); color: #a55b00; }
+  .source-ai { background: rgba(0,113,227,0.08); color: var(--primary); }
+  .source-human { background: rgba(52,199,89,0.12); color: #248a3d; }
+  .source-fail { background: rgba(255,149,0,0.12); color: #9a6200; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .detail {
+    display: none;
+    border-top: 1px solid var(--border);
+    background: rgba(0,0,0,0.018);
+    padding: 0 18px 18px;
+  }
+  .detail.open { display: block; }
+  .detail-grid {
+    padding-top: 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px 16px;
+  }
+  .detail-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .detail-card.full { grid-column: 1 / -1; }
+  .detail-title { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+  .detail-value { font-size: 13px; line-height: 1.8; }
+  .ai-panel {
+    background: linear-gradient(180deg, #eef6ff, #ffffff);
+    border-color: rgba(0,113,227,0.12);
+  }
+  .ai-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .ai-priority { font-size: 30px; font-weight: 700; color: var(--primary); line-height: 1; }
+  .ai-meta { font-size: 12px; color: #55708f; }
+  .log-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .log-item {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #fff;
+    padding: 10px 12px;
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .custom-table-scroll { overflow: auto; }
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1500px;
+    font-size: 13px;
+  }
+  .data-table th, .data-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+  }
+  .data-table th {
+    background: #fafbfd;
+    color: var(--text-secondary);
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+  }
+  .table-actions { white-space: nowrap; }
+  .pagination-wrapper {
+    display: flex;
+    justify-content: flex-end;
+    padding: 14px 4px 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1d1d1f;
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 10px;
+    opacity: 0;
+    transition: opacity 0.25s;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<div class="raw-pool-view">
+  <div class="toolbar-header">
+    <div class="toolbar-left">
+      <div>
+        <div class="page-title">原始需求池</div>
+        <div class="page-subtitle">沿用现有折叠/展开结构，在优先级字段附近补充 AI 判级信息与操作</div>
+      </div>
+      <input class="search-box" placeholder="搜索原始需求标题、编号...">
+      <button class="btn btn-ghost">× 清空筛选</button>
+    </div>
+    <div class="toolbar-right">
+      <a href="submit-form-ai.html"><button class="btn btn-primary">+ 新建需求</button></a>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <div class="mode-switch">
+      <button class="mode-btn active" onclick="switchMode('card', this)">折叠</button>
+      <button class="mode-btn" onclick="switchMode('table', this)">展开</button>
+    </div>
+    <div class="filter-chip active" onclick="toggleFilter()">当前状态</div>
+    <div class="filter-chip">AI 已判级</div>
+    <div class="filter-chip">人工改写</div>
+    <div class="filter-chip">AI 降级待处理</div>
+    <div class="filter-chip">规则版本 V3.4</div>
+  </div>
+
+  <div class="filter-panel" id="filterPanel">
+    <div class="filter-grid">
+      <div class="filter-item"><label>当前状态</label><select><option>全部</option><option>待评估</option><option>待总监判定</option></select></div>
+      <div class="filter-item"><label>业务线</label><select><option>全部</option><option>校园G端</option><option>市监G端</option></select></div>
+      <div class="filter-item"><label>登记人</label><input value="饭粒"></div>
+      <div class="filter-item"><label>项目经理</label><select><option>全部</option><option>梁勇斌</option></select></div>
+      <div class="filter-item"><label>产品经理</label><select><option>全部</option><option>蒋家豪</option></select></div>
+      <div class="filter-item"><label>日期范围</label><input value="2026-06-01 至 2026-06-08"></div>
+    </div>
+  </div>
+
+  <div class="summary" id="summaryBlock" style="display:none;">
+    <div class="summary-card"><div class="summary-k">待项目经理评估</div><div class="summary-v">12</div></div>
+    <div class="summary-card"><div class="summary-k">待产品总监判定</div><div class="summary-v">8</div></div>
+    <div class="summary-card"><div class="summary-k">AI 降级待补充</div><div class="summary-v">2</div></div>
+    <div class="summary-card"><div class="summary-k">人工改写优先级</div><div class="summary-v">5</div></div>
+  </div>
+
+  <div class="pool-scroll">
+    <div class="compact-list" id="cardMode">
+      <div class="compact-item">
+        <div class="compact-main">
+          <div>
+            <div class="title">宁波工程学院项目迭代需求</div>
+            <div class="desc">已签约客户项目，6 月中旬前验收，项目经理补充说明：延期可能影响本轮回款。</div>
+          </div>
+          <div>
+            <div class="field-k">当前状态</div>
+            <div class="field-v"><span class="status-tag status-eval">评估中</span></div>
+          </div>
+          <div>
+            <div class="field-k">业务线</div>
+            <div class="field-v">B端团餐</div>
+          </div>
+          <div>
+            <div class="field-k">优先级</div>
+            <div class="field-v"><span class="priority-tag priority-p1">P1</span></div>
+          </div>
+          <div>
+            <div class="field-k">判定来源</div>
+            <div class="field-v"><span class="source-tag source-ai">AI</span></div>
+          </div>
+          <div>
+            <div class="field-k">需求单链接</div>
+            <div class="field-v"><span style="color:var(--primary);">查看需求单</span></div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary">拆分</button>
+            <button class="btn btn-ghost" onclick="toggleDetail(this)">展开详情</button>
+          </div>
+        </div>
+        <div class="detail">
+          <div class="detail-grid">
+            <div class="detail-card"><div class="detail-title">需求单</div><div class="detail-value">RAW-20260604-001</div></div>
+            <div class="detail-card"><div class="detail-title">登记人</div><div class="detail-value">饭粒</div></div>
+            <div class="detail-card"><div class="detail-title">提出时间</div><div class="detail-value">2026-06-04</div></div>
+            <div class="detail-card"><div class="detail-title">项目经理</div><div class="detail-value">梁勇斌</div></div>
+            <div class="detail-card"><div class="detail-title">产品经理</div><div class="detail-value">蒋家豪</div></div>
+            <div class="detail-card"><div class="detail-title">期望上线时间</div><div class="detail-value">2026-06-15</div></div>
+            <div class="detail-card full ai-panel">
+              <div class="detail-title">AI 优先级判定</div>
+              <div class="ai-head">
+                <div>
+                  <div class="ai-priority">P1</div>
+                  <div class="ai-meta">最近一次来源：AI · 规则 V3.4 · 2026-06-08 10:42</div>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <button class="btn btn-soft" onclick="showToast('已发起重新 AI 判级，将覆盖当前 priority 字段')">重新 AI 判级</button>
+                  <button class="btn btn-ghost" onclick="showToast('已人工修改当前 priority 字段并记录日志')">人工修改优先级</button>
+                </div>
+              </div>
+              <div class="detail-value">命中“已签约客户 + 验收节点临近 + 延期影响回款”规则，建议升至 P1；未达到生产事故或重大合规风险，因此不判 P0。</div>
+            </div>
+            <div class="detail-card"><div class="detail-title">命中规则摘要</div><div class="detail-value">1. 已签约重点客户<br>2. 交付节点明确<br>3. 存在回款影响</div></div>
+            <div class="detail-card"><div class="detail-title">判定记录</div><div class="detail-value">10:42 AI 写入 P1<br>09:55 项目经理补充“影响回款”</div></div>
+            <div class="detail-card"><div class="detail-title">内容补充</div><div class="detail-value">若延期会影响客户现场验收节奏和本轮阶段回款。</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="compact-item">
+        <div class="compact-main">
+          <div>
+            <div class="title">校园食堂多档口打印样式微调</div>
+            <div class="desc">原始描述偏体验优化，AI 原判 P3，产品负责人认为属于重点客户批量规范项，已人工提升到 P2。</div>
+          </div>
+          <div><div class="field-k">当前状态</div><div class="field-v"><span class="status-tag status-director">待总监判定</span></div></div>
+          <div><div class="field-k">业务线</div><div class="field-v">校园G端</div></div>
+          <div><div class="field-k">优先级</div><div class="field-v"><span class="priority-tag priority-p2">P2</span></div></div>
+          <div><div class="field-k">判定来源</div><div class="field-v"><span class="source-tag source-human">人工</span></div></div>
+          <div><div class="field-k">需求单链接</div><div class="field-v"><span style="color:var(--primary);">查看需求单</span></div></div>
+          <div class="actions">
+            <button class="btn btn-primary">拆分</button>
+            <button class="btn btn-ghost" onclick="toggleDetail(this)">展开详情</button>
+          </div>
+        </div>
+        <div class="detail">
+          <div class="detail-grid">
+            <div class="detail-card full ai-panel">
+              <div class="detail-title">AI 优先级判定</div>
+              <div class="ai-head">
+                <div>
+                  <div class="ai-priority" style="color:#8f7500;">P2</div>
+                  <div class="ai-meta">当前来源：人工 · 最近 AI 记录：2026-06-08 10:51 · 规则 V3.4</div>
+                </div>
+                <button class="btn btn-soft" onclick="showToast('当前 priority 最近一次来源为人工，重判前需要确认覆盖')">重新 AI 判级</button>
+              </div>
+              <div class="detail-value">AI 原判 P3，理由是“体验优化、无明确交付时点”。产品负责人基于重点客户统一改造背景，将同一字段人工改写为 P2。</div>
+            </div>
+            <div class="detail-card"><div class="detail-title">人工改写记录</div><div class="detail-value">11:05 李产品：P3 → P2<br>备注：重点客户批量门店规范项</div></div>
+            <div class="detail-card"><div class="detail-title">AI 摘要</div><div class="detail-value">原判理由：偏体验优化、缺少紧急时点，建议 P3。</div></div>
+            <div class="detail-card"><div class="detail-title">内容补充</div><div class="detail-value">当前属于重点客户门店统一打印规范整改项。</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrap" id="tableMode" style="display:none;">
+      <div class="custom-table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>业务线</th>
+              <th>原始需求标题</th>
+              <th>需求单</th>
+              <th>需求备注</th>
+              <th>登记人</th>
+              <th>提出人</th>
+              <th>提出时间</th>
+              <th>当前状态</th>
+              <th>产品需求定义</th>
+              <th>产品经理</th>
+              <th>项目经理</th>
+              <th>优先级建议</th>
+              <th>判定来源</th>
+              <th>规则版本</th>
+              <th>期望上线时间</th>
+              <th>完整度</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>B端团餐</td>
+              <td>宁波工程学院项目迭代需求</td>
+              <td>RAW-20260604-001</td>
+              <td>延期影响回款</td>
+              <td>饭粒</td>
+              <td>郭进浩</td>
+              <td>2026-06-04</td>
+              <td><span class="status-tag status-eval">评估中</span></td>
+              <td>定制化适配</td>
+              <td>蒋家豪</td>
+              <td>梁勇斌</td>
+              <td><span class="priority-tag priority-p1">P1</span></td>
+              <td><span class="source-tag source-ai">AI</span></td>
+              <td>V3.4</td>
+              <td>2026-06-15</td>
+              <td><span class="info-badge source-human">完整</span></td>
+              <td class="table-actions">
+                <button class="btn btn-soft" onclick="showToast('展开模式下建议将重判收纳到二级操作')">重判</button>
+                <button class="btn btn-primary">拆分</button>
+              </td>
+            </tr>
+            <tr>
+              <td>校园G端</td>
+              <td>校园食堂多档口打印样式微调</td>
+              <td>RAW-20260608-003</td>
+              <td>重点客户规范项</td>
+              <td>王琳</td>
+              <td>商务</td>
+              <td>2026-06-08</td>
+              <td><span class="status-tag status-director">待总监判定</span></td>
+              <td>体验优化</td>
+              <td>李产品</td>
+              <td>陈项目</td>
+              <td><span class="priority-tag priority-p2">P2</span></td>
+              <td><span class="source-tag source-human">人工</span></td>
+              <td>V3.4</td>
+              <td>-</td>
+              <td><span class="info-badge source-fail">待补充</span></td>
+              <td class="table-actions">
+                <button class="btn btn-soft" onclick="showToast('人工改写后的重判需要确认是否覆盖')">重判</button>
+                <button class="btn btn-primary">拆分</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination-wrapper">共 24 条，当前第 1 / 3 页</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+function toggleFilter() {
+  const panel = document.getElementById('filterPanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+function toggleDetail(btn) {
+  const detail = btn.closest('.compact-item').querySelector('.detail');
+  const open = detail.classList.toggle('open');
+  btn.textContent = open ? '收起详情' : '展开详情';
+}
+function switchMode(mode, btn) {
+  document.querySelectorAll('.mode-btn').forEach(node => node.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('cardMode').style.display = mode === 'card' ? 'flex' : 'none';
+  document.getElementById('tableMode').style.display = mode === 'table' ? 'block' : 'none';
+  document.getElementById('summaryBlock').style.display = mode === 'table' ? 'grid' : 'none';
+}
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.style.opacity = '1';
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer = setTimeout(() => toast.style.opacity = '0', 2400);
+}
+</script>
+</body>
+</html>

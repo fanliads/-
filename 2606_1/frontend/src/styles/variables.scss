@@ -1,0 +1,44 @@
+:root {
+  --bg: #f4f1ea;
+  --bg-soft: #fbf7f1;
+  --surface: rgba(255, 252, 247, 0.9);
+  --surface-strong: #ffffff;
+  --surface-muted: #f1ece4;
+  --text-primary: #1f2328;
+  --text-secondary: #5f645f;
+  --text-tertiary: #8d8a82;
+  --border: rgba(77, 63, 47, 0.12);
+  --border-strong: rgba(77, 63, 47, 0.2);
+
+  --primary: #1f6b5c;
+  --primary-hover: #175145;
+  --primary-soft: rgba(31, 107, 92, 0.12);
+  --accent: #d68b3d;
+  --success: #2f8f63;
+  --warning: #d9842f;
+  --danger: #d45c47;
+
+  --radius: 20px;
+  --radius-sm: 12px;
+  --radius-xs: 10px;
+  --radius-pill: 999px;
+
+  --shadow: 0 10px 30px rgba(54, 41, 29, 0.08);
+  --shadow-hover: 0 18px 42px rgba(54, 41, 29, 0.14);
+  --shadow-drawer: -8px 0 32px rgba(36, 28, 18, 0.12);
+  --shadow-modal: 0 26px 70px rgba(36, 28, 18, 0.18);
+
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-2xl: 24px;
+  --spacing-3xl: 32px;
+  --spacing-4xl: 40px;
+
+  --font-family: "SF Pro Display", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-family-accent: "Avenir Next", "PingFang SC", sans-serif;
+
+  --transition: all 0.24s ease;
+}

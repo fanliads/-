@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>需求管理平台 - 数据看板</title>
+<style>
+  :root {
+    --bg: #f5f5f7; --surface: #ffffff; --text-primary: #1d1d1f; --text-secondary: #86868b;
+    --border: rgba(0,0,0,0.08); --primary: #0071e3; --primary-hover: #0077ed;
+    --success: #34c759; --warning: #ff9500; --danger: #ff3b30;
+    --radius: 12px; --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--text-primary); font-size: 14px; line-height: 1.5; overflow: hidden;
+  }
+  .layout { display: flex; height: 100vh; }
+  .sidebar {
+    width: 220px; background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 20px 0;
+  }
+  .logo { padding: 0 24px 24px; font-size: 18px; font-weight: 600; letter-spacing: -0.5px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 12px; padding: 10px 24px; margin: 2px 12px;
+    border-radius: var(--radius-sm); cursor: pointer; color: var(--text-secondary); text-decoration: none; font-size: 13px; transition: all 0.2s;
+  }
+  .nav-item:hover, .nav-item.active { background: rgba(0,113,227,0.08); color: var(--primary); font-weight: 500; }
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .header {
+    height: 64px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 32px;
+  }
+  .header-left { display: flex; align-items: center; gap: 24px; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .filter-chip { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); font-size: 13px; color: var(--text-secondary); cursor: pointer; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: #e8e8ed; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--text-secondary); }
+
+  .dash-scroll { flex: 1; overflow-y: auto; padding: 24px 32px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .kpi-card {
+    background: var(--surface); border-radius: var(--radius); padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .kpi-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+  .kpi-value { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  .kpi-change { font-size: 12px; margin-top: 4px; }
+  .kpi-up { color: var(--success); }
+  .kpi-down { color: var(--danger); }
+
+  .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .chart-card {
+    background: var(--surface); border-radius: var(--radius); padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .chart-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+  .pie-chart { display: flex; align-items: center; justify-content: center; gap: 40px; padding: 20px; }
+  .pie-circle {
+    width: 160px; height: 160px; border-radius: 50%;
+    background: conic-gradient(var(--primary) 0deg 108deg, var(--success) 108deg 180deg, var(--warning) 180deg 252deg, var(--danger) 252deg 324deg, #e8e8ed 324deg 360deg);
+    position: relative;
+  }
+  .pie-inner { position: absolute; inset: 24px; background: var(--surface); border-radius: 50%; }
+  .pie-legend { display: flex; flex-direction: column; gap: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  .bar-chart { display: flex; align-items: flex-end; justify-content: space-around; height: 160px; padding: 0 20px; gap: 16px; }
+  .bar-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .bar-track { width: 100%; background: var(--bg); border-radius: 6px 6px 0 0; height: 120px; position: relative; }
+  .bar-fill { position: absolute; bottom: 0; left: 0; right: 0; background: var(--primary); border-radius: 6px 6px 0 0; transition: height 0.6s ease; }
+  .bar-label { font-size: 11px; color: var(--text-secondary); text-align: center; }
+
+  .value-section { background: var(--surface); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+  .value-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+  .value-list { display: flex; flex-direction: column; gap: 10px; }
+  .value-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .value-item:last-child { border-bottom: none; }
+  .value-rank { width: 28px; height: 28px; border-radius: 50%; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; }
+  .value-name { flex: 1; font-size: 13px; }
+  .value-score { display: flex; gap: 2px; }
+  .star { color: #ffcc00; font-size: 14px; }
+  .star.empty { color: #e8e8ed; }
+
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .kpi-row { grid-template-columns: 1fr 1fr; }
+    .chart-row { grid-template-columns: 1fr; }
+    .header { padding: 0 16px; }
+    .dash-scroll { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="logo">需求管理平台</div>
+    <a href="kanban.html" class="nav-item"><span>&#9638;</span>看板视图</a>
+    <a href="sprint.html" class="nav-item"><span>&#8634;</span>迭代版本</a>
+    <a href="raw-pool.html" class="nav-item"><span>&#9993;</span>原始需求池</a>
+    <a href="product-pool.html" class="nav-item"><span>&#9776;</span>产品需求池</a>
+    <a href="dashboard.html" class="nav-item active"><span>&#9733;</span>数据看板</a>
+  </aside>
+
+  <main class="main">
+    <header class="header">
+      <div class="header-left"><h1 style="font-size:16px;font-weight:600;">数据看板</h1></div>
+      <div class="header-right">
+        <div class="filter-chip">本月 &#9662;</div>
+        <div class="filter-chip">全部业务线 &#9662;</div>
+        <div class="avatar">PM</div>
+      </div>
+    </header>
+
+    <div class="dash-scroll">
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-label">本月新增需求</div>
+          <div class="kpi-value">28</div>
+          <div class="kpi-change kpi-up">+12% 环比上月</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">本月完成需求</div>
+          <div class="kpi-value">19</div>
+          <div class="kpi-change kpi-up">+5% 环比上月</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">平均处理周期</div>
+          <div class="kpi-value">14<span style="font-size:16px;font-weight:400">天</span></div>
+          <div class="kpi-change kpi-down">+2天 环比上月</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">挂起率</div>
+          <div class="kpi-value">8<span style="font-size:16px;font-weight:400">%</span></div>
+          <div class="kpi-change kpi-up">-3% 环比上月</div>
+        </div>
+      </div>
+
+      <div class="chart-row">
+        <div class="chart-card">
+          <div class="chart-title">需求状态分布</div>
+          <div class="pie-chart">
+            <div class="pie-circle"><div class="pie-inner"></div></div>
+            <div class="pie-legend">
+              <div class="legend-item"><span class="legend-dot" style="background:var(--primary)"></span>待评估 30%</div>
+              <div class="legend-item"><span class="legend-dot" style="background:var(--success)"></span>设计中 20%</div>
+              <div class="legend-item"><span class="legend-dot" style="background:var(--warning)"></span>研发中 20%</div>
+              <div class="legend-item"><span class="legend-dot" style="background:var(--danger)"></span>已上线 18%</div>
+              <div class="legend-item"><span class="legend-dot" style="background:#e8e8ed"></span>其他 12%</div>
+            </div>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">各业务线吞吐量</div>
+          <div class="bar-chart">
+            <div class="bar-item">
+              <div class="bar-track"><div class="bar-fill" style="height:85%"></div></div>
+              <div class="bar-label">校园G端</div>
+            </div>
+            <div class="bar-item">
+              <div class="bar-track"><div class="bar-fill" style="height:60%"></div></div>
+              <div class="bar-label">市监G端</div>
+            </div>
+            <div class="bar-item">
+              <div class="bar-track"><div class="bar-fill" style="height:35%"></div></div>
+              <div class="bar-label">食安企业</div>
+            </div>
+            <div class="bar-item">
+              <div class="bar-track"><div class="bar-fill" style="height:20%"></div></div>
+              <div class="bar-label">后勤B端</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="value-section">
+        <div class="value-title">价值回归评估排行</div>
+        <div class="value-list">
+          <div class="value-item">
+            <div class="value-rank">1</div>
+            <div class="value-name">智慧食堂支付通道扩容</div>
+            <div class="value-score"><span class="star">&#9733;</span><span class="star">&#9733;</span><span class="star">&#9733;</span><span class="star">&#9733;</span><span class="star">&#9733;</span></div>
+            <span style="font-size:12px;color:var(--text-secondary)">5.0分 · 8条评价</span>
+          </div>
+          <div class="value-item">
+            <div class="value-rank">2</div>
+            <div class="value-name">供应商资质审核流程</div>
+            <div class="value-score"><span class="star">&#9733;</span><span class="star">&#9733;</span><span class="star">&#9733;</span><span class="star">&#9733;</span><span class="star empty">&#9733;</span></div>
+            <span style="font-size:12px;color:var(--text-secondary)">4.2分 · 6条评价</span>
+          </div>
+          <div class="value-item">
+            <div class="value-rank">3</div>
+            <div class="value-name">教育局数据报表导出</div>
+            <div class="value-score"><span class="star">&#9733;</span><span class="star">&#9733;</span><span class="star">&#9733;</span><span class="star">&#9733;</span><span class="star empty">&#9733;</span></div>
+            <span style="font-size:12px;color:var(--text-secondary)">4.0分 · 5条评价</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

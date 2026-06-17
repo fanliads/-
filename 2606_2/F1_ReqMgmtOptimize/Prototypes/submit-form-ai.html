@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>需求管理平台 - 提交原始需求</title>
+<style>
+  :root {
+    --bg: #f5f5f7;
+    --surface: #ffffff;
+    --surface-soft: #f8fbff;
+    --text-primary: #1d1d1f;
+    --text-secondary: #86868b;
+    --border: rgba(0,0,0,0.08);
+    --primary: #0071e3;
+    --success: #34c759;
+    --warning: #ff9500;
+    --danger: #ff3b30;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.05);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.5;
+    overflow: hidden;
+  }
+  .layout { display: flex; height: 100vh; }
+  .sidebar {
+    width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+  }
+  .logo { padding: 0 24px 24px; font-size: 18px; font-weight: 600; }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 24px;
+    margin: 2px 12px;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 13px;
+  }
+  .nav-item.active, .nav-item:hover { background: rgba(0,113,227,0.08); color: var(--primary); font-weight: 500; }
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .header {
+    height: 64px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 24px;
+  }
+  .avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #e8e8ed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .workspace { flex: 1; overflow: auto; padding: 24px; }
+  .shell {
+    max-width: 1160px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1.35fr 0.85fr;
+    gap: 20px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .card-head {
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .card-title { font-size: 16px; font-weight: 600; }
+  .card-desc { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+  .card-body { padding: 20px; }
+  .field { margin-bottom: 16px; }
+  .label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+  .input, .textarea, select {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-soft);
+    padding: 12px 14px;
+    font-size: 14px;
+    outline: none;
+  }
+  .textarea { min-height: 240px; resize: vertical; line-height: 1.7; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .upload {
+    border: 1px dashed rgba(0,113,227,0.22);
+    background: linear-gradient(180deg, #fbfdff, #f6faff);
+    border-radius: 14px;
+    padding: 18px;
+    text-align: center;
+    color: #5d7390;
+    font-size: 12px;
+  }
+  .btn {
+    padding: 9px 16px;
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); }
+  .footer { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-top: 8px; }
+  .hint {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .panel {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    background: #fff;
+  }
+  .panel.hero {
+    background: linear-gradient(180deg, #eef6ff, #fff);
+    border-color: rgba(0,113,227,0.12);
+  }
+  .k { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+  .v { font-size: 13px; color: #536173; line-height: 1.8; }
+  .score-list { display: flex; flex-direction: column; gap: 10px; }
+  .score-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .score-item:last-child { border-bottom: none; }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .tag-ai { background: rgba(0,113,227,0.08); color: var(--primary); }
+  .tag-ok { background: rgba(52,199,89,0.12); color: #248a3d; }
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1d1d1f;
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 10px;
+    opacity: 0;
+    transition: opacity 0.25s;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="logo">需求管理平台</div>
+    <a href="raw-pool-ai.html" class="nav-item"><span>&#9993;</span>原始需求池</a>
+    <a href="priority-rules.html" class="nav-item"><span>&#9881;</span>优先级规则</a>
+    <a href="submit-form-ai.html" class="nav-item active"><span>&#10010;</span>提交原始需求</a>
+  </aside>
+
+  <main class="main">
+    <header class="header">
+      <div>
+        <div style="font-size:16px;font-weight:600;">新建原始需求</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">尽量补齐上下文，AI 判级会更稳定</div>
+      </div>
+      <div class="avatar">BD</div>
+    </header>
+
+    <div class="workspace">
+      <div class="shell">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">原始需求信息</div>
+            <div class="card-desc">保持表单轻量，但尽量提供影响范围、期望时间和背景信息，避免 AI 只能靠关键词猜测。</div>
+          </div>
+          <div class="card-body">
+            <div class="field">
+              <label class="label">原始需求标题</label>
+              <input class="input" value="宁波工程学院项目迭代需求">
+            </div>
+            <div class="field">
+              <label class="label">原始需求描述</label>
+              <textarea class="textarea">宁波工程学院项目提出一批现场迭代诉求，涉及结算流程展示、操作路径收敛和部分打印逻辑调整。项目计划在 6 月中旬前完成本轮验收，如果本次不处理，现场担心会影响客户确认与回款。</textarea>
+            </div>
+            <div class="grid">
+              <div class="field">
+                <label class="label">需求来源</label>
+                <select><option selected>实施</option><option>市场</option><option>客服</option><option>商务</option></select>
+              </div>
+              <div class="field">
+                <label class="label">关联项目</label>
+                <input class="input" value="宁波工程学院">
+              </div>
+              <div class="field">
+                <label class="label">期望上线时间</label>
+                <input class="input" value="2026-06-15">
+              </div>
+              <div class="field">
+                <label class="label">是否紧急</label>
+                <select><option selected>是</option><option>否</option></select>
+              </div>
+            </div>
+            <div class="field">
+              <label class="label">紧急原因</label>
+              <input class="input" value="若延期可能影响现场验收节奏与阶段回款">
+            </div>
+            <div class="field">
+              <label class="label">需求单链接</label>
+              <input class="input" value="https://www.kdocs.cn/l/cuGcAImXseqO">
+            </div>
+            <div class="field">
+              <label class="label">附件上传</label>
+              <div class="upload">拖拽文件到这里，或点击上传现场截图、客户说明、会议纪要</div>
+            </div>
+            <div class="footer">
+              <a href="raw-pool-ai.html"><button class="btn btn-ghost">取消</button></a>
+              <button class="btn btn-primary" onclick="showToast('需求已提交，系统正在自动判定优先级…'); setTimeout(()=>showToast('AI 判级完成：已写入 P1，可前往原始需求池查看'), 1600);">提交并触发 AI 判级</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="hint">
+          <div class="panel hero">
+            <div class="k">提交后系统动作</div>
+            <div class="v">
+              1. 创建原始需求记录<br>
+              2. 读取当前生效规则 V3.4<br>
+              3. 拼装规则文本 + 固定系统模板<br>
+              4. 调用大模型并校验结构化输出<br>
+              5. 直接写入同一个 <strong>priority</strong> 字段
+            </div>
+          </div>
+
+          <div class="panel">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+              <div class="card-title" style="font-size:14px;">AI 判级关注点</div>
+              <span class="tag tag-ai">结构化输出</span>
+            </div>
+            <div class="score-list">
+              <div class="score-item"><span>是否已签约客户 / 项目</span><strong>高影响</strong></div>
+              <div class="score-item"><span>是否存在验收、回款、检查节点</span><strong>高影响</strong></div>
+              <div class="score-item"><span>是否描述了不处理的后果</span><strong>中高影响</strong></div>
+              <div class="score-item"><span>是否只是体验建议、长期规划</span><strong>偏低优</strong></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+              <div class="card-title" style="font-size:14px;">填写质量提示</div>
+              <span class="tag tag-ok">推荐</span>
+            </div>
+            <div class="v">
+              与其写“客户说很急”，不如写清楚：
+              <br>“已签约项目，6 月 15 日现场验收，若不处理会影响本次回款。”
+              <br><br>这类信息对 AI 的帮助远大于单纯的“紧急”标签。
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="card-title" style="font-size:14px;margin-bottom:10px;">原型联动</div>
+            <div class="v">
+              提交后可前往：
+              <br><a href="raw-pool-ai.html" style="color:var(--primary);text-decoration:none;">查看原始需求池中的 AI 判级结果</a>
+              <br><a href="priority-rules.html" style="color:var(--primary);text-decoration:none;">查看当前生效规则版本</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.style.opacity = '1';
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer = setTimeout(() => toast.style.opacity = '0', 2600);
+}
+</script>
+</body>
+</html>

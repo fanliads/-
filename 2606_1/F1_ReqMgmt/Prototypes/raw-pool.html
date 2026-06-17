@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>需求管理平台 - 原始需求池</title>
+<style>
+  :root {
+    --bg: #f5f5f7;
+    --surface: #ffffff;
+    --text-primary: #1d1d1f;
+    --text-secondary: #86868b;
+    --border: rgba(0,0,0,0.08);
+    --primary: #0071e3;
+    --success: #34c759;
+    --warning: #ff9500;
+    --danger: #ff3b30;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.5;
+    overflow: hidden;
+  }
+  .layout { display: flex; height: 100vh; }
+  .sidebar {
+    width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+  }
+  .logo { padding: 0 24px 24px; font-size: 18px; font-weight: 600; }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 24px;
+    margin: 2px 12px;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 13px;
+  }
+  .nav-item.active, .nav-item:hover { background: rgba(0,113,227,0.08); color: var(--primary); font-weight: 500; }
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .header {
+    height: 64px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+  }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .search-box {
+    width: 220px;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg);
+    font-size: 13px;
+  }
+  .btn {
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-success { background: rgba(52,199,89,0.10); color: #248a3d; }
+  .btn-danger { background: rgba(255,59,48,0.08); color: var(--danger); }
+  .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+  .avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #e8e8ed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .toolbar {
+    padding: 12px 24px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .mode-switch {
+    display: flex;
+    gap: 4px;
+    background: var(--bg);
+    padding: 4px;
+    border-radius: var(--radius-sm);
+  }
+  .mode-btn {
+    padding: 6px 14px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+  .mode-btn.active {
+    background: var(--surface);
+    color: var(--text-primary);
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+  .filter-chip {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .filter-chip.active { background: rgba(0,113,227,0.08); border-color: var(--primary); color: var(--primary); }
+  .summary {
+    padding: 0 24px 14px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    min-width: 180px;
+  }
+  .summary-k { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+  .summary-v { font-size: 18px; font-weight: 600; }
+  .pool-scroll { flex: 1; overflow: auto; padding: 0 24px 24px; }
+  .view-panel { display: none; }
+  .view-panel.active { display: block; }
+  .compact-list { display: flex; flex-direction: column; gap: 12px; }
+  .compact-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .compact-main {
+    display: grid;
+    grid-template-columns: 1.8fr 0.85fr 0.75fr 0.75fr 0.9fr 1fr auto;
+    gap: 16px;
+    align-items: center;
+    padding: 16px 18px;
+  }
+  .title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .desc { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+  .field-k { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
+  .field-v { font-size: 13px; font-weight: 500; }
+  .link-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(0,113,227,0.08);
+    color: var(--primary);
+    font-size: 12px;
+    text-decoration: none;
+  }
+  .status-tag, .info-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .status-eval { background: rgba(0,113,227,0.10); color: var(--primary); }
+  .status-director { background: rgba(255,149,0,0.10); color: #b75c00; }
+  .status-split { background: rgba(52,199,89,0.10); color: #248a3d; }
+  .info-ok { background: rgba(52,199,89,0.10); color: #248a3d; }
+  .info-missing { background: rgba(255,149,0,0.12); color: #9a6200; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .detail {
+    display: none;
+    padding: 0 18px 18px;
+    border-top: 1px solid var(--border);
+    background: rgba(0,0,0,0.015);
+  }
+  .detail.open { display: block; }
+  .detail-grid {
+    padding-top: 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px 18px;
+  }
+  .detail-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .detail-card.full { grid-column: 1 / -1; }
+  .detail-card.span-2 { grid-column: span 2; }
+  .detail-title { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+  .detail-value { font-size: 13px; line-height: 1.7; }
+  .linked-list { display: flex; flex-direction: column; gap: 8px; }
+  .linked-item {
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .split-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.24);
+    opacity: 0;
+    visibility: hidden;
+    transition: 0.25s;
+    z-index: 20;
+  }
+  .split-overlay.open {
+    opacity: 1;
+    visibility: visible;
+  }
+  .split-drawer {
+    position: fixed;
+    top: 0;
+    right: -620px;
+    width: 620px;
+    height: 100vh;
+    background: var(--surface);
+    box-shadow: -10px 0 32px rgba(0,0,0,0.12);
+    transition: right 0.3s;
+    z-index: 21;
+    display: flex;
+    flex-direction: column;
+  }
+  .split-drawer.open { right: 0; }
+  .split-header, .split-footer {
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border);
+  }
+  .split-footer {
+    border-bottom: none;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .split-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 22px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .split-kicker {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+  .split-summary {
+    background: rgba(0,113,227,0.05);
+    border: 1px solid rgba(0,113,227,0.12);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .split-summary-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .split-summary-text {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+  .split-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .split-item {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    background: var(--bg);
+  }
+  .split-item-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .split-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .split-item-title {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .split-item-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin-bottom: 10px;
+  }
+  .split-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+  }
+  .split-meta-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .split-input, .split-select, .split-textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+    background: var(--surface);
+    color: var(--text-primary);
+  }
+  .split-textarea {
+    min-height: 68px;
+    resize: vertical;
+    line-height: 1.6;
+  }
+  .split-tools {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .split-note {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #1d1d1f; color: #fff; padding: 10px 20px; border-radius: 8px;
+    opacity: 0; transition: 0.25s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+  .table-wrap {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: auto;
+  }
+  .data-table {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .data-table th {
+    text-align: left;
+    padding: 10px 14px;
+    background: var(--bg);
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 12px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+  .data-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  .data-table tr:hover td { background: rgba(0,113,227,0.02); }
+  @media (max-width: 1100px) {
+    .compact-main { grid-template-columns: 1fr; }
+    .actions { justify-content: flex-start; }
+    .detail-grid { grid-template-columns: 1fr 1fr; }
+    .split-drawer { width: 100%; right: -100%; }
+    .split-meta { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 760px) {
+    .detail-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="logo">需求管理平台</div>
+    <a href="kanban.html" class="nav-item">看板视图</a>
+    <a href="sprint.html" class="nav-item">迭代版本</a>
+    <a href="raw-pool.html" class="nav-item active">原始需求池</a>
+    <a href="product-pool.html" class="nav-item">产品需求池</a>
+    <a href="dashboard.html" class="nav-item">数据看板</a>
+  </aside>
+
+  <main class="main">
+    <header class="header">
+      <div>
+        <div style="font-size:16px;font-weight:600;">原始需求池</div>
+      <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">核心字段评估列表，展开后再看完整上下文和拆分结果</div>
+      </div>
+      <div class="header-right">
+        <input class="search-box" placeholder="搜索原始需求标题、编号...">
+        <button class="btn btn-primary">+ 新建需求</button>
+        <div class="avatar">PM</div>
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <div class="filter-chip active">核心字段模式</div>
+      <div class="mode-switch">
+        <button class="mode-btn active" id="modeCollapsed" onclick="setViewMode('collapsed')">折叠</button>
+        <button class="mode-btn" id="modeExpanded" onclick="setViewMode('expanded')">展开</button>
+      </div>
+      <div class="filter-chip">当前状态</div>
+      <div class="filter-chip">业务线</div>
+      <div class="filter-chip">优先级</div>
+      <div class="filter-chip">项目经理</div>
+    </div>
+
+    <div class="summary">
+      <div class="summary-card"><div class="summary-k">待项目经理评估</div><div class="summary-v">2</div></div>
+      <div class="summary-card"><div class="summary-k">待产品总监判定</div><div class="summary-v">2</div></div>
+      <div class="summary-card"><div class="summary-k">信息待补充</div><div class="summary-v">1</div></div>
+      <div class="summary-card"><div class="summary-k">已拆分待跟进</div><div class="summary-v">1</div></div>
+    </div>
+
+    <div class="pool-scroll">
+      <div class="view-panel active" id="collapsedView">
+        <div class="compact-list">
+        <div class="compact-item">
+          <div class="compact-main">
+            <div>
+              <div class="title">台州各区县采购平台优化</div>
+              <div class="desc">供应商入驻审核周期过长，需优化流程，支持批量导入和自动资质核验。</div>
+            </div>
+            <div><div class="field-k">当前状态</div><div class="field-v"><span class="status-tag status-eval">待项目经理评估</span></div></div>
+            <div><div class="field-k">业务线</div><div class="field-v">校园G端</div></div>
+            <div><div class="field-k">优先级建议</div><div class="field-v">P1</div></div>
+            <div><div class="field-k">是否加急</div><div class="field-v">是</div></div>
+            <div><div class="field-k">需求单链接</div><div class="field-v"><a class="link-pill" href="#">查看需求单</a></div></div>
+            <div class="actions">
+              <button class="btn btn-success" onclick="showToast('已承接并转入总监判定')">承接</button>
+              <button class="btn btn-ghost" onclick="toggleDetail('detail1')">展开详情</button>
+            </div>
+          </div>
+          <div class="detail" id="detail1">
+            <div class="detail-grid">
+              <div class="detail-card"><div class="detail-title">需求单</div><div class="detail-value">RAW-0520-001</div></div>
+              <div class="detail-card"><div class="detail-title">业务线</div><div class="detail-value">校园G端</div></div>
+              <div class="detail-card"><div class="detail-title">登记人</div><div class="detail-value">饭粒</div></div>
+              <div class="detail-card"><div class="detail-title">提出时间</div><div class="detail-value">2026-05-19</div></div>
+              <div class="detail-card"><div class="detail-title">项目经理</div><div class="detail-value">张三</div></div>
+              <div class="detail-card"><div class="detail-title">产品经理</div><div class="detail-value">陈明</div></div>
+              <div class="detail-card"><div class="detail-title">优先级建议</div><div class="detail-value">AI 建议 P1，客户明确要求 6 月前上线</div></div>
+              <div class="detail-card"><div class="detail-title">是否加急插队</div><div class="detail-value">是</div></div>
+              <div class="detail-card"><div class="detail-title">加急原因</div><div class="detail-value">客户明确要求 6 月前上线</div></div>
+              <div class="detail-card"><div class="detail-title">期望上线时间</div><div class="detail-value">2026-06-15</div></div>
+              <div class="detail-card"><div class="detail-title">价值量化评估</div><div class="detail-value">4.2 分 · 6 条评估</div></div>
+              <div class="detail-card span-2"><div class="detail-title">需求单链接</div><div class="detail-value">金蝶云文档 / 采购平台优化需求单</div></div>
+              <div class="detail-card full"><div class="detail-title">需求备注</div><div class="detail-value">供应商入驻审核周期过长，需优化流程，支持批量导入和自动资质核验。</div></div>
+              <div class="detail-card full"><div class="detail-title">产品需求定义</div><div class="detail-value">优化供应商入驻审核流程，支持批量导入、资质自动核验，并联动仓储同步改造。</div></div>
+              <div class="detail-card full"><div class="detail-title">内容补充</div><div class="detail-value">项目经理已补充客户背景和技术细节：当前审核平均耗时 7 个工作日，客户希望压缩至 2 个工作日内，建议接入企业资质自动核验接口。</div></div>
+              <div class="detail-card full"><div class="detail-title">下钻产品需求</div><div class="linked-list"><div class="linked-item"><span>PRD-0520-001 供应商入驻审核流程优化</span><span class="status-tag status-director">待过滤</span></div><div class="linked-item"><span>PRD-0520-002 仓储屏数据同步延迟优化</span><span class="status-tag status-director">待过滤</span></div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="compact-item">
+          <div class="compact-main">
+            <div>
+              <div class="title">南昌青山湖区智慧食堂项目系统修改</div>
+              <div class="desc">支付通道需求相对清晰，建议总监判定通过后直接拆分为支付接入和对账联动能力。</div>
+            </div>
+            <div><div class="field-k">当前状态</div><div class="field-v" id="statusField-RAW-0520-002"><span class="status-tag status-director">待产品总监判定</span></div></div>
+            <div><div class="field-k">业务线</div><div class="field-v">校园G端</div></div>
+            <div><div class="field-k">优先级建议</div><div class="field-v">P0</div></div>
+            <div><div class="field-k">是否加急</div><div class="field-v">是</div></div>
+            <div><div class="field-k">需求单链接</div><div class="field-v"><a class="link-pill" href="#">查看需求单</a></div></div>
+            <div class="actions" id="actions-RAW-0520-002">
+              <button class="btn btn-primary" onclick="openSplitDrawer('RAW-0520-002')">拆分</button>
+              <button class="btn btn-ghost" onclick="toggleDetail('detail2')">展开详情</button>
+            </div>
+          </div>
+          <div class="detail" id="detail2">
+            <div class="detail-grid">
+              <div class="detail-card"><div class="detail-title">需求单</div><div class="detail-value">RAW-0520-002</div></div>
+              <div class="detail-card"><div class="detail-title">业务线</div><div class="detail-value">校园G端</div></div>
+              <div class="detail-card"><div class="detail-title">登记人</div><div class="detail-value">饭粒</div></div>
+              <div class="detail-card"><div class="detail-title">提出时间</div><div class="detail-value">2026-05-19</div></div>
+              <div class="detail-card"><div class="detail-title">项目经理</div><div class="detail-value">张三</div></div>
+              <div class="detail-card"><div class="detail-title">产品经理</div><div class="detail-value">王芳</div></div>
+              <div class="detail-card"><div class="detail-title">优先级建议</div><div class="detail-value">AI 建议 P0</div></div>
+              <div class="detail-card"><div class="detail-title">是否加急插队</div><div class="detail-value">是</div></div>
+              <div class="detail-card"><div class="detail-title">加急原因</div><div class="detail-value">项目验收节点临近</div></div>
+              <div class="detail-card"><div class="detail-title">期望上线时间</div><div class="detail-value">2026-06-01</div></div>
+              <div class="detail-card"><div class="detail-title">价值量化评估</div><div class="detail-value">待补充</div></div>
+              <div class="detail-card span-2"><div class="detail-title">需求单链接</div><div class="detail-value">智慧食堂项目修改需求单</div></div>
+              <div class="detail-card full"><div class="detail-title">需求备注</div><div class="detail-value">对接新的支付通道，兼顾现有项目验收时间要求。</div></div>
+              <div class="detail-card full"><div class="detail-title">产品需求定义</div><div class="detail-value">接入微信支付和支付宝双通道，并评估支付结果与对账联动能力。</div></div>
+              <div class="detail-card full"><div class="detail-title">原始描述</div><div class="detail-value">对接新的支付通道，支持微信支付和支付宝双通道，同时兼顾现有项目验收节点。</div></div>
+              <div class="detail-card full"><div class="detail-title">评估建议</div><div class="detail-value">建议拆成“支付通道接入”和“支付对账联动”两条产品需求，下游再分发给不同业务线负责人。</div></div>
+              <div class="detail-card full"><div class="detail-title">拆分结果</div><div class="detail-value" id="splitResultText-RAW-0520-002">待总监确认后进入拆分。</div></div>
+              <div class="detail-card full"><div class="detail-title">下钻产品需求</div><div class="linked-list" id="linkedList-RAW-0520-002"><div class="linked-item"><span>待拆分后生成产品需求</span><span class="status-tag status-director">待拆分</span></div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="compact-item">
+          <div class="compact-main">
+            <div>
+              <div class="title">山东互联网+明厨亮灶项目</div>
+              <div class="desc">范围较大，先做标准产品/定制化判断，再决定是否进入拆分和下游分发。</div>
+            </div>
+            <div><div class="field-k">当前状态</div><div class="field-v"><span class="status-tag status-director">待产品总监判定</span></div></div>
+            <div><div class="field-k">业务线</div><div class="field-v">市监G端</div></div>
+            <div><div class="field-k">优先级建议</div><div class="field-v">P1</div></div>
+            <div><div class="field-k">是否加急</div><div class="field-v">否</div></div>
+            <div><div class="field-k">需求单链接</div><div class="field-v"><a class="link-pill" href="#">查看需求单</a></div></div>
+            <div class="actions">
+              <button class="btn btn-danger" onclick="showToast('演示：已拒绝并通知发起方')">拒绝</button>
+              <button class="btn btn-ghost" onclick="toggleDetail('detail3')">展开详情</button>
+            </div>
+          </div>
+          <div class="detail" id="detail3">
+            <div class="detail-grid">
+              <div class="detail-card"><div class="detail-title">需求单</div><div class="detail-value">RAW-0520-003</div></div>
+              <div class="detail-card"><div class="detail-title">业务线</div><div class="detail-value">市监G端</div></div>
+              <div class="detail-card"><div class="detail-title">登记人</div><div class="detail-value">饭粒</div></div>
+              <div class="detail-card"><div class="detail-title">提出时间</div><div class="detail-value">2026-05-19</div></div>
+              <div class="detail-card"><div class="detail-title">范围判断</div><div class="detail-value">存在定制化风险，需先做范围收敛</div></div>
+              <div class="detail-card"><div class="detail-title">项目经理</div><div class="detail-value">李强</div></div>
+              <div class="detail-card"><div class="detail-title">产品经理</div><div class="detail-value">郑伟</div></div>
+              <div class="detail-card"><div class="detail-title">优先级定级</div><div class="detail-value">人工 P1</div></div>
+              <div class="detail-card"><div class="detail-title">是否加急插队</div><div class="detail-value">否</div></div>
+              <div class="detail-card"><div class="detail-title">期望上线时间</div><div class="detail-value">2026-07-01</div></div>
+              <div class="detail-card"><div class="detail-title">价值量化评估</div><div class="detail-value">待补充</div></div>
+              <div class="detail-card span-2"><div class="detail-title">需求单链接</div><div class="detail-value">互联网+明厨亮灶项目需求单</div></div>
+              <div class="detail-card full"><div class="detail-title">需求备注</div><div class="detail-value">接入 AI 视频识别，检测厨房违规并向监管端上报。</div></div>
+              <div class="detail-card full"><div class="detail-title">产品定义草案</div><div class="detail-value">可拆成 AI 识别引擎、违规告警、数据上报三部分，但要先判断哪些属于标准能力、哪些属于项目定制。</div></div>
+              <div class="detail-card full"><div class="detail-title">下钻产品需求</div><div class="linked-list"><div class="linked-item"><span>PRD-0521-001 AI 识别引擎升级</span><span class="status-tag status-director">待过滤</span></div><div class="linked-item"><span>PRD-0521-002 违规告警中心</span><span class="status-tag status-director">待过滤</span></div><div class="linked-item"><span>PRD-0521-003 数据上报组件</span><span class="status-tag status-director">待过滤</span></div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="compact-item">
+          <div class="compact-main">
+            <div>
+              <div class="title">嘉兴市仓储屏系统优化</div>
+              <div class="desc">当前描述过于粗糙，不适合直接承接评估，优先补充客户背景、影响范围和成功标准。</div>
+            </div>
+            <div><div class="field-k">当前状态</div><div class="field-v"><span class="status-tag status-eval">待项目经理评估</span></div></div>
+            <div><div class="field-k">业务线</div><div class="field-v">校园G端</div></div>
+            <div><div class="field-k">优先级建议</div><div class="field-v">P2</div></div>
+            <div><div class="field-k">是否加急</div><div class="field-v">否</div></div>
+            <div><div class="field-k">需求单链接</div><div class="field-v"><a class="link-pill" href="#">查看需求单</a></div></div>
+            <div class="actions">
+              <button class="btn btn-ghost" onclick="showToast('演示：打开补充内容弹窗')">补充</button>
+              <button class="btn btn-ghost" onclick="toggleDetail('detail4')">展开详情</button>
+            </div>
+          </div>
+          <div class="detail" id="detail4">
+            <div class="detail-grid">
+              <div class="detail-card"><div class="detail-title">需求单</div><div class="detail-value">RAW-0520-004</div></div>
+              <div class="detail-card"><div class="detail-title">业务线</div><div class="detail-value">校园G端</div></div>
+              <div class="detail-card"><div class="detail-title">登记人</div><div class="detail-value">王磊</div></div>
+              <div class="detail-card"><div class="detail-title">提出时间</div><div class="detail-value">2026-05-20</div></div>
+              <div class="detail-card"><div class="detail-title">缺失信息</div><div class="detail-value">缺客户背景、缺明确范围、缺成功标准</div></div>
+              <div class="detail-card"><div class="detail-title">项目经理</div><div class="detail-value">未分配</div></div>
+              <div class="detail-card"><div class="detail-title">产品经理</div><div class="detail-value">未分配</div></div>
+              <div class="detail-card"><div class="detail-title">优先级建议</div><div class="detail-value">AI 建议 P2</div></div>
+              <div class="detail-card"><div class="detail-title">是否加急插队</div><div class="detail-value">否</div></div>
+              <div class="detail-card"><div class="detail-title">期望上线时间</div><div class="detail-value">2026-06-30</div></div>
+              <div class="detail-card"><div class="detail-title">价值量化评估</div><div class="detail-value">待补充</div></div>
+              <div class="detail-card span-2"><div class="detail-title">需求单链接</div><div class="detail-value">仓储屏系统优化记录</div></div>
+              <div class="detail-card full"><div class="detail-title">产品需求定义</div><div class="detail-value">待定义</div></div>
+              <div class="detail-card full"><div class="detail-title">当前备注</div><div class="detail-value">仅说明“仓储屏数据同步延迟”，没有说明具体页面、延迟时长以及是否影响项目验收。</div></div>
+            </div>
+          </div>
+        </div>
+        </div>
+      </div>
+
+      <div class="view-panel" id="expandedView">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>业务线</th>
+                <th>原始需求标题</th>
+                <th>需求单</th>
+                <th>需求备注</th>
+                <th>登记人</th>
+                <th>提出人</th>
+                <th>提出时间</th>
+                <th>当前状态</th>
+                <th>产品需求定义</th>
+                <th>产品经理</th>
+                <th>项目经理</th>
+                <th>优先级建议</th>
+                <th>是否加急插队</th>
+                <th>加急原因</th>
+                <th>关联项目</th>
+                <th>期望上线时间</th>
+                <th>价值量化评估</th>
+                <th>完整度</th>
+                <th>关联产品需求池</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>校园G端</td>
+                <td>台州各区县采购平台优化</td>
+                <td><a class="link-pill" href="#">RAW-0520-001</a></td>
+                <td>供应商入驻审核周期过长，需优化</td>
+                <td>饭粒</td>
+                <td>饭粒</td>
+                <td>2026-05-19</td>
+                <td><span class="status-tag status-eval">待项目经理评估</span></td>
+                <td>优化供应商入驻审核流程，支持批量导入和自动核验</td>
+                <td>陈明</td>
+                <td>张三</td>
+                <td>P1</td>
+                <td>是</td>
+                <td>客户明确要求 6 月前上线</td>
+                <td>台州教育局</td>
+                <td>2026-06-15</td>
+                <td>4.2 分 · 6 条评估</td>
+                <td><span class="info-badge info-ok">完整</span></td>
+                <td>PRD-0520-001 / PRD-0520-002</td>
+                <td><button class="btn btn-success">承接</button></td>
+              </tr>
+              <tr>
+                <td>校园G端</td>
+                <td>南昌青山湖区智慧食堂项目系统修改</td>
+                <td><a class="link-pill" href="#">RAW-0520-002</a></td>
+                <td>对接新的支付通道</td>
+                <td>饭粒</td>
+                <td>李丽</td>
+                <td>2026-05-19</td>
+                <td id="tableStatus-RAW-0520-002"><span class="status-tag status-director">待产品总监判定</span></td>
+                <td>接入微信支付和支付宝双通道</td>
+                <td>王芳</td>
+                <td>张三</td>
+                <td>P0</td>
+                <td>是</td>
+                <td>项目验收节点临近</td>
+                <td>青山湖区</td>
+                <td>2026-06-01</td>
+                <td>待补充</td>
+                <td><span class="info-badge info-ok">完整</span></td>
+                <td id="tableLinked-RAW-0520-002">待拆分</td>
+                <td id="tableAction-RAW-0520-002"><button class="btn btn-primary" onclick="openSplitDrawer('RAW-0520-002')">拆分</button></td>
+              </tr>
+              <tr>
+                <td>市监G端</td>
+                <td>山东互联网+明厨亮灶项目</td>
+                <td><a class="link-pill" href="#">RAW-0520-003</a></td>
+                <td>接入 AI 视频识别，检测厨房违规</td>
+                <td>饭粒</td>
+                <td>饭粒</td>
+                <td>2026-05-19</td>
+                <td><span class="status-tag status-director">待产品总监判定</span></td>
+                <td>AI 识别引擎 + 违规告警 + 数据上报</td>
+                <td>郑伟</td>
+                <td>李强</td>
+                <td>P1</td>
+                <td>否</td>
+                <td>—</td>
+                <td>山东省市监局</td>
+                <td>2026-07-01</td>
+                <td>待补充</td>
+                <td><span class="info-badge info-ok">完整</span></td>
+                <td>PRD-0521-001 / 002 / 003</td>
+                <td><button class="btn btn-danger">拒绝</button></td>
+              </tr>
+              <tr>
+                <td>校园G端</td>
+                <td>嘉兴市仓储屏系统优化</td>
+                <td><a class="link-pill" href="#">RAW-0520-004</a></td>
+                <td>仓储屏数据同步延迟问题</td>
+                <td>王磊</td>
+                <td>王磊</td>
+                <td>2026-05-20</td>
+                <td><span class="status-tag status-eval">待项目经理评估</span></td>
+                <td>待定义</td>
+                <td>未分配</td>
+                <td>未分配</td>
+                <td>P2</td>
+                <td>否</td>
+                <td>—</td>
+                <td>嘉兴教育局</td>
+                <td>2026-06-30</td>
+                <td>待补充</td>
+                <td><span class="info-badge info-missing">待补充</span></td>
+                <td>暂无</td>
+                <td><button class="btn btn-ghost">补充</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="split-overlay" id="splitOverlay" onclick="closeSplitDrawer()"></div>
+<div class="split-drawer" id="splitDrawer">
+  <div class="split-header">
+    <div style="font-size:16px;font-weight:600;">拆分原始需求</div>
+    <div class="split-kicker" id="splitDrawerSub">根据当前原始需求内容，预拆分为多个可分发的产品需求</div>
+  </div>
+  <div class="split-body">
+    <div class="split-summary">
+      <div class="split-summary-title" id="splitRawTitle">原始需求标题</div>
+      <div class="split-summary-text" id="splitRawSummary">这里展示拆分原则、范围边界和建议说明。</div>
+    </div>
+    <div class="split-list" id="splitList"></div>
+    <div class="split-tools">
+      <div class="split-note">支持直接调整拆分项标题、负责人、优先级和说明。</div>
+      <button class="btn btn-ghost" onclick="addSplitItem()">+ 新增拆分项</button>
+    </div>
+  </div>
+  <div class="split-footer">
+    <div style="font-size:12px;color:var(--text-secondary);" id="splitFooterHint">确认后会把拆分结果同步回原始需求详情和列表。</div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-ghost" onclick="closeSplitDrawer()">取消</button>
+      <button class="btn btn-primary" onclick="confirmSplit()">确认拆分</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let viewMode = 'collapsed';
+let activeSplitRawId = '';
+const SPLIT_STORAGE_KEY = 'req-mgmt-split-results-v1';
+const splitPlans = {
+  'RAW-0520-002': {
+    title: '南昌青山湖区智慧食堂项目系统修改',
+    summary: '建议按“支付接入能力”和“对账联动能力”两条线拆开，前者保障验收节点，后者便于后续排期和分发。',
+    items: [
+      { id: 'PRD-0520-003', title: '智慧食堂双支付通道接入', desc: '覆盖微信支付、支付宝双通道接入与支付入口适配，优先保障当前项目验收。', owner: '王芳', priority: 'P0', next: '待过滤' },
+      { id: 'PRD-0520-004', title: '支付结果与对账联动能力', desc: '补齐支付结果回传、对账状态同步与异常处理，为后续结算闭环做准备。', owner: '陈明', priority: 'P1', next: '待过滤' }
+    ]
+  }
+};
+let editingSplitItems = [];
+
+function setViewMode(mode) {
+  viewMode = mode;
+  document.getElementById('modeCollapsed').classList.toggle('active', mode === 'collapsed');
+  document.getElementById('modeExpanded').classList.toggle('active', mode === 'expanded');
+  document.getElementById('collapsedView').classList.toggle('active', mode === 'collapsed');
+  document.getElementById('expandedView').classList.toggle('active', mode === 'expanded');
+}
+
+function toggleDetail(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2400);
+}
+
+function getStoredSplits() {
+  try {
+    return JSON.parse(localStorage.getItem(SPLIT_STORAGE_KEY) || '{}');
+  } catch (error) {
+    return {};
+  }
+}
+
+function setStoredSplits(data) {
+  localStorage.setItem(SPLIT_STORAGE_KEY, JSON.stringify(data));
+}
+
+function escapeHtml(value) {
+  return String(value || '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[char]));
+}
+
+function renderSplitEditor() {
+  document.getElementById('splitList').innerHTML = editingSplitItems.map((item, index) => `
+    <div class="split-item">
+      <div class="split-item-head">
+        <div class="split-item-title">拆分项 ${index + 1}</div>
+        <div class="split-item-actions">
+          <span class="status-tag status-director">${escapeHtml(item.next || '待过滤')}</span>
+          <button class="btn btn-ghost" style="padding:6px 10px;" onclick="removeSplitItem(${index})">删除</button>
+        </div>
+      </div>
+      <div class="split-meta" style="margin-bottom:10px;">
+        <div class="split-meta-card"><div class="field-k">产品需求编号</div><input class="split-input" value="${escapeHtml(item.id)}" oninput="updateSplitItem(${index}, 'id', this.value)"></div>
+        <div class="split-meta-card"><div class="field-k">建议负责人</div><input class="split-input" value="${escapeHtml(item.owner)}" oninput="updateSplitItem(${index}, 'owner', this.value)"></div>
+        <div class="split-meta-card"><div class="field-k">优先级</div><select class="split-select" onchange="updateSplitItem(${index}, 'priority', this.value)"><option value="P0" ${item.priority === 'P0' ? 'selected' : ''}>P0</option><option value="P1" ${item.priority === 'P1' ? 'selected' : ''}>P1</option><option value="P2" ${item.priority === 'P2' ? 'selected' : ''}>P2</option><option value="P3" ${item.priority === 'P3' ? 'selected' : ''}>P3</option></select></div>
+      </div>
+      <div style="margin-bottom:10px;"><div class="field-k">产品需求标题</div><input class="split-input" value="${escapeHtml(item.title)}" oninput="updateSplitItem(${index}, 'title', this.value)"></div>
+      <div style="margin-bottom:10px;"><div class="field-k">需求说明</div><textarea class="split-textarea" oninput="updateSplitItem(${index}, 'desc', this.value)">${escapeHtml(item.desc)}</textarea></div>
+      <div><div class="field-k">下一步状态</div><select class="split-select" onchange="updateSplitItem(${index}, 'next', this.value)"><option value="待过滤" ${item.next === '待过滤' ? 'selected' : ''}>待过滤</option><option value="待指派" ${item.next === '待指派' ? 'selected' : ''}>待指派</option><option value="待排期" ${item.next === '待排期' ? 'selected' : ''}>待排期</option></select></div>
+    </div>
+  `).join('');
+}
+
+function updateSplitItem(index, field, value) {
+  if (!editingSplitItems[index]) return;
+  editingSplitItems[index][field] = value;
+}
+
+function addSplitItem() {
+  if (!activeSplitRawId) return;
+  const nextId = 'PRD-' + activeSplitRawId.replace('RAW-', '') + '-' + String(editingSplitItems.length + 3).padStart(3, '0');
+  editingSplitItems.push({
+    id: nextId,
+    title: '新增产品需求',
+    desc: '补充拆分说明',
+    owner: '待分配',
+    priority: 'P2',
+    next: '待过滤'
+  });
+  renderSplitEditor();
+}
+
+function removeSplitItem(index) {
+  editingSplitItems.splice(index, 1);
+  renderSplitEditor();
+}
+
+function openSplitDrawer(rawId) {
+  const plan = splitPlans[rawId];
+  if (!plan) {
+    showToast('当前原始需求暂未配置拆分方案');
+    return;
+  }
+  const storedPlan = getStoredSplits()[rawId];
+  activeSplitRawId = rawId;
+  editingSplitItems = JSON.parse(JSON.stringify((storedPlan && storedPlan.items) || plan.items));
+  document.getElementById('splitRawTitle').textContent = plan.title;
+  document.getElementById('splitRawSummary').textContent = (storedPlan && storedPlan.summary) || plan.summary;
+  document.getElementById('splitDrawerSub').textContent = rawId + ' · 预拆分为 ' + editingSplitItems.length + ' 条产品需求';
+  renderSplitEditor();
+  document.getElementById('splitOverlay').classList.add('open');
+  document.getElementById('splitDrawer').classList.add('open');
+}
+
+function closeSplitDrawer() {
+  document.getElementById('splitOverlay').classList.remove('open');
+  document.getElementById('splitDrawer').classList.remove('open');
+}
+
+function confirmSplit() {
+  if (!activeSplitRawId) return;
+  const plan = splitPlans[activeSplitRawId];
+  if (!plan) return;
+  const validItems = editingSplitItems.filter(item => item.id.trim() && item.title.trim());
+  if (!validItems.length) {
+    showToast('至少保留 1 条有效拆分项');
+    return;
+  }
+  const linkedHtml = validItems.map(item => `<div class="linked-item"><span>${item.id} ${item.title}</span><span class="status-tag status-director">${item.next}</span></div>`).join('');
+  const linkedText = validItems.map(item => item.id).join(' / ');
+  const storedSplits = getStoredSplits();
+  storedSplits[activeSplitRawId] = {
+    title: plan.title,
+    summary: document.getElementById('splitRawSummary').textContent,
+    items: validItems
+  };
+  setStoredSplits(storedSplits);
+
+  document.getElementById('statusField-' + activeSplitRawId).innerHTML = '<span class="status-tag status-split">已拆分待跟进</span>';
+  document.getElementById('tableStatus-' + activeSplitRawId).innerHTML = '<span class="status-tag status-split">已拆分待跟进</span>';
+  document.getElementById('linkedList-' + activeSplitRawId).innerHTML = linkedHtml;
+  document.getElementById('splitResultText-' + activeSplitRawId).textContent = '已拆分为 ' + validItems.length + ' 条产品需求，可继续进入产品需求池做过滤与分发。';
+  document.getElementById('tableLinked-' + activeSplitRawId).textContent = linkedText;
+  document.getElementById('actions-' + activeSplitRawId).innerHTML = '<button class="btn btn-success" onclick="showToast(\'演示：已转入产品需求池继续分发\')">查看拆分结果</button><button class="btn btn-ghost" onclick="toggleDetail(\'detail2\')">展开详情</button>';
+  document.getElementById('tableAction-' + activeSplitRawId).innerHTML = '<button class="btn btn-success" onclick="showToast(\'演示：跳转产品需求池查看拆分结果\')">查看结果</button>';
+
+  closeSplitDrawer();
+  showToast('已完成拆分并同步结果');
+}
+</script>
+</body>
+</html>

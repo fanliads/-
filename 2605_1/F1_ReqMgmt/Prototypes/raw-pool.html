@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>需求管理平台 - 原始需求池</title>
+<style>
+  :root {
+    --bg: #f5f5f7; --surface: #ffffff; --text-primary: #1d1d1f; --text-secondary: #86868b;
+    --border: rgba(0,0,0,0.08); --primary: #0071e3; --primary-hover: #0077ed;
+    --success: #34c759; --warning: #ff9500; --danger: #ff3b30;
+    --radius: 12px; --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
+    --shadow-hover: 0 4px 12px rgba(0,0,0,0.08), 0 16px 32px rgba(0,0,0,0.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--text-primary); font-size: 14px; line-height: 1.5; overflow: hidden;
+  }
+  .layout { display: flex; height: 100vh; }
+  .sidebar {
+    width: 220px; background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 20px 0; flex-shrink: 0;
+  }
+  .logo { padding: 0 24px 24px; font-size: 18px; font-weight: 600; letter-spacing: -0.5px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 12px; padding: 10px 24px; margin: 2px 12px;
+    border-radius: var(--radius-sm); cursor: pointer; color: var(--text-secondary); text-decoration: none; font-size: 13px; transition: all 0.2s;
+  }
+  .nav-item:hover, .nav-item.active { background: rgba(0,113,227,0.08); color: var(--primary); font-weight: 500; }
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+  .header {
+    height: 64px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 24px; flex-shrink: 0;
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .search-box { width: 220px; padding: 8px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg); font-size: 13px; outline: none; }
+  .search-box:focus { border-color: var(--primary); }
+  .btn { padding: 8px 16px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-hover); }
+  .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--primary); color: var(--primary); }
+  .btn-success { background: rgba(52,199,89,0.10); color: #248a3d; }
+  .btn-danger { background: rgba(255,59,48,0.08); color: var(--danger); }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .btn-icon { padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); cursor: pointer; color: var(--text-secondary); font-size: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+  .btn-icon:hover { border-color: var(--primary); color: var(--primary); }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: #e8e8ed; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--text-secondary); }
+
+  .toolbar { padding: 12px 24px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; flex-shrink: 0; }
+  .filter-chip { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); font-size: 13px; color: var(--text-secondary); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+  .filter-chip:hover { border-color: var(--primary); color: var(--primary); }
+  .filter-chip.active { background: rgba(0,113,227,0.08); border-color: var(--primary); color: var(--primary); }
+
+  .pool-scroll { flex: 1; overflow: auto; padding: 0 24px 24px; }
+  .table-wrap { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: auto; }
+  .data-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 13px; }
+  .data-table th { text-align: left; padding: 10px 14px; background: var(--bg); font-weight: 600; color: var(--text-secondary); font-size: 12px; border-bottom: 1px solid var(--border); white-space: nowrap; position: sticky; top: 0; z-index: 2; }
+  .data-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: nowrap; max-width: 200px; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: rgba(0,113,227,0.02); }
+
+  /* Inline edit */
+  .cell-editable { cursor: pointer; position: relative; }
+  .cell-editable:hover { background: rgba(0,113,227,0.04); }
+  .cell-editable:hover::after { content: '✎'; position: absolute; right: 4px; top: 50%; transform: translateY(-50%); font-size: 10px; color: var(--primary); opacity: 0.6; }
+  .cell-editing { background: rgba(0,113,227,0.06) !important; }
+  .cell-editing::after { display: none !important; }
+  .inline-input { width: 100%; padding: 4px 8px; border: 1px solid var(--primary); border-radius: 4px; font-size: 13px; font-family: inherit; outline: none; background: #fff; }
+  .inline-select { padding: 4px 8px; border: 1px solid var(--primary); border-radius: 4px; font-size: 13px; font-family: inherit; outline: none; background: #fff; cursor: pointer; }
+  .inline-date { padding: 4px 8px; border: 1px solid var(--primary); border-radius: 4px; font-size: 13px; font-family: inherit; outline: none; background: #fff; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1d1d1f; color: #fff; padding: 10px 24px; border-radius: 8px; font-size: 13px; z-index: 999; opacity: 0; transition: all 0.3s ease; pointer-events: none; display: flex; align-items: center; gap: 8px; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast-icon { font-size: 16px; }
+
+  .status-tag { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+  .status-empty { background: #f0f0f0; color: #999; }
+  .status-eval { background: rgba(0,113,227,0.10); color: var(--primary); }
+  .status-design-wait { background: rgba(255,149,0,0.10); color: #b75c00; }
+  .status-designed { background: rgba(52,199,89,0.10); color: #248a3d; }
+  .status-dev { background: rgba(0,113,227,0.10); color: var(--primary); }
+  .status-online { background: rgba(52,199,89,0.15); color: #1a7d2e; }
+  .status-reject { background: rgba(255,59,48,0.08); color: var(--danger); }
+  .status-hold { background: rgba(142,142,147,0.10); color: var(--text-secondary); }
+  .status-fail { background: rgba(255,59,48,0.12); color: #c41e10; }
+
+  .priority-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  .priority-p0 { background: rgba(255,59,48,0.10); color: var(--danger); }
+  .priority-p1 { background: rgba(255,149,0,0.10); color: #b75c00; }
+  .priority-p2 { background: rgba(255,204,0,0.12); color: #9a7d00; }
+  .priority-p3 { background: rgba(142,142,147,0.12); color: var(--text-secondary); }
+
+  .ai-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; cursor: pointer; }
+  .ai-badge:hover { opacity: 0.85; }
+
+  .ai-trigger-btn {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(102,126,234,0.4);
+    background: rgba(102,126,234,0.06); color: #667eea;
+    font-size: 10px; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .ai-trigger-btn:hover { background: rgba(102,126,234,0.12); border-color: #667eea; }
+  .ai-trigger-btn.loading { opacity: 0.6; pointer-events: none; }
+  .ai-trigger-btn .spinner { display: none; width: 10px; height: 10px; border: 2px solid rgba(102,126,234,0.3); border-top-color: #667eea; border-radius: 50%; animation: spin 0.6s linear infinite; }
+  .ai-trigger-btn.loading .spinner { display: inline-block; }
+  .ai-trigger-btn.loading .ai-icon-text { display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .batch-ai-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(102,126,234,0.4);
+    background: linear-gradient(135deg, rgba(102,126,234,0.08), rgba(118,75,162,0.08));
+    color: #667eea; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s;
+  }
+  .batch-ai-btn:hover { background: linear-gradient(135deg, rgba(102,126,234,0.15), rgba(118,75,162,0.15)); border-color: #667eea; }
+
+  .urgent-yes { color: var(--danger); font-weight: 600; }
+  .urgent-no { color: var(--text-secondary); }
+
+  .link-cell { color: var(--primary); font-size: 12px; cursor: pointer; text-decoration: underline; }
+  .link-cell:hover { color: var(--primary-hover); }
+
+  .req-link { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11px; background: rgba(0,113,227,0.08); color: var(--primary); cursor: pointer; text-decoration: none; }
+  .req-link:hover { background: rgba(0,113,227,0.15); }
+
+  .product-req-links { display: flex; flex-direction: column; gap: 4px; }
+  .product-req-item { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; }
+
+  .action-group { display: flex; gap: 4px; }
+
+  /* Split Modal */
+  .split-modal { width: 900px; }
+  .split-layout { display: flex; gap: 20px; }
+  .split-left { width: 36%; padding: 16px; background: var(--bg); border-radius: var(--radius-sm); }
+  .split-left-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
+  .split-left-content { font-size: 13px; line-height: 1.7; }
+  .split-right { flex: 1; }
+  .split-mode-tabs { display: flex; gap: 4px; background: var(--bg); padding: 4px; border-radius: var(--radius-sm); margin-bottom: 16px; }
+  .split-mode-tab { padding: 8px 20px; border-radius: 6px; font-size: 13px; cursor: pointer; color: var(--text-secondary); border: none; background: transparent; font-family: inherit; transition: all 0.2s; }
+  .split-mode-tab.active { background: var(--surface); color: var(--text-primary); font-weight: 500; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+
+  .split-item {
+    border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 10px;
+    background: var(--surface); position: relative; transition: border-color 0.2s;
+  }
+  .split-item:hover { border-color: var(--primary); }
+  .split-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .split-item-num { font-size: 13px; font-weight: 600; color: var(--primary); }
+  .split-item-actions { display: flex; gap: 6px; }
+  .split-item-body { display: flex; flex-direction: column; gap: 10px; }
+  .split-text-area {
+    width: 100%; padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+    background: var(--bg); font-size: 13px; outline: none; min-height: 60px; resize: vertical; font-family: inherit;
+  }
+  .split-text-area:focus { border-color: var(--primary); }
+  .split-img-upload {
+    padding: 10px; border: 1px dashed var(--border); border-radius: var(--radius-sm);
+    text-align: center; color: var(--text-secondary); font-size: 12px; cursor: pointer; transition: all 0.2s;
+  }
+  .split-img-upload:hover { border-color: var(--primary); color: var(--primary); }
+  .split-img-preview { display: flex; gap: 8px; flex-wrap: wrap; }
+  .split-img-thumb { width: 56px; height: 56px; border-radius: 6px; background: #e8e8ed; object-fit: cover; border: 1px solid var(--border); }
+  .split-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+
+  .ai-split-loading { text-align: center; padding: 32px 0; color: var(--text-secondary); }
+  .ai-split-spinner { width: 32px; height: 32px; border: 3px solid rgba(102,126,234,0.2); border-top-color: #667eea; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+  .ai-split-result { font-size: 12px; color: var(--success); font-weight: 500; margin-top: 8px; }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); opacity: 0; visibility: hidden; transition: all 0.25s; z-index: 200; display: flex; align-items: center; justify-content: center; }
+  .modal-overlay.open { opacity: 1; visibility: visible; }
+  .modal { background: var(--surface); border-radius: var(--radius); max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 24px 48px rgba(0,0,0,0.15); transform: scale(0.96); transition: transform 0.25s; }
+  .modal-overlay.open .modal { transform: scale(1); }
+  .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .modal-title { font-size: 16px; font-weight: 600; }
+  .modal-close { width: 28px; height: 28px; border-radius: 50%; border: none; background: var(--bg); cursor: pointer; font-size: 16px; color: var(--text-secondary); }
+  .modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
+  .modal-footer { padding: 14px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+
+  .form-group { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
+  .form-input, .form-textarea, .form-select {
+    width: 100%; padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+    background: var(--bg); font-size: 13px; outline: none; transition: border 0.2s; font-family: inherit;
+  }
+  .form-input:focus, .form-textarea:focus, .form-select:focus { border-color: var(--primary); }
+  .form-textarea { min-height: 80px; resize: vertical; }
+
+  /* Column settings */
+  .col-settings { width: 420px; }
+  .col-list { display: flex; flex-direction: column; gap: 6px; }
+  .col-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--surface); cursor: grab; transition: all 0.15s;
+  }
+  .col-item:hover { border-color: var(--primary); background: rgba(0,113,227,0.02); }
+  .col-item.hidden { opacity: 0.45; }
+  .col-item .drag-handle { color: var(--text-secondary); font-size: 14px; cursor: grab; }
+  .col-item .col-name { flex: 1; font-size: 13px; }
+  .col-toggle { width: 36px; height: 20px; border-radius: 10px; border: none; cursor: pointer; position: relative; transition: background 0.2s; background: #ddd; }
+  .col-toggle.on { background: var(--primary); }
+  .col-toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left 0.2s; }
+  .col-toggle.on::after { left: 18px; }
+  .col-locked { font-size: 11px; color: var(--text-secondary); }
+
+  /* Timeline */
+  .timeline-modal { width: 600px; }
+  .timeline { display: flex; flex-direction: column; gap: 0; }
+  .timeline-item { display: flex; gap: 16px; padding: 14px 0; position: relative; }
+  .timeline-item:not(:last-child)::after { content: ''; position: absolute; left: 15px; top: 42px; bottom: 0; width: 2px; background: var(--border); }
+  .timeline-dot { width: 32px; height: 32px; border-radius: 50%; background: rgba(0,113,227,0.10); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--primary); flex-shrink: 0; }
+  .timeline-content { flex: 1; }
+  .timeline-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .timeline-author { font-size: 13px; font-weight: 500; }
+  .timeline-time { font-size: 11px; color: var(--text-secondary); }
+  .timeline-field { font-size: 12px; color: var(--primary); margin-bottom: 2px; }
+  .timeline-change { font-size: 13px; line-height: 1.5; }
+  .timeline-old { color: var(--text-secondary); text-decoration: line-through; }
+  .timeline-new { color: var(--text-primary); font-weight: 500; }
+
+  /* AI Priority modal */
+  .ai-modal { width: 520px; }
+  .ai-result { padding: 16px; background: linear-gradient(135deg, rgba(102,126,234,0.08), rgba(118,75,162,0.08)); border-radius: var(--radius-sm); margin-bottom: 16px; }
+  .ai-result-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .ai-result-priority { font-size: 24px; font-weight: 700; }
+  .ai-reason { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .header { padding: 0 16px; }
+    .pool-scroll { padding: 0 16px 16px; }
+    .toolbar { padding: 8px 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="logo">需求管理平台</div>
+    <a href="kanban.html" class="nav-item"><span>&#9638;</span>看板视图</a>
+    <a href="sprint.html" class="nav-item"><span>&#8634;</span>迭代版本</a>
+    <a href="raw-pool.html" class="nav-item active"><span>&#9993;</span>原始需求池</a>
+    <a href="product-pool.html" class="nav-item"><span>&#9776;</span>产品需求池</a>
+    <a href="dashboard.html" class="nav-item"><span>&#9733;</span>数据看板</a>
+  </aside>
+
+  <main class="main">
+    <header class="header">
+      <div class="header-left">
+        <h1 style="font-size:16px;font-weight:600;">原始需求池</h1>
+        <span style="font-size:12px;color:var(--text-secondary);">共 5 条</span>
+      </div>
+      <div class="header-right">
+        <input class="search-box" placeholder="搜索需求标题、编号...">
+        <button class="btn btn-primary">+ 新建需求</button>
+        <button class="btn-icon" title="自定义表头设置" onclick="openColSettings()">&#9881;</button>
+        <div class="avatar">PM</div>
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <div class="filter-chip">当前状态 &#9662;</div>
+      <div class="filter-chip">业务线 &#9662;</div>
+      <div class="filter-chip">优先级 &#9662;</div>
+      <div class="filter-chip">是否加急 &#9662;</div>
+      <div class="filter-chip">产品经理 &#9662;</div>
+      <div class="filter-chip">项目经理 &#9662;</div>
+      <div style="flex:1"></div>
+      <button class="batch-ai-btn" onclick="batchAiPriority()">&#9881; 批量 AI 定级</button>
+      <span style="font-size:12px;color:var(--text-secondary);">显示 8/18 列</span>
+    </div>
+
+    <div class="pool-scroll">
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="min-width:100px;">业务线</th>
+              <th style="min-width:200px;">原始需求标题</th>
+              <th style="min-width:120px;">需求单</th>
+              <th style="min-width:140px;">需求备注</th>
+              <th style="min-width:80px;">登记人</th>
+              <th style="min-width:80px;">提出人</th>
+              <th style="min-width:100px;">提出时间</th>
+              <th style="min-width:90px;">当前状态</th>
+              <th style="min-width:150px;">产品需求定义</th>
+              <th style="min-width:90px;">产品经理</th>
+              <th style="min-width:90px;">项目经理</th>
+              <th style="min-width:100px;">优先级定级</th>
+              <th style="min-width:90px;">是否加急插队</th>
+              <th style="min-width:120px;">加急原因</th>
+              <th style="min-width:120px;">关联项目</th>
+              <th style="min-width:110px;">期望上线时间</th>
+              <th style="min-width:100px;">价值量化评估</th>
+              <th style="min-width:160px;">关联产品需求池</th>
+              <th style="min-width:80px;">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Row 1 -->
+            <tr>
+              <td class="cell-editable" data-field="业务线" data-type="select" data-options="校园G端,市监G端,食安企业,后勤B端" onclick="startEdit(this)">校园G端</td>
+              <td><div style="font-weight:500;white-space:normal;min-width:180px;">台州各区县采购平台优化</div></td>
+              <td><a class="req-link" href="#" target="_blank">RAW-0520-001</a></td>
+              <td class="cell-editable" data-field="需求备注" data-type="text" onclick="startEdit(this)" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;">供应商入驻审核周期过长，需优化</td>
+              <td>饭粒</td>
+              <td class="cell-editable" data-field="提出人" data-type="text" onclick="startEdit(this)">饭粒</td>
+              <td>2026-05-19</td>
+              <td class="cell-editable" data-field="当前状态" data-type="select" data-options="空,评估中,待设计,已设计,开发中,已上线,拒绝,挂起,验收不通过" onclick="startEdit(this)"><span class="status-tag status-eval">评估中</span></td>
+              <td class="cell-editable" data-field="产品需求定义" data-type="text" onclick="startEdit(this)" style="white-space:normal;max-width:150px;overflow:hidden;text-overflow:ellipsis;font-size:12px;">优化供应商入驻审核流程，支持批量导入</td>
+              <td class="cell-editable" data-field="产品经理" data-type="select" data-options="陈明,王芳,郑伟,刘洋,未分配" onclick="startEdit(this)">陈明</td>
+              <td class="cell-editable" data-field="项目经理" data-type="select" data-options="张三,李强,王军,未分配" onclick="startEdit(this)">张三</td>
+              <td class="cell-editable" data-field="优先级定级" data-type="priority" onclick="startEdit(this)">
+                <span class="ai-badge" onclick="event.stopPropagation();openAiPriority()" title="AI自动定级，点击查看">AI</span>
+                <span class="priority-tag priority-p1">P1</span>
+                <button class="ai-trigger-btn" onclick="event.stopPropagation();triggerAiPriority(this)" title="重新触发 AI 判定"><span class="spinner"></span><span class="ai-icon-text">&#9881; AI 判定</span></button>
+              </td>
+              <td class="cell-editable" data-field="是否加急插队" data-type="select" data-options="是,否" onclick="startEdit(this)"><span class="urgent-yes">是</span></td>
+              <td class="cell-editable" data-field="加急原因" data-type="text" onclick="startEdit(this)" style="white-space:normal;max-width:120px;font-size:12px;">客户要求6月前上线</td>
+              <td class="cell-editable" data-field="关联项目" data-type="text" onclick="startEdit(this)">台州各区县教育局</td>
+              <td class="cell-editable" data-field="期望上线时间" data-type="date" onclick="startEdit(this)">2026-06-15</td>
+              <td class="cell-editable" data-field="价值量化评估" data-type="text" onclick="startEdit(this)">4.2分 · 6条</td>
+              <td>
+                <div class="product-req-links">
+                  <a class="link-cell" href="product-pool.html">PRD-0520-001</a>
+                  <a class="link-cell" href="product-pool.html">PRD-0520-002</a>
+                </div>
+              </td>
+              <td>
+                <div class="action-group">
+                  <button class="btn btn-ghost btn-sm" onclick="openTimeline()" title="编辑记录">&#128337;</button>
+                  <button class="btn btn-primary btn-sm" onclick="openSplitModal()" title="拆分需求">&#9986; 拆分</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td class="cell-editable" data-field="业务线" data-type="select" data-options="校园G端,市监G端,食安企业,后勤B端" onclick="startEdit(this)">校园G端</td>
+              <td><div style="font-weight:500;white-space:normal;min-width:180px;">南昌青山湖区智慧食堂项目系统修改</div></td>
+              <td><a class="req-link" href="#" target="_blank">RAW-0520-002</a></td>
+              <td class="cell-editable" data-field="需求备注" data-type="text" onclick="startEdit(this)" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;">对接新的支付通道</td>
+              <td>饭粒</td>
+              <td class="cell-editable" data-field="提出人" data-type="text" onclick="startEdit(this)">李丽</td>
+              <td>2026-05-19</td>
+              <td class="cell-editable" data-field="当前状态" data-type="select" data-options="空,评估中,待设计,已设计,开发中,已上线,拒绝,挂起,验收不通过" onclick="startEdit(this)"><span class="status-tag status-design-wait">待设计</span></td>
+              <td class="cell-editable" data-field="产品需求定义" data-type="text" onclick="startEdit(this)" style="white-space:normal;max-width:150px;overflow:hidden;text-overflow:ellipsis;font-size:12px;">接入微信支付和支付宝双通道</td>
+              <td class="cell-editable" data-field="产品经理" data-type="select" data-options="陈明,王芳,郑伟,刘洋,未分配" onclick="startEdit(this)">王芳</td>
+              <td class="cell-editable" data-field="项目经理" data-type="select" data-options="张三,李强,王军,未分配" onclick="startEdit(this)">张三</td>
+              <td class="cell-editable" data-field="优先级定级" data-type="priority" onclick="startEdit(this)">
+                <span class="ai-badge" onclick="event.stopPropagation();openAiPriority()" title="AI自动定级，点击查看">AI</span>
+                <span class="priority-tag priority-p0">P0</span>
+                <button class="ai-trigger-btn" onclick="event.stopPropagation();triggerAiPriority(this)" title="重新触发 AI 判定"><span class="spinner"></span><span class="ai-icon-text">&#9881; AI 判定</span></button>
+              </td>
+              <td class="cell-editable" data-field="是否加急插队" data-type="select" data-options="是,否" onclick="startEdit(this)"><span class="urgent-yes">是</span></td>
+              <td class="cell-editable" data-field="加急原因" data-type="text" onclick="startEdit(this)" style="white-space:normal;max-width:120px;font-size:12px;">项目验收节点临近</td>
+              <td class="cell-editable" data-field="关联项目" data-type="text" onclick="startEdit(this)">南昌青山湖区</td>
+              <td class="cell-editable" data-field="期望上线时间" data-type="date" onclick="startEdit(this)">2026-06-01</td>
+              <td class="cell-editable" data-field="价值量化评估" data-type="text" onclick="startEdit(this)">—</td>
+              <td>
+                <div class="product-req-links">
+                  <a class="link-cell" href="product-pool.html">PRD-0520-003</a>
+                </div>
+              </td>
+              <td>
+                <div class="action-group">
+                  <button class="btn btn-ghost btn-sm" onclick="openTimeline()" title="编辑记录">&#128337;</button>
+                  <button class="btn btn-primary btn-sm" onclick="openSplitModal()" title="拆分需求">&#9986; 拆分</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td class="cell-editable" data-field="业务线" data-type="select" data-options="校园G端,市监G端,食安企业,后勤B端" onclick="startEdit(this)">市监G端</td>
+              <td><div style="font-weight:500;white-space:normal;min-width:180px;">山东互联网+明厨亮灶项目</div></td>
+              <td><a class="req-link" href="#" target="_blank">RAW-0520-003</a></td>
+              <td class="cell-editable" data-field="需求备注" data-type="text" onclick="startEdit(this)" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;">接入AI视频识别，检测厨房违规</td>
+              <td>饭粒</td>
+              <td class="cell-editable" data-field="提出人" data-type="text" onclick="startEdit(this)">饭粒</td>
+              <td>2026-05-19</td>
+              <td class="cell-editable" data-field="当前状态" data-type="select" data-options="空,评估中,待设计,已设计,开发中,已上线,拒绝,挂起,验收不通过" onclick="startEdit(this)"><span class="status-tag status-designed">已设计</span></td>
+              <td class="cell-editable" data-field="产品需求定义" data-type="text" onclick="startEdit(this)" style="white-space:normal;max-width:150px;overflow:hidden;text-overflow:ellipsis;font-size:12px;">AI识别引擎+违规告警+数据上报</td>
+              <td class="cell-editable" data-field="产品经理" data-type="select" data-options="陈明,王芳,郑伟,刘洋,未分配" onclick="startEdit(this)">郑伟</td>
+              <td class="cell-editable" data-field="项目经理" data-type="select" data-options="张三,李强,王军,未分配" onclick="startEdit(this)">李强</td>
+              <td class="cell-editable" data-field="优先级定级" data-type="priority" data-source="人工" onclick="startEdit(this)">
+                <span class="priority-tag priority-p1">P1</span>
+                <span style="font-size:10px;color:var(--text-secondary);margin-left:2px;">人工</span>
+                <button class="ai-trigger-btn" onclick="event.stopPropagation();triggerAiPriority(this)" title="触发 AI 判定"><span class="spinner"></span><span class="ai-icon-text">&#9881; AI 判定</span></button>
+              </td>
+              <td class="cell-editable" data-field="是否加急插队" data-type="select" data-options="是,否" onclick="startEdit(this)"><span class="urgent-no">否</span></td>
+              <td style="font-size:12px;color:var(--text-secondary);">—</td>
+              <td class="cell-editable" data-field="关联项目" data-type="text" onclick="startEdit(this)">山东省市监局</td>
+              <td class="cell-editable" data-field="期望上线时间" data-type="date" onclick="startEdit(this)">2026-07-01</td>
+              <td class="cell-editable" data-field="价值量化评估" data-type="text" onclick="startEdit(this)">—</td>
+              <td>
+                <div class="product-req-links">
+                  <a class="link-cell" href="product-pool.html">PRD-0521-001</a>
+                  <a class="link-cell" href="product-pool.html">PRD-0521-002</a>
+                  <a class="link-cell" href="product-pool.html">PRD-0521-003</a>
+                </div>
+              </td>
+              <td>
+                <div class="action-group">
+                  <button class="btn btn-ghost btn-sm" onclick="openTimeline()" title="编辑记录">&#128337;</button>
+                  <button class="btn btn-primary btn-sm" onclick="openSplitModal()" title="拆分需求">&#9986; 拆分</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td class="cell-editable" data-field="业务线" data-type="select" data-options="校园G端,市监G端,食安企业,后勤B端" onclick="startEdit(this)">校园G端</td>
+              <td><div style="font-weight:500;white-space:normal;min-width:180px;">嘉兴市仓储屏系统优化</div></td>
+              <td><a class="req-link" href="#" target="_blank">RAW-0520-004</a></td>
+              <td class="cell-editable" data-field="需求备注" data-type="text" onclick="startEdit(this)" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;">仓储屏数据同步延迟问题</td>
+              <td>王磊</td>
+              <td class="cell-editable" data-field="提出人" data-type="text" onclick="startEdit(this)">王磊</td>
+              <td>2026-05-20</td>
+              <td class="cell-editable" data-field="当前状态" data-type="select" data-options="空,评估中,待设计,已设计,开发中,已上线,拒绝,挂起,验收不通过" onclick="startEdit(this)"><span class="status-tag status-empty">空</span></td>
+              <td class="cell-editable" data-field="产品需求定义" data-type="text" onclick="startEdit(this)" style="font-size:12px;color:var(--text-secondary);">待定义</td>
+              <td class="cell-editable" data-field="产品经理" data-type="select" data-options="陈明,王芳,郑伟,刘洋,未分配" onclick="startEdit(this)" style="color:var(--text-secondary);">未分配</td>
+              <td class="cell-editable" data-field="项目经理" data-type="select" data-options="张三,李强,王军,未分配" onclick="startEdit(this)" style="color:var(--text-secondary);">未分配</td>
+              <td class="cell-editable" data-field="优先级定级" data-type="priority" onclick="startEdit(this)">
+                <span class="ai-badge" onclick="event.stopPropagation();openAiPriority()" title="AI自动定级，点击查看">AI</span>
+                <span class="priority-tag priority-p2">P2</span>
+                <button class="ai-trigger-btn" onclick="event.stopPropagation();triggerAiPriority(this)" title="重新触发 AI 判定"><span class="spinner"></span><span class="ai-icon-text">&#9881; AI 判定</span></button>
+              </td>
+              <td class="cell-editable" data-field="是否加急插队" data-type="select" data-options="是,否" onclick="startEdit(this)"><span class="urgent-no">否</span></td>
+              <td style="font-size:12px;color:var(--text-secondary);">—</td>
+              <td class="cell-editable" data-field="关联项目" data-type="text" onclick="startEdit(this)">嘉兴市教育局</td>
+              <td class="cell-editable" data-field="期望上线时间" data-type="date" onclick="startEdit(this)">2026-06-30</td>
+              <td class="cell-editable" data-field="价值量化评估" data-type="text" onclick="startEdit(this)">—</td>
+              <td style="color:var(--text-secondary);font-size:12px;">暂无</td>
+              <td>
+                <div class="action-group">
+                  <button class="btn btn-ghost btn-sm" onclick="openTimeline()" title="编辑记录">&#128337;</button>
+                  <button class="btn btn-primary btn-sm" onclick="openSplitModal()" title="拆分需求">&#9986; 拆分</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td class="cell-editable" data-field="业务线" data-type="select" data-options="校园G端,市监G端,食安企业,后勤B端" onclick="startEdit(this)">食安企业</td>
+              <td><div style="font-weight:500;white-space:normal;min-width:180px;">食堂消费流水对账功能</div></td>
+              <td><a class="req-link" href="#" target="_blank">RAW-0515-005</a></td>
+              <td class="cell-editable" data-field="需求备注" data-type="text" onclick="startEdit(this)" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;">对账报表格式不符合审计要求</td>
+              <td>赵丹</td>
+              <td class="cell-editable" data-field="提出人" data-type="text" onclick="startEdit(this)">赵丹</td>
+              <td>2026-05-15</td>
+              <td class="cell-editable" data-field="当前状态" data-type="select" data-options="空,评估中,待设计,已设计,开发中,已上线,拒绝,挂起,验收不通过" onclick="startEdit(this)"><span class="status-tag status-online">已上线</span></td>
+              <td class="cell-editable" data-field="产品需求定义" data-type="text" onclick="startEdit(this)" style="white-space:normal;max-width:150px;overflow:hidden;text-overflow:ellipsis;font-size:12px;">支持多维度对账+自动差异标记</td>
+              <td class="cell-editable" data-field="产品经理" data-type="select" data-options="陈明,王芳,郑伟,刘洋,未分配" onclick="startEdit(this)">陈明</td>
+              <td class="cell-editable" data-field="项目经理" data-type="select" data-options="张三,李强,王军,未分配" onclick="startEdit(this)">李强</td>
+              <td class="cell-editable" data-field="优先级定级" data-type="priority" data-source="人工" onclick="startEdit(this)">
+                <span class="priority-tag priority-p0">P0</span>
+                <span style="font-size:10px;color:var(--text-secondary);margin-left:2px;">人工</span>
+                <button class="ai-trigger-btn" onclick="event.stopPropagation();triggerAiPriority(this)" title="触发 AI 判定"><span class="spinner"></span><span class="ai-icon-text">&#9881; AI 判定</span></button>
+              </td>
+              <td class="cell-editable" data-field="是否加急插队" data-type="select" data-options="是,否" onclick="startEdit(this)"><span class="urgent-yes">是</span></td>
+              <td class="cell-editable" data-field="加急原因" data-type="text" onclick="startEdit(this)" style="white-space:normal;max-width:120px;font-size:12px;">审计截止日期紧迫</td>
+              <td class="cell-editable" data-field="关联项目" data-type="text" onclick="startEdit(this)">食安集团</td>
+              <td class="cell-editable" data-field="期望上线时间" data-type="date" onclick="startEdit(this)">2026-05-25</td>
+              <td class="cell-editable" data-field="价值量化评估" data-type="text" onclick="startEdit(this)">4.8分 · 12条</td>
+              <td>
+                <div class="product-req-links">
+                  <a class="link-cell" href="product-pool.html">PRD-0515-001</a>
+                </div>
+              </td>
+              <td>
+                <div class="action-group">
+                  <button class="btn btn-ghost btn-sm" onclick="openTimeline()" title="编辑记录">&#128337;</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- 自定义表头设置弹窗 -->
+<div class="modal-overlay" id="colSettingsModal">
+  <div class="modal col-settings">
+    <div class="modal-header">
+      <span class="modal-title">自定义表头设置</span>
+      <button class="modal-close" onclick="closeColSettings()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--text-secondary);margin-bottom:16px;">拖拽调整列顺序，开关控制列的显示/隐藏。「原始需求标题」为锁定列，始终显示。</p>
+      <div class="col-list">
+        <div class="col-item"><span class="drag-handle">&#9776;</span><span class="col-name">业务线</span><button class="col-toggle on" onclick="this.classList.toggle('on')"></button></div>
+        <div class="col-item"><span class="drag-handle">&#9776;</span><span class="col-name">原始需求标题</span><span class="col-locked">&#128274; 锁定</span></div>
+        <div class="col-item"><span class="drag-handle">&#9776;</span><span class="col-name">需求单</span><button class="col-toggle on" onclick="this.classList.toggle('on')"></button></div>
+        <div class="col-item"><span class="drag-handle">&#9776;</span><span class="col-name">需求备注</span><button class="col-toggle on" onclick="this.classList.toggle('on')"></button></div>
+        <div class="col-item"><span class="drag-handle">&#9776;</span><span class="col-name">登记人</span><button class="col-toggle on" onclick="this.classList.toggle('on')"></button></div>
+        <div class="col-item"><span class="drag-handle">&#9776;</span><span class="col-name">提出人</span><button class="col-toggle on" onclick="this.classList.toggle('on')"></button></div>
+        <div class="col-item"><span class="drag-handle">&#9776;</span><span class="col-name">提出时间</span><button class="col-toggle on" onclick="this.classList.toggle('on')"></button></div>
+        <div class="col-item"><span class="drag-handle">&#9776;</span><span class="col-name">当前状态</span><button class="col-toggle on" onclick="this.classList.toggle('on')"></button></div>
+        <div class="col-item hidden"><span class="drag-handle">&#9776;</span><span class="col-name">产品需求定义</span><button class="col-toggle" onclick="this.classList.toggle('on')"></button></div>
+        <div class="col-item hidden"><span class="drag-handle">&#9776;</span><span class="col-name">产品经理</span><button class="col-toggle" onclick="this.classList.toggle('on')"></button></div>
+        <div class="col-item hidden"><span class="drag-handle">&#9776;</span><span class="col-name">项目经理</span><button class="col-toggle" onclick="this.classList.toggle('on')"></button></div>
+        <div class="col-item"><span class="drag-handle">&#9776;</span><span class="col-name">优先级定级</span><button class="col-toggle on" onclick="this.classList.toggle('on')"></button></div>
+        <div class="col-item"><span class="drag-handle">&#9776;</span><span class="col-name">是否加急插队</span><button class="col-toggle on" onclick="this.classList.toggle('on')"></button></div>
+        <div class="col-item hidden"><span class="drag-handle">&#9776;</span><span class="col-name">加急原因</span><button class="col-toggle" onclick="this.classList.toggle('on')"></button></div>
+        <div class="col-item hidden"><span class="drag-handle">&#9776;</span><span class="col-name">关联项目</span><button class="col-toggle" onclick="this.classList.toggle('on')"></button></div>
+        <div class="col-item hidden"><span class="drag-handle">&#9776;</span><span class="col-name">期望上线时间</span><button class="col-toggle" onclick="this.classList.toggle('on')"></button></div>
+        <div class="col-item hidden"><span class="drag-handle">&#9776;</span><span class="col-name">价值量化评估</span><button class="col-toggle" onclick="this.classList.toggle('on')"></button></div>
+        <div class="col-item"><span class="drag-handle">&#9776;</span><span class="col-name">关联产品需求池</span><button class="col-toggle on" onclick="this.classList.toggle('on')"></button></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeColSettings()">取消</button>
+      <button class="btn btn-primary" onclick="closeColSettings();alert('表头设置已保存')">保存设置</button>
+    </div>
+  </div>
+</div>
+
+<!-- 编辑记录 Timeline 弹窗 -->
+<div class="modal-overlay" id="timelineModal">
+  <div class="modal timeline-modal">
+    <div class="modal-header">
+      <span class="modal-title">编辑记录 — 台州各区县采购平台优化</span>
+      <button class="modal-close" onclick="closeTimeline()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-dot">&#9998;</div>
+          <div class="timeline-content">
+            <div class="timeline-header">
+              <span class="timeline-author">张三（项目经理）</span>
+              <span class="timeline-time">2026-05-22 10:15</span>
+            </div>
+            <div class="timeline-field">修改字段：当前状态</div>
+            <div class="timeline-change"><span class="timeline-old">空</span> → <span class="timeline-new">评估中</span></div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot">&#9998;</div>
+          <div class="timeline-content">
+            <div class="timeline-header">
+              <span class="timeline-author">张三（项目经理）</span>
+              <span class="timeline-time">2026-05-21 16:30</span>
+            </div>
+            <div class="timeline-field">修改字段：提出人</div>
+            <div class="timeline-change"><span class="timeline-old">张小明</span> → <span class="timeline-new">饭粒</span></div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot">&#9998;</div>
+          <div class="timeline-content">
+            <div class="timeline-header">
+              <span class="timeline-author">AI 系统</span>
+              <span class="timeline-time">2026-05-20 09:16</span>
+            </div>
+            <div class="timeline-field">AI 自动定级</div>
+            <div class="timeline-change">根据优先级判定规则，自动评定为 <span class="timeline-new">P1</span></div>
+            <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">理由：涉及核心采购流程优化，影响多区县用户，客户有明确时间要求</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot">&#9998;</div>
+          <div class="timeline-content">
+            <div class="timeline-header">
+              <span class="timeline-author">陈明（产品经理）</span>
+              <span class="timeline-time">2026-05-20 14:32</span>
+            </div>
+            <div class="timeline-field">修改字段：产品需求定义</div>
+            <div class="timeline-change"><span class="timeline-old">（空）</span> → <span class="timeline-new">优化供应商入驻审核流程，支持批量导入</span></div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot">&#10010;</div>
+          <div class="timeline-content">
+            <div class="timeline-header">
+              <span class="timeline-author">饭粒</span>
+              <span class="timeline-time">2026-05-19 09:15</span>
+            </div>
+            <div class="timeline-field">创建原始需求单</div>
+            <div class="timeline-change">需求单 <span class="timeline-new">RAW-0520-001</span> 已创建</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeTimeline()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI 优先级定级弹窗 -->
+<div class="modal-overlay" id="aiPriorityModal">
+  <div class="modal ai-modal">
+    <div class="modal-header">
+      <span class="modal-title">AI 优先级定级</span>
+      <button class="modal-close" onclick="closeAiPriority()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="ai-result">
+        <div class="ai-result-header">
+          <span class="ai-badge">AI 判定</span>
+          <span class="ai-result-priority priority-tag priority-p1" style="font-size:18px;padding:4px 14px;">P1</span>
+          <span style="font-size:13px;color:var(--text-secondary);">重要</span>
+        </div>
+        <div class="ai-reason">
+          <strong>判定理由：</strong>该需求涉及核心采购业务流程优化，影响台州多区县用户群体（约200+供应商），且客户明确提出6月前上线的时间要求。根据优先级规则，涉及核心业务流程+多用户影响+有明确时间节点的需求评定为P1级。
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">优先级判定规则（文字描述，由AI解析执行）</label>
+        <textarea class="form-textarea" style="min-height:100px;font-size:12px;" readonly>P0（紧急）：系统故障/安全漏洞、影响核心业务中断、客户投诉且有合同违约风险、政府监管要求且有明确截止日期
+P1（重要）：核心业务流程优化、影响多用户群体（100+）、有明确时间节点的客户诉求、竞品已具备的差异化功能
+P2（一般）：体验优化类需求、影响范围有限（&lt;100用户）、无明确时间要求、新增辅助功能
+P3（低优）：界面美化类、内部工具改进、探索性功能、低频使用场景优化</textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">人工调整优先级（可选，留空则采用AI结果）</label>
+        <select class="form-select" id="manualPriority">
+          <option value="">采用 AI 判定结果（P1）</option>
+          <option value="P0">P0 — 紧急</option>
+          <option value="P1">P1 — 重要</option>
+          <option value="P2">P2 — 一般</option>
+          <option value="P3">P3 — 低优</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">调整原因（人工修改时必填）</label>
+        <textarea class="form-textarea" placeholder="请填写人工调整优先级的原因..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeAiPriority()">取消</button>
+      <button class="btn btn-primary" onclick="closeAiPriority();alert('优先级已更新，编辑记录已保存')">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- Split Modal -->
+<div class="modal-overlay" id="splitModal">
+  <div class="modal split-modal">
+    <div class="modal-header">
+      <span class="modal-title">拆分需求 · RAW-0520-001</span>
+      <button class="modal-close" onclick="closeSplitModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="split-layout">
+        <!-- Left: Original Requirement -->
+        <div class="split-left">
+          <div class="split-left-title">原始需求</div>
+          <div style="font-weight:600;font-size:14px;margin-bottom:8px;">台州各区县采购平台优化</div>
+          <div class="split-left-content" style="color:var(--text-secondary);">
+            <p style="margin:0 0 10px;">供应商入驻审核周期过长，需优化流程，同时支持在线投标功能，并对接财务系统实现自动对账。</p>
+            <p style="margin:0;font-size:11px;color:var(--text-secondary);">业务线：校园G端 · 登记人：饭粒 · 提出人：陈明</p>
+          </div>
+        </div>
+
+        <!-- Right: Split Operations -->
+        <div class="split-right">
+          <!-- Mode Tabs -->
+          <div class="split-mode-tabs">
+            <button class="split-mode-tab active" onclick="switchSplitMode('ai')">&#9881; AI 拆分</button>
+            <button class="split-mode-tab" onclick="switchSplitMode('manual')">&#9998; 手工拆分</button>
+          </div>
+
+          <!-- AI Split Area -->
+          <div id="aiSplitArea">
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;">
+              <button class="batch-ai-btn" onclick="triggerAiSplit()" id="aiSplitBtn">&#9881; 开始 AI 拆分</button>
+              <span style="font-size:12px;color:var(--text-secondary);" id="aiSplitHint">AI 将自动将原始需求拆分为多条产品需求</span>
+            </div>
+            <div id="aiSplitContent">
+              <div class="ai-split-loading">
+                <div style="color:var(--text-secondary);font-size:13px;">点击「开始 AI 拆分」按钮，AI 将自动分析并拆分需求</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Manual Split Area -->
+          <div id="manualSplitArea" style="display:none;">
+            <div id="manualSplitItems">
+              <div class="split-item">
+                <div class="split-item-header">
+                  <span class="split-item-num">产品需求 1</span>
+                  <div class="split-item-actions">
+                    <button class="btn btn-ghost btn-sm" onclick="addSplitItem()" title="在后面插入">+ 插入</button>
+                    <button class="btn btn-ghost btn-sm" onclick="removeSplitItem(this)" title="删除">&times;</button>
+                  </div>
+                </div>
+                <div class="split-item-body">
+                  <textarea class="split-text-area" placeholder="请输入产品需求 1 的描述...">供应商入驻审核流程优化：缩短审核周期，支持在线资质提交、自动预审、审核进度可视化</textarea>
+                  <div class="split-img-upload" onclick="simulateImgUpload(this)">+ 点击上传截图 / 原型图（支持多图）</div>
+                </div>
+                <div class="split-fields">
+                  <input class="inline-input" placeholder="产品经理" value="待分配">
+                  <select class="inline-select"><option>业务线：校园G端</option><option>市监G端</option><option>食安企业</option><option>后勤B端</option></select>
+                </div>
+              </div>
+
+              <div class="split-item">
+                <div class="split-item-header">
+                  <span class="split-item-num">产品需求 2</span>
+                  <div class="split-item-actions">
+                    <button class="btn btn-ghost btn-sm" onclick="addSplitItem()" title="在后面插入">+ 插入</button>
+                    <button class="btn btn-ghost btn-sm" onclick="removeSplitItem(this)" title="删除">&times;</button>
+                  </div>
+                </div>
+                <div class="split-item-body">
+                  <textarea class="split-text-area" placeholder="请输入产品需求 2 的描述...">在线投标功能模块：支持供应商在线报名、上传投标文件、线上开标、评标流程</textarea>
+                  <div class="split-img-upload" onclick="simulateImgUpload(this)">+ 点击上传截图 / 原型图（支持多图）</div>
+                </div>
+                <div class="split-fields">
+                  <input class="inline-input" placeholder="产品经理" value="待分配">
+                  <select class="inline-select"><option>业务线：校园G端</option><option>市监G端</option><option>食安企业</option><option>后勤B端</option></select>
+                </div>
+              </div>
+
+              <div class="split-item">
+                <div class="split-item-header">
+                  <span class="split-item-num">产品需求 3</span>
+                  <div class="split-item-actions">
+                    <button class="btn btn-ghost btn-sm" onclick="addSplitItem()" title="在后面插入">+ 插入</button>
+                    <button class="btn btn-ghost btn-sm" onclick="removeSplitItem(this)" title="删除">&times;</button>
+                  </div>
+                </div>
+                <div class="split-item-body">
+                  <textarea class="split-text-area" placeholder="请输入产品需求 3 的描述...">财务对账自动化：对接财务系统，实现采购订单自动对账、发票匹配、账期预警</textarea>
+                  <div class="split-img-upload" onclick="simulateImgUpload(this)">+ 点击上传截图 / 原型图（支持多图）</div>
+                </div>
+                <div class="split-fields">
+                  <input class="inline-input" placeholder="产品经理" value="待分配">
+                  <select class="inline-select"><option>业务线：校园G端</option><option>市监G端</option><option>食安企业</option><option>后勤B端</option></select>
+                </div>
+              </div>
+            </div>
+
+            <button class="btn btn-ghost" onclick="addSplitItem()" style="margin-top:8px;width:100%;border:1px dashed var(--border);">+ 添加产品需求</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <span id="splitCount" style="font-size:12px;color:var(--text-secondary);">已拆分 3 条产品需求</span>
+      <div style="flex:1"></div>
+      <button class="btn btn-ghost" onclick="closeSplitModal()">取消</button>
+      <button class="btn btn-primary" onclick="confirmSplit()">确认拆分并转入产品需求池</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"><span class="toast-icon">✓</span><span id="toastMsg">已保存</span></div>
+
+<script>
+function openColSettings() { document.getElementById('colSettingsModal').classList.add('open'); }
+function closeColSettings() { document.getElementById('colSettingsModal').classList.remove('open'); }
+function openTimeline() { document.getElementById('timelineModal').classList.add('open'); }
+function closeTimeline() { document.getElementById('timelineModal').classList.remove('open'); }
+function openAiPriority() { document.getElementById('aiPriorityModal').classList.add('open'); }
+function closeAiPriority() { document.getElementById('aiPriorityModal').classList.remove('open'); }
+
+/* ===== Inline Editing ===== */
+let currentEditing = null;
+
+function startEdit(cell) {
+  if (currentEditing) return; // prevent double edit
+  currentEditing = cell;
+  const type = cell.dataset.type || 'text';
+  const field = cell.dataset.field || '';
+  cell.classList.add('cell-editing');
+  const oldText = cell.textContent.trim();
+
+  if (type === 'select') {
+    const options = (cell.dataset.options || '').split(',');
+    const select = document.createElement('select');
+    select.className = 'inline-select';
+    options.forEach(opt => {
+      const o = document.createElement('option');
+      o.value = opt.trim(); o.textContent = opt.trim();
+      if (oldText.includes(opt.trim())) o.selected = true;
+      select.appendChild(o);
+    });
+    cell.innerHTML = '';
+    cell.appendChild(select);
+    select.focus();
+    select.addEventListener('change', () => finishEdit(cell, select.value, oldText, field));
+    select.addEventListener('blur', () => { setTimeout(() => { if (currentEditing === cell) cancelEdit(cell, oldText); }, 150); });
+    select.addEventListener('keydown', e => { if (e.key === 'Escape') cancelEdit(cell, oldText); });
+  } else if (type === 'priority') {
+    const currentP = oldText.match(/P[0-3]/) ? oldText.match(/P[0-3]/)[0] : '';
+    const isAi = cell.querySelector('.ai-badge') !== null;
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'display:flex;align-items:center;gap:6px;';
+    const select = document.createElement('select');
+    select.className = 'inline-select';
+    ['P0','P1','P2','P3'].forEach(p => {
+      const o = document.createElement('option');
+      o.value = p; o.textContent = p + (p==='P0'?' — 紧急':p==='P1'?' — 重要':p==='P2'?' — 一般':' — 低优');
+      if (p === currentP) o.selected = true;
+      select.appendChild(o);
+    });
+    wrapper.appendChild(select);
+    cell.innerHTML = '';
+    cell.appendChild(wrapper);
+    select.focus();
+    select.addEventListener('change', () => {
+      const newP = select.value;
+      cell.dataset.source = '人工';
+      finishEdit(cell, newP, currentP, field, isAi);
+    });
+    select.addEventListener('blur', () => { setTimeout(() => { if (currentEditing === cell) cancelEdit(cell, oldText); }, 150); });
+    select.addEventListener('keydown', e => { if (e.key === 'Escape') cancelEdit(cell, oldText); });
+  } else if (type === 'date') {
+    const input = document.createElement('input');
+    input.type = 'date'; input.className = 'inline-date';
+    input.value = oldText || '';
+    cell.innerHTML = '';
+    cell.appendChild(input);
+    input.focus();
+    input.addEventListener('change', () => finishEdit(cell, input.value, oldText, field));
+    input.addEventListener('blur', () => { setTimeout(() => { if (currentEditing === cell) cancelEdit(cell, oldText); }, 150); });
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') finishEdit(cell, input.value, oldText, field);
+      if (e.key === 'Escape') cancelEdit(cell, oldText);
+    });
+  } else {
+    const input = document.createElement('input');
+    input.type = 'text'; input.className = 'inline-input';
+    input.value = oldText === '—' || oldText === '待定义' ? '' : oldText;
+    cell.innerHTML = '';
+    cell.appendChild(input);
+    input.focus(); input.select();
+    input.addEventListener('blur', () => { setTimeout(() => { if (currentEditing === cell) cancelEdit(cell, oldText); }, 150); });
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') finishEdit(cell, input.value, oldText, field);
+      if (e.key === 'Escape') cancelEdit(cell, oldText);
+    });
+  }
+}
+
+function finishEdit(cell, newVal, oldVal, field, wasAi) {
+  if (!newVal || newVal === '') newVal = oldVal;
+  const changed = newVal !== oldVal;
+  cell.classList.remove('cell-editing');
+
+  // Re-render cell based on field type
+  if (field === '当前状态') {
+    cell.innerHTML = renderStatusTag(newVal);
+  } else if (field === '是否加急插队') {
+    cell.innerHTML = newVal === '是' ? '<span class="urgent-yes">是</span>' : '<span class="urgent-no">否</span>';
+  } else if (field === '优先级定级') {
+    const pClass = 'priority-' + newVal.toLowerCase();
+    const source = cell.dataset.source;
+    if (source === '人工') {
+      cell.innerHTML = '<span class="priority-tag ' + pClass + '">' + newVal + '</span><span style="font-size:10px;color:var(--text-secondary);margin-left:2px;">人工</span>';
+    } else {
+      cell.innerHTML = '<span class="ai-badge" onclick="event.stopPropagation();openAiPriority()" title="AI自动定级，点击查看">AI</span><span class="priority-tag ' + pClass + '">' + newVal + '</span>';
+    }
+  } else {
+    cell.textContent = newVal;
+  }
+
+  currentEditing = null;
+  if (changed) {
+    showToast('✅ 已保存：' + field + '「' + oldVal + '」→「' + newVal + '」，编辑记录已更新');
+  }
+}
+
+function cancelEdit(cell, oldVal) {
+  cell.classList.remove('cell-editing');
+  const field = cell.dataset.field || '';
+  if (field === '当前状态') {
+    cell.innerHTML = renderStatusTag(oldVal);
+  } else if (field === '是否加急插队') {
+    cell.innerHTML = oldVal.includes('是') ? '<span class="urgent-yes">是</span>' : '<span class="urgent-no">否</span>';
+  } else if (field === '优先级定级') {
+    const pClass = 'priority-' + oldVal.toLowerCase();
+    const source = cell.dataset.source;
+    if (source === '人工') {
+      cell.innerHTML = '<span class="priority-tag ' + pClass + '">' + oldVal + '</span><span style="font-size:10px;color:var(--text-secondary);margin-left:2px;">人工</span>';
+    } else {
+      cell.innerHTML = '<span class="ai-badge" onclick="event.stopPropagation();openAiPriority()" title="AI自动定级，点击查看">AI</span><span class="priority-tag ' + pClass + '">' + oldVal + '</span>';
+    }
+  } else {
+    cell.textContent = oldVal;
+  }
+  currentEditing = null;
+}
+
+function renderStatusTag(status) {
+  const map = {
+    '空': 'status-empty', '评估中': 'status-eval', '待设计': 'status-design-wait',
+    '已设计': 'status-designed', '开发中': 'status-dev', '已上线': 'status-online',
+    '拒绝': 'status-reject', '挂起': 'status-hold', '验收不通过': 'status-fail'
+  };
+  const cls = map[status] || 'status-empty';
+  return '<span class="status-tag ' + cls + '">' + status + '</span>';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+/* ===== AI Priority Trigger ===== */
+function triggerAiPriority(btn) {
+  const cell = btn.closest('td');
+  const row = cell.closest('tr');
+  const reqTitle = row.querySelector('div[style*="font-weight:500"]');
+  const title = reqTitle ? reqTitle.textContent.trim() : '当前需求';
+
+  btn.classList.add('loading');
+
+  // Simulate AI processing delay
+  setTimeout(() => {
+    btn.classList.remove('loading');
+
+    // Simulated AI results
+    const results = [
+      { p: 'P1', label: '重要', reason: '涉及核心业务流程优化，影响多区县用户群体，且客户有明确时间要求' },
+      { p: 'P0', label: '紧急', reason: '系统存在安全隐忧，直接影响业务连续性，且有合同违约风险' },
+      { p: 'P2', label: '一般', reason: '属于体验优化类需求，影响范围有限，无明确时间要求' }
+    ];
+    const result = results[Math.floor(Math.random() * results.length)];
+
+    // Update cell
+    const pClass = 'priority-' + result.p.toLowerCase();
+    cell.dataset.source = '';
+    cell.innerHTML = '<span class="ai-badge" onclick="event.stopPropagation();openAiPriority()" title="AI自动定级，点击查看">AI</span>'
+      + '<span class="priority-tag ' + pClass + '">' + result.p + '</span>'
+      + '<button class="ai-trigger-btn" onclick="event.stopPropagation();triggerAiPriority(this)" title="重新触发 AI 判定"><span class="spinner"></span><span class="ai-icon-text">&#9881; AI 判定</span></button>';
+
+    showToast('🤖 AI 定级完成：' + title + ' → ' + result.p + '（' + result.label + '）');
+  }, 1500);
+}
+
+function batchAiPriority() {
+  const cells = document.querySelectorAll('td[data-field="优先级定级"]');
+  const btns = [];
+  cells.forEach(cell => {
+    const btn = cell.querySelector('.ai-trigger-btn');
+    if (btn) {
+      btn.classList.add('loading');
+      btns.push({ cell, btn });
+    }
+  });
+
+  showToast('🤖 正在批量 AI 定级，共 ' + btns.length + ' 条需求...');
+
+  // Simulate staggered AI processing
+  btns.forEach((item, i) => {
+    setTimeout(() => {
+      item.btn.classList.remove('loading');
+      const results = ['P0','P1','P2','P3'];
+      const result = results[Math.floor(Math.random() * results.length)];
+      const pClass = 'priority-' + result.toLowerCase();
+      item.cell.dataset.source = '';
+      item.cell.innerHTML = '<span class="ai-badge" onclick="event.stopPropagation();openAiPriority()" title="AI自动定级，点击查看">AI</span>'
+        + '<span class="priority-tag ' + pClass + '">' + result + '</span>'
+        + '<button class="ai-trigger-btn" onclick="event.stopPropagation();triggerAiPriority(this)" title="重新触发 AI 判定"><span class="spinner"></span><span class="ai-icon-text">&#9881; AI 判定</span></button>';
+
+      if (i === btns.length - 1) {
+        setTimeout(() => showToast('✅ 批量 AI 定级完成，共处理 ' + btns.length + ' 条需求，编辑记录已更新'), 300);
+      }
+    }, 800 + i * 600);
+  });
+}
+
+/* ===== Split Modal ===== */
+function openSplitModal() { document.getElementById('splitModal').classList.add('open'); }
+function closeSplitModal() { document.getElementById('splitModal').classList.remove('open'); }
+
+function switchSplitMode(mode) {
+  const tabs = document.querySelectorAll('.split-mode-tab');
+  tabs.forEach(t => t.classList.remove('active'));
+  if (mode === 'ai') {
+    tabs[0].classList.add('active');
+    document.getElementById('aiSplitArea').style.display = 'block';
+    document.getElementById('manualSplitArea').style.display = 'none';
+  } else {
+    tabs[1].classList.add('active');
+    document.getElementById('aiSplitArea').style.display = 'none';
+    document.getElementById('manualSplitArea').style.display = 'block';
+  }
+  updateSplitCount();
+}
+
+function triggerAiSplit() {
+  const btn = document.getElementById('aiSplitBtn');
+  const content = document.getElementById('aiSplitContent');
+  const hint = document.getElementById('aiSplitHint');
+  btn.disabled = true;
+  btn.style.opacity = '0.6';
+  hint.textContent = 'AI 正在分析原始需求...';
+
+  content.innerHTML = '<div class="ai-split-loading"><div class="ai-split-spinner"></div><div>AI 正在解析需求文本，识别功能模块...</div></div>';
+
+  setTimeout(() => {
+    hint.textContent = '拆分完成，共识别 3 条产品需求';
+    hint.style.color = 'var(--success)';
+
+    const items = [
+      { title: '供应商入驻审核流程优化', desc: '缩短审核周期，支持在线资质提交、自动预审、审核进度可视化', hasImg: true },
+      { title: '在线投标功能模块', desc: '支持供应商在线报名、上传投标文件、线上开标、评标流程', hasImg: false },
+      { title: '财务对账自动化', desc: '对接财务系统，实现采购订单自动对账、发票匹配、账期预警', hasImg: false }
+    ];
+
+    let html = '<div class="ai-split-result">✓ AI 已识别 3 条独立产品需求，请确认后提交</div>';
+    items.forEach((item, i) => {
+      html += '<div class="split-item">'
+        + '<div class="split-item-header"><span class="split-item-num">' + (i+1) + '. ' + item.title + '</span>'
+        + '<span class="ai-badge" style="font-size:9px;cursor:default;">AI 生成</span></div>'
+        + '<div class="split-item-body">'
+        + '<textarea class="split-text-area">' + item.desc + '</textarea>'
+        + (item.hasImg
+          ? '<div class="split-img-preview"><div class="split-img-thumb" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-secondary);">原型图1</div><div class="split-img-thumb" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-secondary);">截图2</div></div>'
+          : '<div class="split-img-upload" onclick="simulateImgUpload(this)">+ 点击上传截图 / 原型图（支持多图）</div>')
+        + '</div>'
+        + '<div class="split-fields"><input class="inline-input" placeholder="产品经理" value="待分配">'
+        + '<select class="inline-select"><option>业务线：校园G端</option><option>市监G端</option><option>食安企业</option><option>后勤B端</option></select></div>'
+        + '</div>';
+    });
+
+    content.innerHTML = html;
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.textContent = '↻ 重新 AI 拆分';
+    updateSplitCount();
+  }, 2200);
+}
+
+function addSplitItem() {
+  const container = document.getElementById('manualSplitItems');
+  const count = container.querySelectorAll('.split-item').length + 1;
+  const html = '<div class="split-item">'
+    + '<div class="split-item-header"><span class="split-item-num">产品需求 ' + count + '</span>'
+    + '<div class="split-item-actions"><button class="btn btn-ghost btn-sm" onclick="addSplitItem()" title="在后面插入">+ 插入</button>'
+    + '<button class="btn btn-ghost btn-sm" onclick="removeSplitItem(this)" title="删除">&times;</button></div></div>'
+    + '<div class="split-item-body"><textarea class="split-text-area" placeholder="请输入产品需求 ' + count + ' 的描述..."></textarea>'
+    + '<div class="split-img-upload" onclick="simulateImgUpload(this)">+ 点击上传截图 / 原型图（支持多图）</div></div>'
+    + '<div class="split-fields"><input class="inline-input" placeholder="产品经理" value="待分配">'
+    + '<select class="inline-select"><option>业务线：校园G端</option><option>市监G端</option><option>食安企业</option><option>后勤B端</option></select></div></div>';
+  container.insertAdjacentHTML('beforeend', html);
+  updateSplitCount();
+}
+
+function removeSplitItem(btn) {
+  const item = btn.closest('.split-item');
+  if (document.querySelectorAll('.split-item').length <= 1) {
+    showToast('至少保留一条拆分需求');
+    return;
+  }
+  item.remove();
+  // Re-number
+  document.querySelectorAll('#manualSplitItems .split-item').forEach((el, i) => {
+    el.querySelector('.split-item-num').textContent = '产品需求 ' + (i + 1);
+  });
+  updateSplitCount();
+}
+
+function simulateImgUpload(el) {
+  const preview = document.createElement('div');
+  preview.className = 'split-img-preview';
+  preview.innerHTML = '<div class="split-img-thumb" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-secondary);">截图1</div>'
+    + '<div class="split-img-thumb" style="display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-secondary);">截图2</div>';
+  el.replaceWith(preview);
+}
+
+function updateSplitCount() {
+  const aiCount = document.querySelectorAll('#aiSplitContent .split-item').length;
+  const manualCount = document.querySelectorAll('#manualSplitItems .split-item').length;
+  const total = Math.max(aiCount, manualCount);
+  document.getElementById('splitCount').textContent = '已拆分 ' + total + ' 条产品需求';
+}
+
+function confirmSplit() {
+  closeSplitModal();
+  showToast('✓ 拆分成功，已生成 3 条产品需求并转入产品需求池');
+}
+</script>
+</body>
+</html>
