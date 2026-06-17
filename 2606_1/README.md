@@ -87,6 +87,14 @@ bash deploy/deploy.sh rollback v1.0.0
 
 详细规范见 [deploy/DEPLOYMENT_WORKFLOW.md](./deploy/DEPLOYMENT_WORKFLOW.md)。
 
+## 运维与发布文档
+
+为避免发布和线上处理流程依赖口头沟通，项目内统一维护 SOP 文档：
+
+- [发布上线 SOP](./docs/release-sop.md)
+- [线上故障与回滚 SOP](./docs/incident-rollback-sop.md)
+- [发布/回滚执行清单模板](./docs/release-rollback-checklist.md)
+
 ## 环境变量要求
 
 开发环境至少需要：
