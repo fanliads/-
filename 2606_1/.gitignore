@@ -20,6 +20,16 @@ Thumbs.db
 # Environment
 .env.local
 .env.*.local
+.env.production
+
+# Credentials & SSH
+.sshpass
+sshpass.tar.gz
+sshpass-1.10/
+ssh_cmd.exp
+ssh_long.exp
+bin/
+.local/
 
 # Java
 *.class
@@ -44,3 +54,9 @@ yarn-error.log*
 *.tgz
 .npm
 .yarn
+
+# Maven local repo cache
+backend/D:\maven/
+
+# Compiled class files in wrong location
+com/
