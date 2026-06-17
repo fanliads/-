@@ -1,5 +1,5 @@
 #!/bin/bash
-# GitLab-based deployment script
+# GitHub-based deployment script
 # Usage:
 #   bash deploy.sh bootstrap
 #   bash deploy.sh deploy branch main
@@ -12,30 +12,30 @@
 
 set -euo pipefail
 
-PROJECT_DIR="${PROJECT_DIR:-/opt/req-mgmt}"
-REPO_URL="${REPO_URL:-http://192.168.10.122/product/requirement_management.git}"
-# GitLab Personal Access Token authentication
-# Set GITLAB_USER and GITLAB_TOKEN in environment or in .env file
-# The clone URL will be constructed as: http://<user>:<token>@192.168.10.122/product/requirement_management.git
-GITLAB_USER="${GITLAB_USER:-fanli}"
-GITLAB_TOKEN="${GITLAB_TOKEN:-}"
+PROJECT_DIR="${PROJECT_DIR:-/opt/req-mgmt/app}"
+REPO_URL="${REPO_URL:-https://github.com/fanliads/-.git}"
+# GitHub Personal Access Token authentication
+# Set GITHUB_USER and GITHUB_TOKEN in environment or in .env file
+# The clone URL will be constructed as: https://<user>:<token>@github.com/fanliads/-.git
+GITHUB_USER="${GITHUB_USER:-fanliads}"
+GITHUB_TOKEN="${GITHUB_TOKEN:-}"
 DEFAULT_BRANCH="${DEFAULT_BRANCH:-main}"
 DEPLOY_LOG="${DEPLOY_LOG:-/opt/req-mgmt/shared/deploy-history.log}"
 ENV_FILE="${ENV_FILE:-/opt/req-mgmt/shared/.env.production}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
 
-# Build authenticated repo URL for GitLab
+# Build authenticated repo URL for GitHub
 build_repo_url() {
-  # Load GITLAB_USER and GITLAB_TOKEN from env file if not already set
-  if [ -z "$GITLAB_USER" ] || [ -z "$GITLAB_TOKEN" ]; then
+  # Load GITHUB_USER and GITHUB_TOKEN from env file if not already set
+  if [ -z "$GITHUB_USER" ] || [ -z "$GITHUB_TOKEN" ]; then
     if [ -f "$ENV_FILE" ]; then
       set -a
       . "$ENV_FILE"
       set +a
     fi
   fi
-  if [ -n "$GITLAB_USER" ] && [ -n "$GITLAB_TOKEN" ]; then
-    echo "http://${GITLAB_USER}:${GITLAB_TOKEN}@192.168.10.122/product/requirement_management.git"
+  if [ -n "$GITHUB_USER" ] && [ -n "$GITHUB_TOKEN" ]; then
+    echo "https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/fanliads/-.git"
   else
     echo "$REPO_URL"
   fi
@@ -73,7 +73,7 @@ bootstrap_repo() {
     git clone "$(build_repo_url)" "$PROJECT_DIR"
   fi
   # Configure credential helper to store token for subsequent pulls
-  if [ -n "$GITLAB_USER" ] && [ -n "$GITLAB_TOKEN" ]; then
+  if [ -n "$GITHUB_USER" ] && [ -n "$GITHUB_TOKEN" ]; then
     git -C "$PROJECT_DIR" remote set-url origin "$(build_repo_url)"
   fi
 }

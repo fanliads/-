@@ -37,6 +37,8 @@ if [ ! -f "$ENV_FILE" ]; then
   cat > "$ENV_FILE" <<'EOF'
 MYSQL_ROOT_PASSWORD=change-me
 JWT_SECRET=change-me-to-a-long-random-string
+GITHUB_USER=fanliads
+GITHUB_TOKEN=change-me-to-your-github-pat
 EOF
 fi
 
