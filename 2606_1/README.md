@@ -94,6 +94,7 @@ bash deploy/deploy.sh rollback v1.0.0
 - [发布上线 SOP](./docs/release-sop.md)
 - [线上故障与回滚 SOP](./docs/incident-rollback-sop.md)
 - [发布/回滚执行清单模板](./docs/release-rollback-checklist.md)
+- [部署 Agent 执行指令](./docs/deploy-agent-instructions.md)
 
 ## 环境变量要求
 
