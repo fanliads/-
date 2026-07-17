@@ -1,9 +1,8 @@
 <template>
-  <el-drawer
+  <LnDrawer
     :model-value="visible"
-    size="640px"
-    :before-close="handleClose"
-    destroy-on-close
+    width="640px"
+    @close="handleClose"
     :show-close="false"
     class="apple-drawer"
   >
@@ -13,16 +12,18 @@
           <div class="drawer-id">{{ detail?.reqNo || '' }}</div>
           <div class="drawer-title">{{ detail?.title || '' }}</div>
         </div>
-        <button class="btn btn-ghost" @click="handleClose">关闭</button>
+        <LnButton size="small" variant="ghost" @click="handleClose">关闭</LnButton>
       </div>
     </template>
 
-    <div v-loading="loading" class="drawer-body">
-      <template v-if="detail">
+    <div class="drawer-body">
+      <LnSkeleton v-if="loading" variant="detail" :rows="8" />
+      <template v-else-if="detail">
         <!-- Tabs -->
-        <el-tabs v-model="activeTab" class="drawer-tabs">
+        <LnTabs v-model="activeTab" :options="drawerTabs" class="drawer-tabs" fluid />
+        <div class="drawer-panel">
           <!-- 概览 -->
-          <el-tab-pane label="概览" name="overview">
+          <div v-if="activeTab === 'overview'">
             <!-- 基础信息 -->
             <div class="section">
               <div class="section-title">基础信息</div>
@@ -68,7 +69,7 @@
                 <div class="info-item">
                   <div class="info-label">价值评分</div>
                   <div class="info-value">
-                    <el-rate v-model="detail.valueScore" disabled :max="5" v-if="detail.valueScore" />
+                    <span v-if="detail.valueScore" class="value-score" :aria-label="`价值评分 ${detail.valueScore} 分`"><span>{{ '★'.repeat(Math.round(detail.valueScore)) }}</span><small>{{ detail.valueScore }}/5</small></span>
                     <span v-else>-</span>
                   </div>
                 </div>
@@ -117,10 +118,10 @@
                 </div>
               </div>
             </div>
-          </el-tab-pane>
+          </div>
 
           <!-- 流转记录 -->
-          <el-tab-pane label="流转记录" name="logs">
+          <div v-else-if="activeTab === 'logs'">
             <div class="timeline">
               <div v-for="log in logs" :key="log.id" class="timeline-item">
                 <div class="log-item">
@@ -137,11 +138,11 @@
                 <div class="log-time">{{ log.createTime ? log.createTime.substring(0, 16).replace('T', ' ') : '' }}</div>
               </div>
             </div>
-            <el-empty v-if="logs.length === 0" description="暂无流转记录" />
-          </el-tab-pane>
+            <LnEmptyState v-if="logs.length === 0" title="暂无流转记录" description="状态变化和字段调整会显示在这里。" compact />
+          </div>
 
           <!-- 评论 -->
-          <el-tab-pane label="评论" name="comments">
+          <div v-else-if="activeTab === 'comments'">
             <div class="comment-list">
               <div v-for="comment in comments" :key="comment.id" class="comment-item">
                 <div class="comment-header">
@@ -150,16 +151,16 @@
                 </div>
                 <div class="comment-content">{{ comment.content }}</div>
               </div>
-              <el-empty v-if="comments.length === 0" description="暂无评论" />
+              <LnEmptyState v-if="comments.length === 0" title="暂无评论" description="留下上下文，方便后续协作。" compact />
             </div>
             <div class="comment-input">
-              <el-input v-model="commentText" type="textarea" :rows="2" placeholder="输入评论内容..." />
-              <button class="btn btn-primary" style="margin-top: 8px" @click="submitComment">发表评论</button>
+              <LnTextarea v-model="commentText" :rows="2" placeholder="输入评论内容…" />
+              <LnButton size="small" @click="submitComment">发表评论</LnButton>
             </div>
-          </el-tab-pane>
+          </div>
 
           <!-- 补充内容 -->
-          <el-tab-pane label="补充内容" name="supplements">
+          <div v-else>
             <div class="supplement-list">
               <div v-for="sup in supplements" :key="sup.id" class="timeline-item">
                 <div class="supplement-header">
@@ -169,21 +170,20 @@
                 <div class="supplement-content">{{ sup.content }}</div>
                 <div class="log-time">{{ sup.createTime ? sup.createTime.substring(0, 16).replace('T', ' ') : '' }}</div>
               </div>
-              <el-empty v-if="supplements.length === 0" description="暂无补充内容" />
+              <LnEmptyState v-if="supplements.length === 0" title="暂无补充内容" description="补充材料和处理记录会显示在这里。" compact />
             </div>
             <div style="margin-top: 12px">
-              <button class="btn btn-primary" @click="$emit('openSupplement', requirementId)">添加补充</button>
+              <LnButton size="small" @click="$emit('openSupplement', requirementId)">添加补充</LnButton>
             </div>
-          </el-tab-pane>
-        </el-tabs>
+          </div>
+        </div>
       </template>
     </div>
-  </el-drawer>
+  </LnDrawer>
 </template>
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
 import {
   getProductRequirementDetail,
   getProductRequirementLogs,
@@ -197,6 +197,7 @@ import {
   PRIORITY_MAP,
 } from '@/types/requirement'
 import { sanitizeRichText } from '@/utils/rich-text'
+import { lnToast, LnButton, LnDrawer, LnEmptyState, LnSkeleton, LnTabs, LnTextarea, type LnTabOption } from '@/components/linear'
 
 const props = defineProps<{
   visible: boolean
@@ -216,6 +217,12 @@ const logs = ref<RequirementLogVO[]>([])
 const comments = ref<CommentVO[]>([])
 const supplements = ref<SupplementVO[]>([])
 const commentText = ref('')
+const drawerTabs: LnTabOption[] = [
+  { label: '概览', value: 'overview' },
+  { label: '流转记录', value: 'logs' },
+  { label: '评论', value: 'comments' },
+  { label: '补充内容', value: 'supplements' },
+]
 
 function renderRichText(content?: string) {
   return sanitizeRichText(content) || '暂无描述'
@@ -255,12 +262,12 @@ async function loadDetail() {
 
 async function submitComment() {
   if (!commentText.value.trim()) {
-    ElMessage.warning('请输入评论内容')
+    lnToast.warning('请输入评论内容')
     return
   }
   try {
     await addProductRequirementComment(props.requirementId, { content: commentText.value })
-    ElMessage.success('评论成功')
+    lnToast.success('评论成功')
     commentText.value = ''
     const res = await getProductRequirementComments(props.requirementId)
     comments.value = res.data || []
@@ -310,41 +317,8 @@ watch(() => props.visible, (val) => {
 }
 
 // ===== Apple-style 抽屉覆盖 =====
-:deep(.el-drawer) {
-  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.08);
-}
-
-:deep(.el-drawer__header) {
-  padding: 18px 24px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 0;
-}
-
-:deep(.el-drawer__body) {
-  padding: 0;
-}
-
-.drawer-tabs {
-  :deep(.el-tabs__header) {
-    padding: 0 24px;
-    margin-bottom: 0;
-  }
-
-  :deep(.el-tabs__nav-wrap::after) {
-    height: 1px;
-    background: var(--border);
-  }
-
-  :deep(.el-tabs__item) {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-secondary);
-
-    &.is-active {
-      color: var(--primary);
-    }
-  }
-}
+.drawer-tabs { margin-bottom: 20px; }
+.drawer-panel { min-height: 320px; }
 
 // ===== 区段 =====
 .section {
@@ -381,6 +355,15 @@ watch(() => props.visible, (val) => {
 .info-value {
   font-size: 13px;
   color: var(--text-primary);
+}
+
+.value-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #d29a28;
+  letter-spacing: 1px;
+  small { color: var(--text-secondary); font-size: 11px; letter-spacing: 0; }
 }
 
 // ===== 状态标签 =====
@@ -466,6 +449,9 @@ watch(() => props.visible, (val) => {
 }
 
 .comment-input {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
   margin-top: 16px;
   padding-top: 12px;
   border-top: 1px solid var(--border);

@@ -1,9 +1,9 @@
 <template>
   <div class="result-view">
-    <div class="result-card">
-      <div class="result-badge">已受理</div>
-      <h1>需求已进入受理流程</h1>
-      <p>你的提报已经进入原始需求池，后续将按待判定、待拆分、开发中的流程推进。</p>
+    <div class="result-card wb-panel">
+      <div class="result-badge wb-meta-pill">已受理</div>
+      <h1 class="wb-page-title">需求已进入受理流程</h1>
+      <p class="wb-page-subtitle">你的提报已经进入原始需求池，后续将按待判定、待拆分、开发中的流程推进。</p>
 
       <div class="result-panel">
         <div class="result-item">
@@ -21,7 +21,7 @@
       </div>
 
       <div class="result-actions">
-        <el-button type="primary" @click="goBack">继续提交</el-button>
+        <LnButton variant="primary" @click="goBack">继续提交</LnButton>
       </div>
     </div>
   </div>
@@ -30,6 +30,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { LnButton } from '@/components/linear'
 
 const route = useRoute()
 const router = useRouter()
@@ -50,49 +51,33 @@ function goBack() {
   justify-content: center;
   padding: 24px;
   background:
-    radial-gradient(circle at top right, rgba(52, 199, 89, 0.14), transparent 30%),
-    linear-gradient(180deg, #f7fafc 0%, #edf2f7 100%);
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.1), transparent 28%),
+    linear-gradient(180deg, #f7f8fa 0%, #eef2f6 100%);
 }
 
 .result-card {
   width: min(640px, 100%);
   padding: 32px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.1);
 }
 
 .result-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(52, 199, 89, 0.12);
-  color: #15803d;
-  font-size: 12px;
-  font-weight: 700;
 }
 
 .result-card h1 {
   margin: 14px 0 10px;
-  font-size: 30px;
-  color: #0f172a;
 }
 
 .result-card p {
   margin: 0 0 20px;
-  line-height: 1.7;
-  color: #475569;
 }
 
 .result-panel {
   display: grid;
   gap: 12px;
   padding: 18px;
-  border-radius: 18px;
-  background: #f8fafc;
-  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 16px;
+  background: rgba(17, 24, 39, 0.024);
+  border: 1px solid rgba(17, 24, 39, 0.05);
 }
 
 .result-item {
@@ -102,12 +87,12 @@ function goBack() {
 
 .k {
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-tertiary);
 }
 
 .v {
   font-size: 14px;
-  color: #0f172a;
+  color: var(--text-primary);
   line-height: 1.6;
 }
 

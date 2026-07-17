@@ -1,0 +1,1346 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>需求分诊台预览</title>
+  <style>
+    :root {
+      --bg: #f3f5f2;
+      --panel: rgba(255, 255, 255, 0.9);
+      --panel-strong: #ffffff;
+      --line: rgba(26, 36, 32, 0.08);
+      --line-strong: rgba(26, 36, 32, 0.14);
+      --text: #1f2723;
+      --muted: #69726c;
+      --soft: #94a098;
+      --primary: #1d6b59;
+      --primary-soft: rgba(29, 107, 89, 0.1);
+      --warning: #b8781f;
+      --warning-soft: rgba(184, 120, 31, 0.12);
+      --danger: #b14e45;
+      --danger-soft: rgba(177, 78, 69, 0.12);
+      --success: #2d8a5f;
+      --success-soft: rgba(45, 138, 95, 0.12);
+      --shadow: 0 18px 40px rgba(24, 32, 28, 0.06);
+      --radius: 24px;
+      --radius-sm: 16px;
+      --font: "SF Pro Display", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--font);
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(29, 107, 89, 0.08), transparent 26%),
+        radial-gradient(circle at top right, rgba(184, 120, 31, 0.06), transparent 24%),
+        linear-gradient(180deg, #f7f8f5 0%, var(--bg) 100%);
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .shell {
+      min-height: 100%;
+      padding: 14px;
+    }
+
+    .layout {
+      height: calc(100vh - 28px);
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 14px;
+    }
+
+    .rail,
+    .workspace {
+      border-radius: 28px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      overflow: hidden;
+    }
+
+    .rail {
+      width: 84px;
+      transition: width 0.24s ease;
+      display: flex;
+      flex-direction: column;
+      padding: 14px 10px;
+      gap: 10px;
+    }
+
+    .layout.menu-open .rail {
+      width: 236px;
+    }
+
+    .rail-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 52px;
+    }
+
+    .brand {
+      width: 50px;
+      height: 50px;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, rgba(29, 107, 89, 0.18), rgba(184, 120, 31, 0.14));
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      flex: 0 0 auto;
+    }
+
+    .brand-copy {
+      display: none;
+      min-width: 0;
+    }
+
+    .layout.menu-open .brand-copy {
+      display: block;
+    }
+
+    .brand-title {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-subtitle {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .rail-toggle {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.82);
+      color: var(--muted);
+      cursor: pointer;
+      flex: 0 0 auto;
+    }
+
+    .rail-nav {
+      display: grid;
+      gap: 8px;
+      margin-top: 6px;
+      flex: 1;
+    }
+
+    .rail-item {
+      width: 100%;
+      min-height: 50px;
+      border-radius: 16px;
+      border: 1px solid transparent;
+      background: rgba(255, 255, 255, 0.68);
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 14px;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .rail-item.active {
+      color: var(--primary);
+      background: var(--primary-soft);
+      border-color: rgba(29, 107, 89, 0.14);
+    }
+
+    .rail-icon {
+      width: 22px;
+      text-align: center;
+      flex: 0 0 22px;
+      font-size: 17px;
+    }
+
+    .rail-label {
+      display: none;
+      white-space: nowrap;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .layout.menu-open .rail-label {
+      display: inline;
+    }
+
+    .user {
+      min-height: 52px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.68);
+      border: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px;
+    }
+
+    .user-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--primary), #164e42);
+      color: #fff;
+      font-weight: 700;
+      flex: 0 0 auto;
+    }
+
+    .user-copy {
+      display: none;
+      min-width: 0;
+    }
+
+    .layout.menu-open .user-copy {
+      display: block;
+    }
+
+    .user-name {
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .user-role {
+      color: var(--muted);
+      font-size: 11px;
+      margin-top: 2px;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      min-width: 0;
+    }
+
+    .header {
+      padding: 18px 22px 14px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .heading h1 {
+      margin: 0;
+      font-size: 25px;
+      letter-spacing: -0.04em;
+    }
+
+    .heading p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .tag,
+    .hint {
+      height: 34px;
+      padding: 0 12px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.76);
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .signal {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 0 6px rgba(45, 138, 95, 0.12);
+    }
+
+    .toolbar {
+      padding: 14px 22px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-left,
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .search,
+    .select,
+    .ghost,
+    .primary,
+    .text-btn {
+      height: 38px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .search,
+    .select {
+      padding: 0 14px;
+      outline: none;
+    }
+
+    .search {
+      width: 240px;
+    }
+
+    .search:focus,
+    .select:focus {
+      border-color: rgba(29, 107, 89, 0.24);
+      box-shadow: 0 0 0 4px rgba(29, 107, 89, 0.08);
+    }
+
+    .ghost,
+    .primary,
+    .text-btn {
+      padding: 0 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .ghost {
+      background: rgba(255, 255, 255, 0.82);
+    }
+
+    .primary {
+      border-color: transparent;
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .text-btn {
+      background: transparent;
+      border-color: transparent;
+      color: var(--primary);
+    }
+
+    .body {
+      min-height: 0;
+      padding: 16px;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 12px;
+    }
+
+    .summary-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .metric {
+      padding: 12px 14px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.82);
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .metric-value {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+
+    .list-panel {
+      min-height: 0;
+      border-radius: 24px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.82);
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .panel-head {
+      padding: 16px 18px 12px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .panel-title {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .panel-subtitle {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .compact {
+      color: var(--soft);
+      font-size: 12px;
+    }
+
+    .list {
+      min-height: 0;
+      overflow: auto;
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+
+    .item {
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.88);
+      overflow: hidden;
+      transition: 0.18s ease;
+    }
+
+    .item.active {
+      border-color: rgba(29, 107, 89, 0.18);
+      box-shadow: 0 10px 20px rgba(29, 107, 89, 0.06);
+    }
+
+    .item-head {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      padding: 14px 16px;
+      text-align: left;
+      display: grid;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .item-top,
+    .item-bottom {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .item-id {
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .item-title {
+      margin-top: 6px;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    .item-desc {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .head-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .chevron {
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.74);
+      color: var(--muted);
+      display: grid;
+      place-items: center;
+      transition: transform 0.18s ease;
+    }
+
+    .item.expanded .chevron {
+      transform: rotate(180deg);
+    }
+
+    .row-tags,
+    .row-meta,
+    .inline-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+
+    .pill.status {
+      color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    .pill.warn {
+      color: var(--warning);
+      background: var(--warning-soft);
+    }
+
+    .pill.danger {
+      color: var(--danger);
+      background: var(--danger-soft);
+    }
+
+    .pill.success {
+      color: var(--success);
+      background: var(--success-soft);
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .item-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.22s ease;
+      border-top: 1px solid transparent;
+    }
+
+    .item.expanded .item-body {
+      max-height: 420px;
+      border-top-color: var(--line);
+    }
+
+    .item-detail {
+      padding: 14px 16px 16px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .detail-card {
+      padding: 12px 13px;
+      border-radius: 16px;
+      background: rgba(245, 247, 245, 0.88);
+      border: 1px solid rgba(26, 36, 32, 0.05);
+    }
+
+    .detail-label {
+      color: var(--soft);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .detail-value {
+      font-size: 14px;
+      line-height: 1.55;
+      font-weight: 600;
+      word-break: break-word;
+    }
+
+    .detail-notes {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1fr;
+      gap: 10px;
+    }
+
+    .note {
+      padding: 13px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.86);
+    }
+
+    .note-title {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .note-text {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.75;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(20, 26, 23, 0.18);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+      z-index: 20;
+    }
+
+    .overlay.open {
+      display: flex;
+    }
+
+    .modal {
+      width: min(980px, 100%);
+      max-height: min(88vh, 920px);
+      border-radius: 28px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: 0 24px 60px rgba(20, 26, 23, 0.16);
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .modal-head {
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .modal-kicker {
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .modal-title {
+      margin: 8px 0 0;
+      font-size: 24px;
+      line-height: 1.35;
+      letter-spacing: -0.03em;
+    }
+
+    .modal-desc {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    .modal-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .close {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.9);
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .modal-body {
+      overflow: auto;
+      padding: 18px 20px 20px;
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .info-cell,
+    .block {
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid var(--line);
+    }
+
+    .cell-label {
+      color: var(--soft);
+      font-size: 12px;
+      margin-bottom: 7px;
+    }
+
+    .cell-value {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.5;
+    }
+
+    .section-title {
+      margin: 0 0 10px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .section-text {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.8;
+      margin: 0;
+    }
+
+    .section-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .line {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed rgba(26, 36, 32, 0.08);
+    }
+
+    .line:last-child {
+      padding-bottom: 0;
+      border-bottom: 0;
+    }
+
+    .line-key {
+      color: var(--muted);
+      font-size: 12px;
+      min-width: 72px;
+    }
+
+    .line-value {
+      flex: 1;
+      font-size: 13px;
+      line-height: 1.7;
+      text-align: right;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 10px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 24px 1fr;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .step-dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: rgba(29, 107, 89, 0.08);
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .step-title {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .step-desc {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    @media (max-width: 1180px) {
+      .summary-strip,
+      .detail-grid,
+      .info-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .detail-notes {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 860px) {
+      .layout {
+        height: auto;
+        grid-template-columns: 1fr;
+      }
+
+      .rail {
+        width: 100%;
+      }
+
+      .layout:not(.menu-open) .rail-nav,
+      .layout:not(.menu-open) .user {
+        display: none;
+      }
+
+      .workspace {
+        min-height: calc(100vh - 28px);
+      }
+
+      .header,
+      .toolbar {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      .body {
+        padding: 12px;
+      }
+
+      .summary-strip,
+      .detail-grid,
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .search {
+        width: 100%;
+      }
+
+      .modal {
+        max-height: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="layout" id="layout">
+      <aside class="rail">
+        <div class="rail-top">
+          <div class="brand">RM</div>
+          <div class="brand-copy">
+            <div class="brand-title">Req Mgmt</div>
+            <div class="brand-subtitle">沉浸式分诊台</div>
+          </div>
+          <button class="rail-toggle" id="menu-toggle" type="button">≡</button>
+        </div>
+
+        <div class="rail-nav">
+          <button class="rail-item" type="button">
+            <span class="rail-icon">⌂</span>
+            <span class="rail-label">工作台</span>
+          </button>
+          <button class="rail-item active" type="button">
+            <span class="rail-icon">▤</span>
+            <span class="rail-label">需求分诊台</span>
+          </button>
+          <button class="rail-item" type="button">
+            <span class="rail-icon">☰</span>
+            <span class="rail-label">原始需求池</span>
+          </button>
+          <button class="rail-item" type="button">
+            <span class="rail-icon">◫</span>
+            <span class="rail-label">评审看板</span>
+          </button>
+          <button class="rail-item" type="button">
+            <span class="rail-icon">◎</span>
+            <span class="rail-label">配置中心</span>
+          </button>
+        </div>
+
+        <div class="user">
+          <div class="user-avatar">LU</div>
+          <div class="user-copy">
+            <div class="user-name">Luna</div>
+            <div class="user-role">产品运营</div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <section class="header">
+          <div class="heading">
+            <h1>需求分诊台</h1>
+            <p>列表负责浏览和快速判断，详情只在需要时浮出，不长期占用主工作区。</p>
+          </div>
+          <div class="header-meta">
+            <div class="hint"><span class="signal"></span> 当前为静态预览稿</div>
+            <div class="tag">Form follows function</div>
+          </div>
+        </section>
+
+        <section class="toolbar">
+          <div class="toolbar-left">
+            <input class="search" value="搜索标题 / 来源单号 / 提交人" />
+            <select class="select">
+              <option>全部业务线</option>
+              <option>交易</option>
+              <option>风控</option>
+              <option>基础平台</option>
+            </select>
+            <select class="select">
+              <option>待分诊</option>
+              <option>需补充</option>
+              <option>已纳入</option>
+            </select>
+            <button class="ghost" type="button">高优先级</button>
+          </div>
+          <div class="toolbar-right">
+            <button class="ghost" type="button">列表密度: 紧凑</button>
+            <button class="ghost" type="button">筛选视图</button>
+            <button class="primary" type="button">新建分诊结论</button>
+          </div>
+        </section>
+
+        <section class="body">
+          <div class="summary-strip">
+            <div class="metric">
+              <div class="metric-label">待分诊</div>
+              <div class="metric-value">12</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">高优先级</div>
+              <div class="metric-value">4</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">需补材料</div>
+              <div class="metric-value">3</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">今日新入池</div>
+              <div class="metric-value">7</div>
+            </div>
+          </div>
+
+          <section class="list-panel">
+            <div class="panel-head">
+              <div>
+                <div class="panel-title">待处理需求</div>
+                <div class="panel-subtitle">保留高信息密度分层，但把更多上下文收进折叠区，避免首屏过重。</div>
+              </div>
+              <div class="compact">12 条结果</div>
+            </div>
+            <div class="list" id="list"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-head">
+        <div id="modal-content-head"></div>
+        <div class="modal-actions">
+          <button class="ghost" type="button">转产品需求</button>
+          <button class="primary" type="button">记录结论</button>
+          <button class="close" id="close-modal" type="button">×</button>
+        </div>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <script>
+    const records = [
+      {
+        id: "RAW-2048",
+        title: "批量导入原始需求时支持自动识别重复项，并给出可合并候选",
+        desc: "运营团队每天会手工比对 Excel 中的需求条目。当前导入只校验必填字段，没有重复建议，导致同一问题会被多次录入并反复评估。",
+        status: "待分诊",
+        statusClass: "status",
+        priority: "P0 高",
+        priorityClass: "danger",
+        source: "企微收集表",
+        business: "基础平台",
+        submitter: "刘晨 / 运营",
+        owner: "张宁",
+        createdAt: "今天 09:40",
+        eta: "今日内完成结论",
+        fit: "高",
+        reqNo: "RQ-240615-18",
+        stage: "池内待评估",
+        origin: "Excel 导入",
+        risk: "需先确认重复判定规则，避免误伤相似但不相同的需求。",
+        impact: "高频操作场景，能直接降低重复评审成本，适合作为原始需求池入口优化项。",
+        missing: "需要补充重复判定规则，是否按标题相似度、来源单号或业务线组合判断。",
+        recommendation: "建议纳入本周平台治理小迭代，先做候选提示，不自动合并。",
+        actions: ["指派平台产品", "补充规则说明", "进入评估排期"],
+        trace: [
+          ["关联业务线", "基础平台"],
+          ["来源渠道", "企微表单 / Excel 导入"],
+          ["影响角色", "运营、产品助理"],
+          ["预估范围", "导入页、列表页、去重服务"]
+        ],
+        timeline: [
+          ["已入池", "来源需求已登记并自动补全基础字段。"],
+          ["待确认规则", "需要产品确认重复候选展示方式。"],
+          ["可进入评估", "规则确认后即可转产品需求。"]
+        ]
+      },
+      {
+        id: "RAW-2039",
+        title: "需求详情页增加外部附件预览，避免下载后再本地打开",
+        desc: "目前附件统一下载，产品经理查看录屏或截图需要反复切出系统，影响评审连续性，希望支持图片与 PDF 的页内预览。",
+        status: "需补充",
+        statusClass: "warn",
+        priority: "P1 中",
+        priorityClass: "warn",
+        source: "飞书群反馈",
+        business: "交易",
+        submitter: "徐帆 / 产品",
+        owner: "王可",
+        createdAt: "昨天 16:20",
+        eta: "等待补材料",
+        fit: "中",
+        reqNo: "RQ-240614-07",
+        stage: "材料待补充",
+        origin: "群反馈",
+        risk: "附件鉴权和水印要求如果不先统一，后续会产生重复建设。",
+        impact: "能改善沉浸式评审体验，但需要先界定支持的文件类型和安全策略。",
+        missing: "缺少附件类型统计、平均大小、访问权限要求，以及是否需要水印。",
+        recommendation: "先补齐使用场景与安全边界，再判断是否进入通用能力建设。",
+        actions: ["补充文件类型分布", "确认鉴权方案", "评估是否共建预览组件"],
+        trace: [
+          ["关联业务线", "交易"],
+          ["来源渠道", "飞书群反馈"],
+          ["影响角色", "产品经理、评审人"],
+          ["预估范围", "详情页、附件服务、鉴权能力"]
+        ],
+        timeline: [
+          ["已入池", "需求描述已同步。"],
+          ["材料不足", "缺少安全与格式信息。"],
+          ["暂不排期", "补充后再判断优先级。"]
+        ]
+      },
+      {
+        id: "RAW-2026",
+        title: "原始需求池支持按业务线维护默认字段模板，减少重复录入",
+        desc: "不同业务线录入需求时关注字段差异明显，当前统一表单导致很多字段经常留空，也增加提交人理解成本。",
+        status: "可纳入",
+        statusClass: "success",
+        priority: "P1 中",
+        priorityClass: "warn",
+        source: "月度复盘",
+        business: "风控",
+        submitter: "周颖 / PMO",
+        owner: "赵越",
+        createdAt: "06-15 11:10",
+        eta: "本周评估",
+        fit: "高",
+        reqNo: "RQ-240612-31",
+        stage: "方向已认可",
+        origin: "复盘结论",
+        risk: "字段模板如果抽象过深，维护成本会高于收益，需要做分层。",
+        impact: "字段模板能提升录入效率，也利于后续状态化管理和数据完整度提升。",
+        missing: "需要确定哪些字段是业务线模板，哪些仍需全局统一。",
+        recommendation: "建议作为池子体验优化主线之一，和字段状态表达一起推进。",
+        actions: ["梳理字段分层", "产出模板规则", "拉业务线确认"],
+        trace: [
+          ["关联业务线", "风控"],
+          ["来源渠道", "月度复盘"],
+          ["影响角色", "提交人、产品经理"],
+          ["预估范围", "录入表单、模板配置、校验规则"]
+        ],
+        timeline: [
+          ["已入池", "问题来源较明确。"],
+          ["方向认可", "具备明显提效价值。"],
+          ["待方案化", "需要抽象模板配置能力。"]
+        ]
+      }
+    ];
+
+    const layoutEl = document.getElementById("layout");
+    const menuToggleEl = document.getElementById("menu-toggle");
+    const listEl = document.getElementById("list");
+    const overlayEl = document.getElementById("overlay");
+    const modalHeadEl = document.getElementById("modal-content-head");
+    const modalBodyEl = document.getElementById("modal-body");
+    const closeModalEl = document.getElementById("close-modal");
+
+    let expandedId = records[0].id;
+    let activeDetailId = null;
+
+    function metricCard(label, value) {
+      return `
+        <div class="detail-card">
+          <div class="detail-label">${label}</div>
+          <div class="detail-value">${value}</div>
+        </div>
+      `;
+    }
+
+    function renderList() {
+      listEl.innerHTML = records.map((item) => `
+        <article class="item ${expandedId === item.id ? "expanded active" : ""}">
+          <button class="item-head" type="button" data-expand="${item.id}">
+            <div class="item-top">
+              <div>
+                <div class="item-id">${item.id}</div>
+                <div class="item-title">${item.title}</div>
+              </div>
+              <div class="head-right">
+                <span class="pill ${item.statusClass}">${item.status}</span>
+                <span class="chevron">⌄</span>
+              </div>
+            </div>
+            <div class="item-desc">${item.desc}</div>
+            <div class="item-bottom">
+              <div class="row-tags">
+                <span class="pill ${item.priorityClass}">${item.priority}</span>
+                <span class="meta">${item.business}</span>
+                <span class="meta">${item.source}</span>
+              </div>
+              <div class="row-meta">
+                <span class="meta">${item.submitter}</span>
+                <span class="meta">${item.createdAt}</span>
+              </div>
+            </div>
+          </button>
+          <div class="item-body">
+            <div class="item-detail">
+              <div class="detail-grid">
+                ${metricCard("需求单号", item.reqNo)}
+                ${metricCard("当前负责人", item.owner)}
+                ${metricCard("处理阶段", item.stage)}
+                ${metricCard("建议时效", item.eta)}
+              </div>
+              <div class="detail-notes">
+                <div class="note">
+                  <div class="note-title">价值判断</div>
+                  <p class="note-text">${item.impact}</p>
+                </div>
+                <div class="note">
+                  <div class="note-title">缺失信息</div>
+                  <p class="note-text">${item.missing}</p>
+                </div>
+                <div class="note">
+                  <div class="note-title">操作</div>
+                  <div class="inline-actions">
+                    <button class="ghost" type="button" data-modal="${item.id}">查看详情</button>
+                    <button class="primary" type="button">记录结论</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      `).join("");
+
+      listEl.querySelectorAll("[data-expand]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const nextId = button.dataset.expand;
+          expandedId = expandedId === nextId ? "" : nextId;
+          renderList();
+        });
+      });
+
+      listEl.querySelectorAll("[data-modal]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
+          openModal(button.dataset.modal);
+        });
+      });
+    }
+
+    function renderModal(item) {
+      modalHeadEl.innerHTML = `
+        <div>
+          <div class="modal-kicker">${item.id}</div>
+          <h2 class="modal-title" id="modal-title">${item.title}</h2>
+          <p class="modal-desc">${item.desc}</p>
+        </div>
+      `;
+
+      modalBodyEl.innerHTML = `
+        <div class="info-grid">
+          <div class="info-cell">
+            <div class="cell-label">当前状态</div>
+            <div class="cell-value"><span class="pill ${item.statusClass}">${item.status}</span></div>
+          </div>
+          <div class="info-cell">
+            <div class="cell-label">优先级</div>
+            <div class="cell-value"><span class="pill ${item.priorityClass}">${item.priority}</span></div>
+          </div>
+          <div class="info-cell">
+            <div class="cell-label">当前负责人</div>
+            <div class="cell-value">${item.owner}</div>
+          </div>
+          <div class="info-cell">
+            <div class="cell-label">功能匹配度</div>
+            <div class="cell-value">${item.fit}</div>
+          </div>
+        </div>
+
+        <div class="info-grid">
+          <div class="block">
+            <h3 class="section-title">建议结论</h3>
+            <p class="section-text">${item.recommendation}</p>
+          </div>
+          <div class="block">
+            <h3 class="section-title">主要风险</h3>
+            <p class="section-text">${item.risk}</p>
+          </div>
+          <div class="block">
+            <h3 class="section-title">缺失信息</h3>
+            <p class="section-text">${item.missing}</p>
+          </div>
+          <div class="block">
+            <h3 class="section-title">下一步动作</h3>
+            <div class="section-list">
+              ${item.actions.map((action) => `<span class="meta">• ${action}</span>`).join("")}
+            </div>
+          </div>
+        </div>
+
+        <div class="info-grid">
+          <div class="block">
+            <h3 class="section-title">关键信息</h3>
+            <div class="section-list">
+              <div class="line">
+                <div class="line-key">需求单号</div>
+                <div class="line-value">${item.reqNo}</div>
+              </div>
+              <div class="line">
+                <div class="line-key">业务线</div>
+                <div class="line-value">${item.business}</div>
+              </div>
+              <div class="line">
+                <div class="line-key">来源类型</div>
+                <div class="line-value">${item.origin}</div>
+              </div>
+              ${item.trace.map(([key, value]) => `
+                <div class="line">
+                  <div class="line-key">${key}</div>
+                  <div class="line-value">${value}</div>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+          <div class="block">
+            <h3 class="section-title">处理轨迹</h3>
+            <div class="timeline">
+              ${item.timeline.map(([title, desc], index) => `
+                <div class="step">
+                  <div class="step-dot">${index + 1}</div>
+                  <div>
+                    <div class="step-title">${title}</div>
+                    <div class="step-desc">${desc}</div>
+                  </div>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function openModal(id) {
+      activeDetailId = id;
+      const item = records.find((record) => record.id === id);
+      if (!item) return;
+      renderModal(item);
+      overlayEl.classList.add("open");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeModal() {
+      activeDetailId = null;
+      overlayEl.classList.remove("open");
+      document.body.style.overflow = "";
+    }
+
+    menuToggleEl.addEventListener("click", () => {
+      layoutEl.classList.toggle("menu-open");
+    });
+
+    closeModalEl.addEventListener("click", closeModal);
+
+    overlayEl.addEventListener("click", (event) => {
+      if (event.target === overlayEl) {
+        closeModal();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && activeDetailId) {
+        closeModal();
+      }
+    });
+
+    renderList();
+  </script>
+</body>
+</html>

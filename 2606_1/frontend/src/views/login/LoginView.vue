@@ -1,25 +1,12 @@
 <template>
   <div class="login-container">
-    <div class="login-ambient login-ambient-left"></div>
-    <div class="login-ambient login-ambient-right"></div>
-    <div class="login-intro">
-      <div class="intro-kicker">需求协作平台</div>
-      <h1 class="intro-title">让需求流转更清楚，决策推进更顺手。</h1>
-      <p class="intro-copy">
-        把原始收集、产品拆分、排期跟进和待办协同收拢到一个工作台里，减少跳转和信息断层。
-      </p>
-      <div class="intro-points">
-        <span>统一入口</span>
-        <span>状态透明</span>
-        <span>交接顺滑</span>
-      </div>
-    </div>
-    <div class="login-card">
+    <main class="login-card">
       <div class="login-header">
-        <h1 class="login-title">需求管理系统</h1>
-        <p class="login-subtitle">欢迎回来，继续推进今天的需求节奏。</p>
+        <div class="brand-mark" aria-hidden="true">需</div>
+        <h1 class="login-title">登录需求中枢</h1>
+        <p class="login-subtitle">使用你的工作账号继续</p>
       </div>
-      <el-form
+      <LnForm
         ref="loginFormRef"
         :model="loginForm"
         :rules="loginRules"
@@ -28,47 +15,31 @@
       >
         <div class="form-group">
           <label class="form-label">用户名</label>
-          <el-form-item prop="username">
-            <el-input
-              v-model="loginForm.username"
-              placeholder="请输入用户名"
-              size="large"
-              clearable
-              class="apple-input"
-            />
-          </el-form-item>
+          <LnFormItem prop="username">
+            <LnInput v-model="loginForm.username" placeholder="请输入用户名" autocomplete="username" clearable><template #prefix>◎</template></LnInput>
+          </LnFormItem>
         </div>
         <div class="form-group">
           <label class="form-label">密码</label>
-          <el-form-item prop="password">
-            <el-input
-              v-model="loginForm.password"
-              type="password"
-              placeholder="请输入密码"
-              size="large"
-              show-password
-              class="apple-input"
-            />
-          </el-form-item>
+          <LnFormItem prop="password">
+            <LnPasswordInput v-model="loginForm.password" placeholder="请输入密码" @keydown.enter="handleLogin"><template #prefix>◇</template></LnPasswordInput>
+          </LnFormItem>
         </div>
-        <button type="button" class="login-btn" :disabled="loading" @click="handleLogin">
-          {{ loading ? '登录中...' : '登 录' }}
-        </button>
-        <button
+        <LnButton class="login-action" variant="primary" :loading="loading" @click="handleLogin">
+          登 录
+        </LnButton>
+        <LnButton
           v-if="dingtalkConfig"
-          type="button"
-          class="login-btn login-btn-secondary"
+          class="login-action login-action--secondary"
           :disabled="loading"
           @click="handleDingTalkLogin"
         >
           钉钉登录
-        </button>
-        <p v-if="dingtalkConfig?.message" class="login-tip">{{ dingtalkConfig.message }}</p>
-      </el-form>
-      <p class="login-tip">
-        本地预览模式下，登录失败会自动进入演示账号，方便直接查看页面效果。
-      </p>
-    </div>
+        </LnButton>
+        <p v-if="dingtalkConfig?.message" class="login-note">{{ dingtalkConfig.message }}</p>
+      </LnForm>
+    </main>
+    <p class="login-footer">需求中枢 · 产品与项目协作</p>
   </div>
 </template>
 
@@ -76,15 +47,14 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/store/user'
-import type { FormInstance, FormRules } from 'element-plus'
-import { ElMessage } from 'element-plus'
 import { getDingTalkConfigApi, type DingTalkAuthConfig } from '@/api/auth'
+import { lnToast, LnButton, LnForm, LnFormItem, LnInput, LnPasswordInput, type LnFormInstance, type LnFormRules } from '@/components/linear'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 
-const loginFormRef = ref<FormInstance>()
+const loginFormRef = ref<LnFormInstance>()
 const loading = ref(false)
 const dingtalkConfig = ref<DingTalkAuthConfig | null>(null)
 
@@ -93,7 +63,7 @@ const loginForm = reactive({
   password: '',
 })
 
-const loginRules: FormRules = {
+const loginRules: LnFormRules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
 }
@@ -107,9 +77,9 @@ async function handleLogin() {
       await userStore.login(loginForm.username, loginForm.password)
       const redirect = (route.query.redirect as string) || '/dashboard'
       router.push(redirect)
-      ElMessage.success('登录成功')
+      lnToast.success('登录成功')
     } catch (error: any) {
-      ElMessage.error(error.message || '登录失败，请检查用户名和密码')
+      lnToast.error(error.message || '登录失败，请检查用户名和密码')
     } finally {
       loading.value = false
     }
@@ -118,7 +88,7 @@ async function handleLogin() {
 
 function handleDingTalkLogin() {
   if (!dingtalkConfig.value?.enabled || !dingtalkConfig.value.loginUrl) {
-    ElMessage.info(dingtalkConfig.value?.message || '当前环境未启用钉钉登录')
+    lnToast.info(dingtalkConfig.value?.message || '当前环境未启用钉钉登录')
     return
   }
   window.location.href = dingtalkConfig.value.loginUrl
@@ -136,123 +106,47 @@ onMounted(async () => {
 
 <style lang="scss" scoped>
 .login-container {
-  position: relative;
-  display: flex;
-  justify-content: space-between;
-  justify-content: center;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  justify-items: center;
   align-items: center;
   min-height: 100vh;
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 15% 20%, rgba(214, 139, 61, 0.2), transparent 28%),
-    radial-gradient(circle at 82% 16%, rgba(31, 107, 92, 0.18), transparent 26%),
-    linear-gradient(135deg, #f6efe6 0%, #f3eee7 42%, #ebe5db 100%);
-  padding: 40px 48px;
-  gap: 60px;
-}
-
-.login-ambient {
-  position: absolute;
-  border-radius: 999px;
-  filter: blur(10px);
-  opacity: 0.5;
-}
-
-.login-ambient-left {
-  width: 260px;
-  height: 260px;
-  left: -70px;
-  bottom: 12%;
-  background: rgba(214, 139, 61, 0.18);
-}
-
-.login-ambient-right {
-  width: 320px;
-  height: 320px;
-  right: -80px;
-  top: -30px;
-  background: rgba(31, 107, 92, 0.14);
-}
-
-.login-intro {
-  position: relative;
-  z-index: 1;
-  width: min(540px, 48vw);
-  color: #2f352f;
-}
-
-.intro-kicker {
-  display: inline-flex;
-  align-items: center;
-  padding: 8px 12px;
-  border-radius: 999px;
-  margin-bottom: 18px;
-  background: rgba(255, 255, 255, 0.56);
-  border: 1px solid rgba(77, 63, 47, 0.1);
-  color: var(--text-secondary);
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.intro-title {
-  font-size: clamp(38px, 4vw, 56px);
-  line-height: 1.06;
-  font-weight: 700;
-  letter-spacing: -0.04em;
-  max-width: 9em;
-  font-family: var(--font-family-accent);
-}
-
-.intro-copy {
-  margin-top: 20px;
-  font-size: 16px;
-  line-height: 1.8;
-  color: var(--text-secondary);
-  max-width: 34em;
-}
-
-.intro-points {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-top: 24px;
-
-  span {
-    padding: 10px 14px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.56);
-    border: 1px solid rgba(77, 63, 47, 0.1);
-    color: #32433d;
-    font-size: 13px;
-    font-weight: 600;
-  }
+  padding: 48px 20px 28px;
+  background: #f7f7f5;
 }
 
 .login-card {
-  position: relative;
-  z-index: 1;
   width: 100%;
-  max-width: 430px;
-  padding: 40px 36px 34px;
-  background: rgba(255, 252, 247, 0.82);
-  border-radius: 30px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  box-shadow: 0 28px 60px rgba(54, 41, 29, 0.16);
-  backdrop-filter: blur(16px);
+  max-width: 380px;
+  padding: 36px;
+  background: #fff;
+  border: 1px solid #e5e5e1;
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(26, 26, 24, 0.06);
 }
 
 .login-header {
-  text-align: left;
-  margin-bottom: 32px;
+  margin-bottom: 30px;
+
+  .brand-mark {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    margin-bottom: 22px;
+    border-radius: 9px;
+    background: #252522;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+  }
 
   .login-title {
-    font-size: 28px;
-    font-weight: 700;
-    margin-bottom: 10px;
-    letter-spacing: -0.03em;
+    margin: 0 0 8px;
+    font-size: 24px;
+    font-weight: 650;
+    letter-spacing: -0.02em;
     color: var(--text-primary);
-    font-family: var(--font-family-accent);
   }
 
   .login-subtitle {
@@ -263,7 +157,7 @@ onMounted(async () => {
 }
 
 .form-group {
-  margin-bottom: 22px;
+  margin-bottom: 18px;
 }
 
 .form-label {
@@ -274,97 +168,38 @@ onMounted(async () => {
   color: var(--text-secondary);
 }
 
-.apple-input {
-  :deep(.el-input__wrapper) {
-    width: 100%;
-    padding: 13px 14px;
-    border-radius: 16px;
-    border: 1px solid rgba(77, 63, 47, 0.1);
-    background: rgba(255, 255, 255, 0.7);
-    font-size: 15px;
-    box-shadow: none;
-    transition: var(--transition);
-
-    &:hover {
-      border-color: rgba(77, 63, 47, 0.18);
-    }
-
-    &.is-focus {
-      border-color: var(--primary);
-      background: rgba(255, 255, 255, 0.96);
-      box-shadow: 0 0 0 4px rgba(31, 107, 92, 0.08);
-    }
-  }
-}
-
-.login-btn {
+.login-action {
   width: 100%;
-  padding: 14px;
-  border-radius: 16px;
-  border: none;
-  background: linear-gradient(135deg, var(--primary) 0%, #234e47 100%);
-  color: #fff;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: var(--transition);
-  font-family: inherit;
-
-  &:hover {
-    background: linear-gradient(135deg, var(--primary-hover) 0%, #173d36 100%);
-    transform: translateY(-1px);
-    box-shadow: 0 16px 34px rgba(31, 107, 92, 0.24);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-
-  &:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-    transform: none;
-  }
+  height: 44px;
+  border-radius: 10px;
 }
 
-.login-btn-secondary {
+.login-action--secondary {
   margin-top: 12px;
-  background: rgba(28, 35, 32, 0.88);
-
-  &:hover {
-    background: rgba(22, 28, 26, 0.94);
-  }
 }
 
-.login-tip {
-  margin-top: 14px;
+.login-note {
+  margin: 12px 4px 0;
+  color: var(--text-tertiary);
   font-size: 12px;
-  color: var(--text-secondary);
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
-@media (max-width: 980px) {
-  .login-container {
-    flex-direction: column;
-    justify-content: center;
-    padding: 32px 18px;
-    gap: 28px;
-  }
-
-  .login-intro {
-    width: 100%;
-    max-width: 680px;
-  }
-
-  .intro-title {
-    max-width: none;
-  }
+.login-footer {
+  margin: 0;
+  color: #999994;
+  font-size: 12px;
+  letter-spacing: 0.02em;
 }
 
 @media (max-width: 640px) {
+  .login-container {
+    padding: 24px 16px;
+  }
+
   .login-card {
-    padding: 28px 22px 24px;
-    border-radius: 24px;
+    padding: 30px 24px;
+    border-radius: 14px;
   }
 
   .login-header {
@@ -372,11 +207,7 @@ onMounted(async () => {
   }
 
   .login-header .login-title {
-    font-size: 24px;
-  }
-
-  .intro-title {
-    font-size: 34px;
+    font-size: 22px;
   }
 }
 </style>

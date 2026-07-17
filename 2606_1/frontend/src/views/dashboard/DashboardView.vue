@@ -1,14 +1,24 @@
 <template>
   <div v-if="!isCurrentStageOpen" class="disabled-page">
     <div class="disabled-card">
-      <div class="disabled-badge">暂未开放</div>
+      <div class="disabled-badge wb-meta-pill">暂未开放</div>
       <h2 class="disabled-title">数据看板已从当前阶段正式入口移出</h2>
       <p class="disabled-desc">
         当前产品先聚焦需求流转与处理闭环，统计看板暂不作为对外承诺能力开放。
       </p>
+      <div class="disabled-points">
+        <div class="disabled-point">
+          <span>当前重心</span>
+          <strong>需求流转、分诊与承接</strong>
+        </div>
+        <div class="disabled-point">
+          <span>后续承接</span>
+          <strong>等主链路稳定后再恢复数据表达</strong>
+        </div>
+      </div>
       <div class="disabled-actions">
-        <button class="action-btn action-btn-primary" @click="router.push('/raw-pool')">前往原始需求池</button>
-        <button class="action-btn" @click="router.push('/my-tasks')">前往我的待办</button>
+        <LnButton @click="router.push('/raw-pool')">前往原始需求池</LnButton>
+        <LnButton variant="ghost" @click="router.push('/my-tasks')">前往我的工作</LnButton>
       </div>
     </div>
   </div>
@@ -85,6 +95,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { LnButton } from '@/components/linear'
 
 const router = useRouter()
 const isCurrentStageOpen = false
@@ -134,22 +145,15 @@ const valueData = ref([
 
 .disabled-card {
   width: min(560px, 100%);
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(17, 24, 39, 0.06);
   border-radius: 20px;
   padding: 32px;
-  box-shadow: var(--shadow);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(16px);
 }
 
 .disabled-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(0, 113, 227, 0.08);
-  color: var(--primary, #0071e3);
-  font-size: 12px;
-  font-weight: 600;
   margin-bottom: 16px;
 }
 
@@ -165,27 +169,36 @@ const valueData = ref([
   line-height: 1.7;
 }
 
+.disabled-points {
+  margin-top: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.disabled-point {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(17, 24, 39, 0.035);
+
+  span {
+    display: block;
+    font-size: 11px;
+    color: var(--text-tertiary);
+  }
+
+  strong {
+    display: block;
+    margin-top: 5px;
+    font-size: 13px;
+    color: var(--text-primary);
+  }
+}
+
 .disabled-actions {
   display: flex;
   gap: 12px;
   margin-top: 24px;
   flex-wrap: wrap;
-}
-
-.action-btn {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text-primary);
-  border-radius: 10px;
-  padding: 10px 16px;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.action-btn-primary {
-  border-color: transparent;
-  background: var(--primary, #0071e3);
-  color: #fff;
 }
 
 .dashboard-view {

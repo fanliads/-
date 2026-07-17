@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { loginApi, getUserInfoApi, logoutApi } from '@/api/auth'
 import type { LoginResult, UserInfoVO } from '@/api/auth'
-import router from '@/router'
 
 const DEV_PREVIEW_TOKEN = 'dev-preview-token'
 
@@ -82,7 +81,6 @@ export const useUserStore = defineStore('user', () => {
       }
     } finally {
       resetState()
-      router.push('/login')
     }
   }
 

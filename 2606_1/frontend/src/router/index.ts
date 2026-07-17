@@ -1,4 +1,10 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import {
+  createRouter,
+  createWebHistory,
+  type RouteLocationNormalized,
+  type RouteRecordRaw,
+} from 'vue-router'
+import { useUserStore } from '@/store/user'
 
 /** 带超时的 Promise 包装 */
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
@@ -36,6 +42,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false },
   },
   {
+    path: '/linear-components',
+    name: 'LinearComponents',
+    component: () => import('@/views/components/LinearComponentsView.vue'),
+    meta: { requiresAuth: false, title: 'Linear 组件库' },
+  },
+  {
     path: '/',
     component: () => import('@/layouts/MainLayout.vue'),
     redirect: '/raw-pool',
@@ -51,37 +63,43 @@ const routes: RouteRecordRaw[] = [
         path: 'kanban',
         name: 'Kanban',
         component: () => import('@/views/kanban/KanbanView.vue'),
-        meta: { title: '看板视图', icon: 'Board' },
+        meta: { title: '看板视图', icon: 'Board', permissions: ['kanban:view'] },
       },
       {
         path: 'raw-pool',
         name: 'RawPool',
         component: () => import('@/views/raw-pool/RawPoolView.vue'),
-        meta: { title: '原始需求池', icon: 'Collection' },
+        meta: { title: '原始需求池', icon: 'Collection', permissions: ['raw-pool:view'] },
       },
       {
         path: 'product-pool',
         name: 'ProductPool',
         component: () => import('@/views/product-pool/ProductPoolView.vue'),
-        meta: { title: '产品需求池', icon: 'Box' },
+        meta: { title: '产品需求池', icon: 'Box', permissions: ['product-pool:view'] },
       },
       {
         path: 'my-tasks',
         name: 'MyTasks',
         component: () => import('@/views/my-tasks/MyTasksView.vue'),
-        meta: { title: '我的待办', icon: 'List' },
+        meta: { title: '我的工作', icon: 'List', permissions: ['my-tasks:view'] },
       },
       {
         path: 'submit',
         name: 'Submit',
         component: () => import('@/views/submit/SubmitView.vue'),
-        meta: { title: '新建需求', icon: 'Plus', hidden: true, entryMode: 'secondary' },
+        meta: {
+          title: '新建需求',
+          icon: 'Plus',
+          hidden: true,
+          entryMode: 'secondary',
+          permissions: ['submit-form:add', 'raw-pool:add'],
+        },
       },
       {
         path: 'sprint',
         name: 'Sprint',
         component: () => import('@/views/sprint/SprintView.vue'),
-        meta: { title: '迭代管理', icon: 'Timer' },
+        meta: { title: '迭代管理', icon: 'Timer', permissions: ['sprint:view'] },
       },
       // 以下路由已合并到看板页面的Tab中，重定向到 /kanban
       {
@@ -122,6 +140,23 @@ const router = createRouter({
 // 路由守卫
 let isLoadingUser = false
 
+function getDefaultAuthorizedPath(userStore: ReturnType<typeof useUserStore>): string {
+  const candidates = [
+    { path: '/my-tasks', permissions: ['my-tasks:view'] },
+    { path: '/raw-pool', permissions: ['raw-pool:view'] },
+    { path: '/product-pool', permissions: ['product-pool:view'] },
+    { path: '/kanban', permissions: ['kanban:view'] },
+    { path: '/sprint', permissions: ['sprint:view'] },
+    { path: '/submit', permissions: ['submit-form:add', 'raw-pool:add'] },
+  ]
+  return candidates.find((item) => userStore.hasAnyPermission(item.permissions))?.path || '/login'
+}
+
+function canAccessRoute(to: RouteLocationNormalized, userStore: ReturnType<typeof useUserStore>): boolean {
+  const requiredPermissions = to.meta.permissions as string[] | undefined
+  return !requiredPermissions?.length || userStore.hasAnyPermission(requiredPermissions)
+}
+
 router.beforeEach(async (to, _from, next) => {
   const token = localStorage.getItem('token')
 
@@ -131,8 +166,7 @@ router.beforeEach(async (to, _from, next) => {
       // 无token，跳转登录
       next({ path: '/login', query: { redirect: to.fullPath } })
     } else {
-      // 有token，检查是否已获取用户信息（动态导入打破循环依赖）
-      const { useUserStore } = await import('@/store/user')
+      // 有token，检查是否已获取用户信息
       const userStore = useUserStore()
 
       if (!userStore.userInfo) {
@@ -145,7 +179,11 @@ router.beforeEach(async (to, _from, next) => {
         try {
           // 5秒超时控制，防止服务器慢响应导致页面卡死
           await withTimeout(userStore.getUserInfo(), 5000)
-          next()
+          if (canAccessRoute(to, userStore)) {
+            next()
+          } else {
+            next(getDefaultAuthorizedPath(userStore))
+          }
         } catch {
           // 获取用户信息失败（token过期或超时），清除token跳转登录
           userStore.resetState()
@@ -154,14 +192,27 @@ router.beforeEach(async (to, _from, next) => {
           isLoadingUser = false
         }
       } else {
-        next()
+        if (canAccessRoute(to, userStore)) {
+          next()
+        } else {
+          next(getDefaultAuthorizedPath(userStore))
+        }
       }
     }
   } else {
     // 不需要认证的页面
     if (to.path === '/login' && token) {
-      // 已登录用户访问登录页，重定向到首页
-      next({ path: '/raw-pool' })
+      const userStore = useUserStore()
+      if (!userStore.userInfo) {
+        try {
+          await withTimeout(userStore.getUserInfo(), 5000)
+        } catch {
+          userStore.resetState()
+          next()
+          return
+        }
+      }
+      next({ path: getDefaultAuthorizedPath(userStore) })
     } else {
       next()
     }

@@ -1,51 +1,43 @@
 <template>
   <div class="action-buttons">
     <template v-if="loading">
-      <el-button loading text />
+      <LnButton size="small" variant="ghost" loading>加载操作</LnButton>
     </template>
     <template v-else-if="actions.length > 0">
-      <el-button
+      <LnButton
         v-for="action in actions"
         :key="action.toStatus"
-        :type="getButtonType(action.actionName)"
+        :variant="getButtonVariant(action.actionName)"
         size="small"
         @click="handleAction(action)"
       >
         {{ action.actionName }}
-      </el-button>
+      </LnButton>
     </template>
     <span v-else class="no-actions">当前无可执行操作</span>
 
     <!-- 审批意见弹窗 -->
-    <el-dialog
+    <LnDialog
       v-model="dialogVisible"
-      :title="`执行操作: ${currentAction?.actionName}`"
+      :title="`执行操作：${currentAction?.actionName || ''}`"
+      description="确认后将立即更新需求状态并记录操作人。"
       width="480px"
-      :close-on-click-modal="false"
-      append-to-body
+      :close-on-backdrop="false"
     >
-      <el-form label-width="80px">
-        <el-form-item label="审批意见">
-          <el-input
-            v-model="remark"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入审批意见（可选）"
-          />
-        </el-form-item>
-      </el-form>
+      <LnCallout v-if="currentAction" tone="info" :title="`${currentStatus} → ${currentAction.toStatus}`" description="状态名称将按当前工作流配置执行。" />
+      <LnTextarea v-model="remark" label="审批意见" placeholder="请输入审批意见（可选）" />
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="executing" @click="confirmAction">确认</el-button>
+        <LnButton variant="ghost" @click="dialogVisible = false">取消</LnButton>
+        <LnButton variant="primary" :loading="executing" @click="confirmAction">确认</LnButton>
       </template>
-    </el-dialog>
+    </LnDialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { ElMessage } from 'element-plus'
 import { getAvailableActions, executeAction, type ActionVO } from '@/api/workflow'
+import { lnToast, LnButton, LnCallout, LnDialog, LnTextarea } from '@/components/linear'
 
 const props = defineProps<{
   reqType: string
@@ -76,10 +68,10 @@ async function loadActions() {
   }
 }
 
-function getButtonType(actionName: string): '' | 'success' | 'danger' | 'warning' | 'primary' {
-  if (actionName.includes('通过') || actionName.includes('确认') || actionName.includes('完成') || actionName.includes('接受')) return 'success'
+function getButtonVariant(actionName: string): 'primary' | 'secondary' | 'danger' {
+  if (actionName.includes('通过') || actionName.includes('确认') || actionName.includes('完成') || actionName.includes('接受')) return 'primary'
   if (actionName.includes('拒绝')) return 'danger'
-  if (actionName.includes('挂起') || actionName.includes('退回')) return 'warning'
+  if (actionName.includes('挂起') || actionName.includes('退回')) return 'secondary'
   return 'primary'
 }
 
@@ -102,7 +94,7 @@ async function doExecute(action: ActionVO, remarkText: string) {
       toStatus: action.toStatus,
       remark: remarkText,
     })
-    ElMessage.success(`操作「${action.actionName}」执行成功`)
+    lnToast.success(`操作「${action.actionName}」执行成功`)
     emit('action-done')
     loadActions()
   } catch {
@@ -132,12 +124,14 @@ watch(() => props.currentStatus, () => {
 .action-buttons {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 
   .no-actions {
     color: #c0c4cc;
-    font-size: 13px;
+    font-size: 12px;
   }
 }
+
+.ln-callout + .ln-textarea-field { margin-top: 14px; }
 </style>

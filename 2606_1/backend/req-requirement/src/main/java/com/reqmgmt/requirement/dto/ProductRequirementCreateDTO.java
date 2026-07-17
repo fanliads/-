@@ -1,5 +1,7 @@
 package com.reqmgmt.requirement.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -10,6 +12,11 @@ import java.time.LocalDate;
 @Data
 public class ProductRequirementCreateDTO {
 
+    @Size(max = 64)
+    private String clientRequestId;
+
+    @NotBlank(message = "需求标题不能为空")
+    @Size(max = 200, message = "需求标题不能超过200个字符")
     private String title;
 
     private String description;
@@ -37,4 +44,6 @@ public class ProductRequirementCreateDTO {
     private String creator;
 
     private Integer isDirect;
+
+    private String status;
 }

@@ -51,49 +51,49 @@ Server initialization:
 
 ```bash
 cd /opt/req-mgmt/app
-bash deploy/init-server.sh
+bash 2606_1/deploy/init-server.sh
 ```
 
 First-time repository bootstrap:
 
 ```bash
 cd /opt/req-mgmt/app
-bash deploy/deploy.sh bootstrap
+bash 2606_1/deploy/deploy.sh bootstrap
 ```
 
 Deploy development or test environment from `main`:
 
 ```bash
 cd /opt/req-mgmt/app
-bash deploy/deploy.sh deploy branch main
+bash 2606_1/deploy/deploy.sh deploy branch main
 ```
 
 Deploy production from a tag:
 
 ```bash
 cd /opt/req-mgmt/app
-bash deploy/deploy.sh deploy tag v1.0.0
+bash 2606_1/deploy/deploy.sh deploy tag v1.0.0
 ```
 
 Deploy a fixed commit:
 
 ```bash
 cd /opt/req-mgmt/app
-bash deploy/deploy.sh deploy commit <commit-sha>
+bash 2606_1/deploy/deploy.sh deploy commit <commit-sha>
 ```
 
 Rollback:
 
 ```bash
 cd /opt/req-mgmt/app
-bash deploy/deploy.sh rollback v1.0.0
+bash 2606_1/deploy/deploy.sh rollback v1.0.0
 ```
 
 Check current deployment:
 
 ```bash
 cd /opt/req-mgmt/app
-bash deploy/deploy.sh status
+bash 2606_1/deploy/deploy.sh status
 ```
 
 ## Version Consistency Guarantees

@@ -1,0 +1,34 @@
+:root {
+  --ln-font: "SF Pro Text", "PingFang SC", "Hiragino Sans GB", sans-serif;
+  --ln-canvas: #f7f7f8;
+  --ln-surface: #ffffff;
+  --ln-surface-raised: #ffffff;
+  --ln-surface-hover: #f4f4f5;
+  --ln-surface-active: #ededee;
+  --ln-text: #252529;
+  --ln-text-secondary: #6f6f78;
+  --ln-text-tertiary: #9b9ba4;
+  --ln-border: rgba(35, 35, 40, 0.09);
+  --ln-border-strong: rgba(35, 35, 40, 0.16);
+  --ln-accent: #5e6ad2;
+  --ln-accent-hover: #515cc6;
+  --ln-accent-soft: rgba(94, 106, 210, 0.11);
+  --ln-success: #2f9e6f;
+  --ln-warning: #d28b36;
+  --ln-danger: #d05757;
+  --ln-radius-sm: 5px;
+  --ln-radius-md: 7px;
+  --ln-radius-lg: 10px;
+  --ln-shadow-popover: 0 8px 28px rgba(20, 20, 24, 0.12), 0 2px 8px rgba(20, 20, 24, 0.06);
+  --ln-shadow-peek: -12px 0 40px rgba(20, 20, 24, 0.10);
+  --ln-fast: 120ms cubic-bezier(.2, .8, .2, 1);
+  --ln-normal: 180ms cubic-bezier(.2, .8, .2, 1);
+  --ln-control-sm: 28px;
+  --ln-control-md: 32px;
+  --ln-row: 40px;
+}
+
+.ln-focus-ring:focus-visible {
+  outline: 2px solid rgba(94, 106, 210, 0.42);
+  outline-offset: 1px;
+}

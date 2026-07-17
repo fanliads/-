@@ -282,6 +282,7 @@ export interface RawRequirementDetailVO {
 
 /** 产品需求创建DTO */
 export interface ProductRequirementCreateDTO {
+  clientRequestId?: string
   title?: string
   description?: string
   priority?: string
@@ -296,6 +297,7 @@ export interface ProductRequirementCreateDTO {
   handler?: string
   creator?: string
   isDirect?: number
+  status?: string
 }
 
 /** 产品需求更新DTO */

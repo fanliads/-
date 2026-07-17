@@ -1,0 +1,88 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: req-mgmt-acceptance-frontend
+    ports:
+      - "8088:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - acceptance-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: req-mgmt-acceptance-backend
+    environment:
+      DB_HOST: mysql
+      DB_USER: root
+      DB_PASS: ${ACCEPTANCE_MYSQL_PASSWORD:-acceptance-only-change-me}
+      REDIS_HOST: redis
+      JWT_SECRET: ${ACCEPTANCE_JWT_SECRET:-acceptance-only-jwt-secret-change-me-2026}
+      AI_PRIORITY_ENABLED: "false"
+      WECOM_NOTIFICATION_ENABLED: "false"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8080/api/auth/dingtalk/config >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - acceptance-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: req-mgmt-acceptance-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${ACCEPTANCE_MYSQL_PASSWORD:-acceptance-only-change-me}
+      MYSQL_DATABASE: req_mgmt
+      TZ: Asia/Shanghai
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "3307:3306"
+    volumes:
+      - acceptance-mysql-data:/var/lib/mysql
+      - ./backend/mysql/my.cnf:/etc/mysql/conf.d/custom.cnf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - acceptance-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: req-mgmt-acceptance-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - acceptance-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+    networks:
+      - acceptance-network
+
+volumes:
+  acceptance-mysql-data:
+  acceptance-redis-data:
+
+networks:
+  acceptance-network:
+    driver: bridge

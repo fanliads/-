@@ -1,28 +1,27 @@
 <template>
   <div class="inline-edit-text" @click="startEdit">
     <span v-if="!isEditing" class="text-value">{{ displayValue }}</span>
-    <el-input
-      v-else-if="type !== 'textarea'"
-      ref="inputRef"
+    <span v-else ref="editorRef" class="inline-edit-text__editor" @click.stop @focusout="handleFocusOut">
+      <LnInput
+      v-if="type !== 'textarea'"
       v-model="editValue"
-      size="small"
-      @blur="save"
-      @keyup.enter="save"
+      :placeholder="placeholder"
+      @keydown="handleKeydown"
     />
-    <el-input
+      <LnTextarea
       v-else
-      ref="inputRef"
       v-model="editValue"
-      type="textarea"
       :rows="2"
-      size="small"
-      @blur="save"
-    />
+      :placeholder="placeholder"
+      @keydown="handleTextareaKeydown"
+      />
+    </span>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, nextTick, computed } from 'vue'
+import { LnInput, LnTextarea } from './linear'
 
 const props = defineProps<{
   value?: string
@@ -36,7 +35,7 @@ const emit = defineEmits<{
 
 const isEditing = ref(false)
 const editValue = ref('')
-const inputRef = ref<any>(null)
+const editorRef = ref<HTMLElement | null>(null)
 
 const displayValue = computed(() => {
   return props.value || props.placeholder || '点击编辑'
@@ -45,12 +44,30 @@ const displayValue = computed(() => {
 function startEdit() {
   isEditing.value = true
   editValue.value = props.value || ''
-  nextTick(() => {
-    inputRef.value?.focus()
-  })
+  nextTick(() => editorRef.value?.querySelector<HTMLElement>('input, textarea')?.focus())
+}
+
+function cancel() {
+  isEditing.value = false
+  editValue.value = props.value || ''
+}
+
+function handleKeydown(event: KeyboardEvent) {
+  if (event.key === 'Enter') save()
+  if (event.key === 'Escape') cancel()
+}
+
+function handleTextareaKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') cancel()
+  if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') save()
+}
+
+function handleFocusOut(event: FocusEvent) {
+  if (!editorRef.value?.contains(event.relatedTarget as Node | null)) save()
 }
 
 function save() {
+  if (!isEditing.value) return
   isEditing.value = false
   if (editValue.value !== (props.value || '')) {
     emit('save', editValue.value)
@@ -73,5 +90,7 @@ function save() {
       background: rgba(0, 113, 227, 0.06);
     }
   }
+
+  .inline-edit-text__editor { display: block; width: 100%; }
 }
 </style>

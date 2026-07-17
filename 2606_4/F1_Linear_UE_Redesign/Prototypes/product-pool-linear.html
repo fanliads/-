@@ -1,0 +1,3168 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>产品需求池 - Linear 风格原型</title>
+  <style>
+    :root {
+      --bg: #f7f7f6;
+      --surface: #ffffff;
+      --sidebar: #f0f0ef;
+      --line: #e5e5e2;
+      --line-strong: #d9d9d5;
+      --text: #222321;
+      --muted: #6f716d;
+      --soft: #8b8d88;
+      --hover: #ececea;
+      --active: #dddddb;
+      --accent: #1f8f64;
+      --accent-soft: #e8f4ee;
+      --danger: #c24e3a;
+      --warning: #b7791f;
+      --purple: #7655c8;
+      --shadow: 0 20px 60px rgba(28, 30, 27, .13);
+      --sidebar-width: 248px;
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      letter-spacing: 0;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      background: var(--sidebar);
+      border-right: 1px solid var(--line);
+      padding: 14px 10px 12px;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .side-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 8px 18px;
+    }
+
+    .avatar {
+      width: 21px;
+      height: 21px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: #3aa7e9;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      flex: 0 0 auto;
+    }
+
+    .icon-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: #5f625d;
+    }
+
+    .icon-btn:hover {
+      background: var(--hover);
+      color: var(--text);
+    }
+
+    .side-spacer {
+      flex: 1;
+    }
+
+    .nav-section {
+      margin-bottom: 22px;
+    }
+
+    .section-title {
+      color: #636560;
+      font-size: 12px;
+      line-height: 24px;
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .nav-item {
+      min-height: 28px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
+      border-radius: 7px;
+      color: #525550;
+      text-decoration: none;
+      margin: 1px 0;
+      white-space: nowrap;
+    }
+
+    .nav-item svg,
+    .toolbar-btn svg,
+    .tiny-action svg {
+      width: 15px;
+      height: 15px;
+      stroke: currentColor;
+      stroke-width: 1.7;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex: 0 0 auto;
+    }
+
+    .nav-item:hover {
+      background: var(--hover);
+      color: var(--text);
+    }
+
+    .nav-item.active {
+      background: var(--active);
+      color: #20211f;
+      font-weight: 560;
+    }
+
+    .badge {
+      margin-left: auto;
+      color: #6d706a;
+      font-size: 11px;
+    }
+
+    .team-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 2px;
+      background: var(--accent);
+      display: inline-block;
+      transform: rotate(45deg);
+    }
+
+    .side-footer {
+      margin-top: auto;
+      display: grid;
+      gap: 4px;
+    }
+
+    .main {
+      min-width: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+    }
+
+    .topbar {
+      height: 52px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      background: rgba(247, 247, 246, .92);
+      backdrop-filter: blur(16px);
+      flex: 0 0 auto;
+    }
+
+    .page-title {
+      font-size: 15px;
+      font-weight: 620;
+      margin-right: 16px;
+      white-space: nowrap;
+    }
+
+    .toolbar {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .search {
+      position: relative;
+      width: min(310px, 28vw);
+      min-width: 190px;
+    }
+
+    .search input {
+      width: 100%;
+      height: 30px;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 8px;
+      padding: 0 10px 0 30px;
+      outline: none;
+      color: var(--text);
+    }
+
+    .search input:focus {
+      border-color: #b9b9b5;
+      box-shadow: 0 0 0 3px rgba(31, 143, 100, .1);
+    }
+
+    .search svg {
+      position: absolute;
+      left: 10px;
+      top: 8px;
+      width: 14px;
+      height: 14px;
+      color: var(--soft);
+      stroke: currentColor;
+      fill: none;
+    }
+
+    .toolbar-btn,
+    .create-btn,
+    .chip {
+      height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 0 10px;
+      color: #4f524d;
+      white-space: nowrap;
+    }
+
+    .toolbar-btn:hover,
+    .chip:hover {
+      border-color: var(--line-strong);
+      background: #fafafa;
+    }
+
+    .toolbar-btn.active,
+    .chip.active {
+      background: #eeeeec;
+      border-color: #d4d4cf;
+      color: var(--text);
+    }
+
+    .create-btn {
+      background: #20211f;
+      border-color: #20211f;
+      color: #fff;
+      font-weight: 560;
+    }
+
+    .canvas {
+      padding: 8px 16px 20px 8px;
+      min-height: 0;
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .view-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 0 10px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      height: 28px;
+      border-radius: 999px;
+      font-size: 12px;
+      padding: 0 11px;
+    }
+
+    .list-surface {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 1px 2px rgba(18, 19, 17, .04);
+      overflow: hidden;
+      min-height: 0;
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .table-scroll {
+      overflow: auto;
+      min-height: 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(320px, 1fr) minmax(520px, auto);
+      min-width: 920px;
+    }
+
+    .table-head {
+      display: none;
+    }
+
+    .th,
+    .td {
+      min-height: 36px;
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      border-right: 1px solid transparent;
+    }
+
+    .th {
+      font-weight: 520;
+    }
+
+    .row {
+      border-bottom: 1px solid #eeeeeb;
+      color: #30322f;
+      transition: background .12s ease;
+      cursor: pointer;
+      padding-right: 8px;
+    }
+
+    .row:hover,
+    .row.selected,
+    .row.hovered {
+      background: #f6f6f4;
+    }
+
+    .row.hovered {
+      box-shadow: inset 2px 0 0 #20211f;
+    }
+
+    .row .td {
+      min-height: 46px;
+    }
+
+    .group-header {
+      min-height: 34px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      padding: 0 12px;
+      background: #f0f0ef;
+      border-bottom: 1px solid #e7e7e3;
+      color: #4f524d;
+      font-size: 13px;
+    }
+
+    .group-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      font-weight: 540;
+    }
+
+    .group-caret {
+      color: #b3b5af;
+      font-size: 12px;
+    }
+
+    .group-count {
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .group-add {
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      border-radius: 7px;
+      color: #73766f;
+    }
+
+    .group-add:hover {
+      background: #e5e5e1;
+      color: var(--text);
+    }
+
+    .issue-title-cell {
+      gap: 9px;
+    }
+
+    .issue-status-ring {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      border: 1.5px solid #a5a8a1;
+      flex: 0 0 auto;
+    }
+
+    .issue-status-ring.done {
+      border-color: #6472d8;
+      background: #6472d8;
+      box-shadow: inset 0 0 0 3px #fff;
+    }
+
+    .issue-key {
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .tag-list {
+      justify-content: flex-end;
+      gap: 6px;
+      flex-wrap: nowrap;
+      overflow: hidden;
+    }
+
+    .tag-list .editable-trigger,
+    .tag-pill {
+      min-height: 25px;
+      border: 1px solid #deded9;
+      background: #fff;
+      color: #575a54;
+      font-size: 12px;
+      padding: 0 9px;
+      box-shadow: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border-radius: 999px;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .tag-list .editable-trigger:hover,
+    .tag-pill:hover {
+      background: #f2f2ef;
+      border-color: #d1d1cb;
+    }
+
+    .tag-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #9c7ae6;
+      flex: 0 0 auto;
+    }
+
+    .tag-dot.blue {
+      background: #4a9de8;
+    }
+
+    .tag-dot.red {
+      background: #df6464;
+    }
+
+    .tag-dot.brown {
+      background: #bb6f28;
+    }
+
+    body.compact-density .row .td {
+      min-height: 40px;
+    }
+
+    body.compact-density .title-wrap {
+      gap: 1px;
+    }
+
+    body.compact-density .title-meta {
+      display: none;
+    }
+
+    .title-cell {
+      gap: 10px;
+    }
+
+    .object-icon {
+      width: 17px;
+      height: 17px;
+      border-radius: 5px;
+      border: 1px solid #cfd2cd;
+      display: grid;
+      place-items: center;
+      color: #7c8079;
+      flex: 0 0 auto;
+      background: #fff;
+      text-decoration: none;
+    }
+
+    .object-icon svg {
+      width: 12px;
+      height: 12px;
+      stroke: currentColor;
+      fill: none;
+    }
+
+    .object-icon:hover {
+      color: #20211f;
+      border-color: #bfc2bc;
+      background: #f4f4f2;
+    }
+
+    .title-wrap {
+      min-width: 0;
+      display: grid;
+      gap: 3px;
+    }
+
+    .title-main {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 520;
+    }
+
+    .title-meta {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      color: var(--soft);
+      font-size: 12px;
+      min-width: 0;
+    }
+
+    .flag-icons {
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .flat-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 5px;
+      display: inline-grid;
+      place-items: center;
+      color: #6c6f69;
+      background: #f0f0ee;
+    }
+
+    .flat-icon.urgent-icon {
+      color: #9f4b1e;
+      background: #fff0e7;
+    }
+
+    .flat-icon.external-icon {
+      color: #4a5d99;
+      background: #edf2ff;
+    }
+
+    .flat-icon svg {
+      width: 12px;
+      height: 12px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .tag {
+      height: 20px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 0 7px;
+      background: #f0f0ee;
+      color: #5f625d;
+      font-size: 12px;
+      max-width: 100%;
+      white-space: nowrap;
+    }
+
+    .urgent {
+      background: #fff0e7;
+      color: #9f4b1e;
+    }
+
+    .external {
+      background: #edf2ff;
+      color: #4a5d99;
+    }
+
+    .ellipsis {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      border: 1.5px solid #9a9d97;
+      flex: 0 0 auto;
+    }
+
+    .dot.green {
+      border-color: var(--accent);
+      background: var(--accent);
+    }
+
+    .dot.orange {
+      border-color: #d08328;
+    }
+
+    .dot.purple {
+      border-color: var(--purple);
+      background: var(--purple);
+    }
+
+    .priority {
+      min-width: 31px;
+      height: 21px;
+      border-radius: 6px;
+      background: #efefed;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: #545752;
+      font-weight: 560;
+    }
+
+    .priority.p0 {
+      color: var(--danger);
+      background: #fff0ed;
+    }
+
+    .priority.p1 {
+      color: var(--warning);
+      background: #fff6df;
+    }
+
+    .editable-trigger {
+      min-height: 28px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      max-width: 100%;
+      min-width: 0;
+      padding: 0 8px;
+      color: #30322f;
+      transition: background .12s ease, box-shadow .12s ease, color .12s ease;
+      cursor: pointer;
+    }
+
+    .row:hover .editable-trigger,
+    .editable-trigger.active {
+      background: #ededeb;
+      box-shadow: inset 0 0 0 1px #deded9;
+    }
+
+    .editable-trigger .value {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+
+    .td[data-edit-cell] {
+      cursor: pointer;
+    }
+
+    .td[data-edit-cell]:hover .editable-trigger {
+      background: #ededeb;
+      box-shadow: inset 0 0 0 1px #deded9;
+    }
+
+    .editable-trigger.empty-value {
+      color: var(--soft);
+    }
+
+    .date-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 6px;
+      display: inline-grid;
+      place-items: center;
+      color: #666965;
+      background: #eeeeec;
+      flex: 0 0 auto;
+    }
+
+    .date-icon svg {
+      width: 12px;
+      height: 12px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+    }
+
+    .field-menu {
+      position: fixed;
+      z-index: 55;
+      width: 300px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      box-shadow: 0 18px 48px rgba(28, 30, 27, .16);
+      padding: 8px;
+      display: none;
+    }
+
+    .field-menu.visible {
+      display: block;
+    }
+
+    .menu-option {
+      min-height: 36px;
+      width: 100%;
+      border-radius: 9px;
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      padding: 0 8px;
+      color: #30322f;
+      text-align: left;
+    }
+
+    .menu-option:hover {
+      background: #f1f1ef;
+    }
+
+    .menu-option .label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .menu-check {
+      color: #666965;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .menu-count {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .menu-section-title {
+      padding: 9px 8px 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .menu-divider {
+      height: 1px;
+      background: var(--line);
+      margin: 6px 0;
+    }
+
+    .new-value-row {
+      min-height: 38px;
+      width: 100%;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 0 8px;
+      color: #30322f;
+      text-align: left;
+    }
+
+    .new-value-row:hover {
+      background: #f1f1ef;
+    }
+
+    .calendar-menu {
+      width: 292px;
+    }
+
+    .calendar-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 4px 4px 10px;
+    }
+
+    .calendar-title {
+      font-weight: 620;
+      color: #30322f;
+    }
+
+    .calendar-nav {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: #666965;
+    }
+
+    .calendar-nav:hover {
+      background: #f1f1ef;
+      color: #20211f;
+    }
+
+    .calendar-week,
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 2px;
+    }
+
+    .calendar-week span {
+      height: 24px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .calendar-day {
+      height: 32px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: #30322f;
+    }
+
+    .calendar-day:hover {
+      background: #f1f1ef;
+    }
+
+    .calendar-day.muted {
+      color: #b3b5af;
+    }
+
+    .calendar-day.today {
+      box-shadow: inset 0 0 0 1px #cacdc7;
+    }
+
+    .calendar-day.selected {
+      background: #20211f;
+      color: #fff;
+    }
+
+    .calendar-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding-top: 10px;
+      margin-top: 8px;
+      border-top: 1px solid var(--line);
+    }
+
+    .calendar-action {
+      min-height: 30px;
+      border-radius: 8px;
+      padding: 0 9px;
+      color: #4f524d;
+    }
+
+    .calendar-action:hover {
+      background: #f1f1ef;
+      color: #20211f;
+    }
+
+    .empty {
+      min-height: 420px;
+      display: none;
+      place-items: center;
+      text-align: center;
+      color: var(--muted);
+      padding: 40px;
+    }
+
+    .empty.visible {
+      display: grid;
+    }
+
+    .empty-box {
+      max-width: 360px;
+      display: grid;
+      gap: 10px;
+      justify-items: center;
+    }
+
+    .empty-mark {
+      width: 38px;
+      height: 38px;
+      border: 1px solid var(--line-strong);
+      border-radius: 11px;
+      display: grid;
+      place-items: center;
+      color: var(--soft);
+      background: #fbfbfa;
+    }
+
+    .floating {
+      position: fixed;
+      top: 52px;
+      right: 88px;
+      width: 300px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: var(--shadow);
+      padding: 12px;
+      z-index: 10;
+      display: none;
+    }
+
+    .floating.visible {
+      display: block;
+    }
+
+    .floating h3 {
+      margin: 0 0 10px;
+      font-size: 13px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      margin: 10px 0;
+    }
+
+    .field label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .field select {
+      height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfbfa;
+      padding: 0 8px;
+      outline: none;
+    }
+
+    .check-row {
+      min-height: 28px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #4e514c;
+    }
+
+    .peek-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(34, 35, 33, .08);
+      z-index: 20;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s ease;
+    }
+
+    .peek {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      bottom: 12px;
+      width: min(462px, calc(100vw - 40px));
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      z-index: 21;
+      transform: translateX(calc(100% + 28px));
+      transition: transform .18s ease;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    body.peek-open .peek-backdrop {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    body.peek-open .peek {
+      transform: translateX(0);
+    }
+
+    .story-card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fcfcfb;
+      padding: 13px 14px;
+    }
+
+    .story-card.primary {
+      background: #fff;
+      border-color: #d8d8d3;
+    }
+
+    .story-copy {
+      margin: 0;
+      color: #2b2d29;
+      line-height: 1.72;
+      font-size: 14px;
+    }
+
+    .analysis-list {
+      margin: 0;
+      padding-left: 18px;
+      color: #343733;
+      line-height: 1.7;
+    }
+
+    .support-section {
+      opacity: .92;
+    }
+
+    .support-section .prop-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .peek-head {
+      padding: 16px 18px 12px;
+      border-bottom: 1px solid var(--line);
+      flex: 0 0 auto;
+    }
+
+    .peek-kicker {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .peek-title {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.35;
+      font-weight: 650;
+    }
+
+    .peek-tags {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .peek-body {
+      min-height: 0;
+      overflow: auto;
+      padding: 16px 18px 86px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .prop-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .prop {
+      min-width: 0;
+      display: grid;
+      gap: 4px;
+      padding: 9px 10px;
+      background: #f8f8f7;
+      border-radius: 9px;
+      border: 1px solid #eeeeeb;
+    }
+
+    .prop span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .prop strong {
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .section {
+      display: grid;
+      gap: 8px;
+    }
+
+    .section h3 {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 640;
+    }
+
+    .section p {
+      margin: 0;
+      color: #4f524d;
+      line-height: 1.65;
+    }
+
+    .assessment {
+      display: grid;
+      gap: 6px;
+      padding: 10px;
+      border-radius: 10px;
+      background: #f8fbf9;
+      border: 1px solid #dcebe4;
+    }
+
+    .activity {
+      display: grid;
+      gap: 8px;
+    }
+
+    .activity-item {
+      display: flex;
+      gap: 8px;
+      color: #575a55;
+      line-height: 1.4;
+    }
+
+    .activity-item time {
+      color: var(--soft);
+      width: 58px;
+      flex: 0 0 auto;
+    }
+
+    .peek-actions {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border-top: 1px solid var(--line);
+      background: rgba(255, 255, 255, .94);
+      backdrop-filter: blur(12px);
+      padding: 12px 18px;
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .action-btn {
+      height: 32px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0 12px;
+      background: #fff;
+    }
+
+    .action-btn.primary {
+      background: #20211f;
+      color: #fff;
+      border-color: #20211f;
+    }
+
+    .detail-page {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 40;
+      display: none;
+      grid-template-rows: 52px minmax(0, 1fr);
+    }
+
+    body.detail-open .detail-page {
+      display: grid;
+    }
+
+    .detail-topbar {
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      background: rgba(247, 247, 246, .94);
+      backdrop-filter: blur(16px);
+    }
+
+    .detail-route {
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .detail-scroll {
+      overflow: auto;
+      padding: 22px;
+    }
+
+    .detail-hero {
+      max-width: 1180px;
+      margin: 0 auto 18px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .detail-hero h1 {
+      margin: 4px 0 0;
+      font-size: 25px;
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+
+    .detail-layout {
+      max-width: 1180px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(320px, .75fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .detail-section {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .detail-section.wide {
+      grid-column: 1 / -1;
+    }
+
+    .detail-section h2 {
+      font-size: 14px;
+      margin: 0;
+    }
+
+    .detail-section p {
+      margin: 0;
+      line-height: 1.7;
+      color: #4f524d;
+    }
+
+    .detail-field-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .detail-field {
+      min-width: 0;
+      display: grid;
+      gap: 4px;
+      padding: 10px;
+      border: 1px solid #eeeeeb;
+      border-radius: 10px;
+      background: #fafaf9;
+    }
+
+    .detail-field span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .detail-field strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .section-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .split-summary {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .split-board {
+      display: grid;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .split-row {
+      display: grid;
+      grid-template-columns: 110px minmax(260px, 1fr) 120px 116px 116px 36px;
+      min-height: 44px;
+      align-items: center;
+      border-top: 1px solid #f0f0ed;
+    }
+
+    .split-row:first-child {
+      border-top: 0;
+    }
+
+    .split-row.header {
+      min-height: 36px;
+      background: #fafaf9;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .split-cell {
+      min-width: 0;
+      padding: 6px 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .split-no {
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .split-input,
+    .split-select {
+      width: 100%;
+      height: 30px;
+      border: 1px solid transparent;
+      border-radius: 7px;
+      background: transparent;
+      padding: 0 7px;
+      color: var(--text);
+      font: inherit;
+      outline: none;
+      min-width: 0;
+    }
+
+    .split-input:hover,
+    .split-select:hover {
+      background: #f5f5f3;
+      border-color: #ecece8;
+    }
+
+    .split-input:focus,
+    .split-select:focus {
+      background: #fff;
+      border-color: #b9b9b5;
+      box-shadow: 0 0 0 3px rgba(31, 143, 100, .1);
+    }
+
+    .split-delete {
+      width: 28px;
+      height: 28px;
+      border: 1px solid transparent;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--muted);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+    }
+
+    .split-delete:hover {
+      background: #f5f5f3;
+      border-color: var(--line);
+      color: #20211f;
+    }
+
+    .split-empty {
+      min-height: 76px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      background: #fafaf9;
+    }
+
+    .split-context {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .split-context span {
+      border: 1px solid #eeeeeb;
+      border-radius: 999px;
+      padding: 4px 8px;
+      background: #fafaf9;
+      color: #4f524d;
+      font-size: 12px;
+    }
+
+    .reason-dialog {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: none;
+      place-items: center;
+      background: rgba(34, 35, 33, .18);
+      padding: 20px;
+    }
+
+    .reason-dialog.visible {
+      display: grid;
+    }
+
+    .raw-drawer {
+      position: fixed;
+      inset: 0 0 0 auto;
+      width: min(420px, 92vw);
+      background: #fff;
+      border-left: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      transform: translateX(104%);
+      transition: transform .18s ease;
+      z-index: 45;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .raw-drawer.visible {
+      transform: translateX(0);
+    }
+
+    .raw-drawer-head {
+      min-height: 58px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .raw-drawer-title {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .raw-drawer-title span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .raw-drawer-title strong {
+      display: block;
+      font-size: 14px;
+      line-height: 1.35;
+    }
+
+    .raw-drawer-body {
+      padding: 16px;
+      overflow: auto;
+      display: grid;
+      gap: 14px;
+    }
+
+    .reason-card {
+      width: min(420px, calc(100vw - 40px));
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .reason-card h2 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .reason-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .reason-card textarea {
+      min-height: 96px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      outline: none;
+      font: inherit;
+    }
+
+    .reason-card textarea:focus {
+      border-color: #b9b9b5;
+      box-shadow: 0 0 0 3px rgba(31, 143, 100, .1);
+    }
+
+    .reason-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .toast {
+      position: fixed;
+      left: calc(var(--sidebar-width) + 18px);
+      bottom: 18px;
+      z-index: 30;
+      background: #20211f;
+      color: #fff;
+      border-radius: 9px;
+      padding: 10px 12px;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: .18s ease;
+      pointer-events: none;
+    }
+
+    .toast.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 980px) {
+      :root {
+        --sidebar-width: 64px;
+      }
+
+      .sidebar {
+        padding-left: 8px;
+        padding-right: 8px;
+      }
+
+      .section-title,
+      .nav-item span:not(.team-dot),
+      .side-footer .nav-label {
+        display: none;
+      }
+
+      .nav-item {
+        justify-content: center;
+        padding: 0;
+      }
+
+      .search {
+        min-width: 150px;
+        width: 38vw;
+      }
+
+      .toolbar-btn span,
+      .create-btn span {
+        display: none;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        display: none;
+      }
+
+      .topbar {
+        height: auto;
+        min-height: 52px;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 10px;
+      }
+
+      .toolbar {
+        width: 100%;
+      }
+
+      .search {
+        flex: 1;
+        width: auto;
+      }
+
+      .canvas {
+        padding: 8px;
+      }
+
+      .toast {
+        left: 12px;
+      }
+
+      .detail-layout,
+      .detail-field-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .detail-hero {
+        display: grid;
+      }
+
+      .split-row {
+        grid-template-columns: 86px minmax(180px, 1fr) 98px 88px 98px 34px;
+        min-width: 690px;
+      }
+
+      .split-board {
+        overflow-x: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" aria-label="主导航">
+      <div class="side-top">
+        <div class="avatar">需</div>
+        <button class="icon-btn" title="历史">
+          <svg viewBox="0 0 24 24"><path d="M12 7v5l3 2"/><path d="M20 12a8 8 0 1 1-2.35-5.65"/></svg>
+        </button>
+        <button class="icon-btn" title="后退">
+          <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <button class="icon-btn" title="前进">
+          <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="side-spacer"></div>
+        <button class="icon-btn" title="新建">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+        </button>
+      </div>
+
+      <nav>
+        <section class="nav-section">
+          <a class="nav-item" href="#"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="m4 8 8 5 8-5"/></svg><span>收件箱</span></a>
+          <a class="nav-item" href="#"><svg viewBox="0 0 24 24"><path d="M8 7h8"/><path d="M8 12h8"/><path d="M8 17h5"/><rect x="4" y="3" width="16" height="18" rx="2"/></svg><span>我的工作</span><span class="badge">4</span></a>
+          <a class="nav-item" href="#"><svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg><span>草稿</span><span class="badge">1</span></a>
+        </section>
+
+        <section class="nav-section">
+          <div class="section-title">工作区</div>
+          <a class="nav-item" href="#"><svg viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12 4 7.5"/><path d="M12 12v9"/><path d="m12 12 8-4.5"/></svg><span>原始需求</span></a>
+          <a class="nav-item active" href="#"><svg viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3z"/></svg><span>产品需求</span></a>
+          <a class="nav-item" href="#"><svg viewBox="0 0 24 24"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/></svg><span>视图</span></a>
+          <a class="nav-item" href="#"><svg viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h10"/></svg><span>迭代</span></a>
+        </section>
+
+        <section class="nav-section">
+          <div class="section-title">保存视图</div>
+          <a class="nav-item" href="#"><svg viewBox="0 0 24 24"><path d="M5 5h14v14H5z"/><path d="M9 9h6"/><path d="M9 13h6"/></svg><span>未排期</span><span class="badge">3</span></a>
+          <a class="nav-item" href="#"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg><span>待设计</span><span class="badge">2</span></a>
+        </section>
+
+        <section class="nav-section">
+          <div class="section-title">团队</div>
+          <a class="nav-item" href="#"><span class="team-dot"></span><span>产品研发</span></a>
+          <a class="nav-item" href="#"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h10"/></svg><span>团队需求</span></a>
+        </section>
+      </nav>
+
+      <div class="side-footer">
+        <a class="nav-item" href="#"><svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg><span class="nav-label">邀请成员</span></a>
+        <a class="nav-item" href="#"><svg viewBox="0 0 24 24"><path d="M12 15v.01"/><path d="M12 12a3 3 0 1 0-3-3"/><circle cx="12" cy="12" r="9"/></svg><span class="nav-label">帮助</span></a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="page-title">产品需求池</div>
+        <div class="toolbar">
+          <div class="search">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg>
+            <input id="searchInput" placeholder="搜索标题、编号、处理人、迭代" autocomplete="off" />
+          </div>
+          <button id="filterBtn" class="toolbar-btn" title="筛选">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M7 12h10"/><path d="M10 18h4"/></svg><span>筛选</span>
+          </button>
+          <button id="displayBtn" class="toolbar-btn" title="显示设置">
+            <svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/><circle cx="8" cy="7" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="11" cy="17" r="2"/></svg><span>显示</span>
+          </button>
+          <button class="create-btn" id="createBtn"><span>新建产品需求</span><svg viewBox="0 0 24 24" width="15" height="15"><path d="M12 5v14" stroke="currentColor" stroke-width="1.8"/><path d="M5 12h14" stroke="currentColor" stroke-width="1.8"/></svg></button>
+        </div>
+      </header>
+
+      <section class="canvas">
+        <div class="view-row" aria-label="视图">
+          <button class="chip active" data-view="all">全部产品需求 <span id="allCount">8</span></button>
+          <button class="chip" data-view="triage">未排期 <span>3</span></button>
+          <button class="chip" data-view="split">待设计 <span>2</span></button>
+          <button class="chip" data-view="urgent">本迭代 <span>2</span></button>
+          <button class="chip" data-view="empty">空状态</button>
+        </div>
+
+        <div class="list-surface">
+          <div class="table-scroll" id="tableScroll">
+            <div class="table-head grid">
+              <div class="th">产品需求标题</div>
+              <div class="th">类型</div>
+              <div class="th">业务线</div>
+              <div class="th">状态</div>
+              <div class="th">优先级</div>
+              <div class="th">处理人</div>
+              <div class="th">所属迭代</div>
+              <div class="th">PRD</div>
+              <div class="th">项目 / 父需求</div>
+            </div>
+            <div id="rows"></div>
+            <div id="emptyState" class="empty">
+              <div class="empty-box">
+                <div class="empty-mark">
+                  <svg viewBox="0 0 24 24" width="18" height="18"><path d="M5 5h14v14H5z" stroke="currentColor" fill="none"/><path d="M8 9h8M8 13h5" stroke="currentColor"/></svg>
+                </div>
+                <strong>当前视图没有产品需求</strong>
+                <span>筛选、搜索或视图切换后没有匹配结果。页面结构保持稳定，避免因为空状态导致工具栏和表头跳动。</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <section id="filterPanel" class="floating" aria-label="筛选面板">
+    <h3>筛选产品需求</h3>
+    <div class="field">
+      <label for="statusFilter">状态</label>
+      <select id="statusFilter">
+        <option value="">全部状态</option>
+        <option value="待设计">待设计</option>
+        <option value="设计中">设计中</option>
+        <option value="开发中">开发中</option>
+        <option value="测试中">测试中</option>
+        <option value="已上线">已上线</option>
+        <option value="验收不通过">验收不通过</option>
+        <option value="作废">作废</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="lineFilter">业务线</label>
+      <select id="lineFilter">
+        <option value="">全部业务线</option>
+        <option value="政企交付">政企交付</option>
+        <option value="客户成功">客户成功</option>
+        <option value="数据平台">数据平台</option>
+        <option value="移动端">移动端</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="priorityFilter">优先级</label>
+      <select id="priorityFilter">
+        <option value="">全部优先级</option>
+        <option value="P0">P0</option>
+        <option value="P1">P1</option>
+        <option value="P2">P2</option>
+        <option value="P3">P3</option>
+      </select>
+    </div>
+    <label class="check-row"><input id="urgentFilter" type="checkbox" /> 仅看本迭代</label>
+    <label class="check-row"><input id="externalFilter" type="checkbox" /> 仅看直接创建</label>
+  </section>
+
+  <section id="displayPanel" class="floating" aria-label="显示设置">
+    <h3>显示设置</h3>
+    <div class="field">
+      <label for="densitySelect">密度</label>
+      <select id="densitySelect">
+        <option>舒适</option>
+        <option>紧凑</option>
+      </select>
+    </div>
+    <label class="check-row"><input type="checkbox" checked /> 显示业务线</label>
+    <label class="check-row"><input type="checkbox" checked /> 显示处理人</label>
+    <label class="check-row"><input type="checkbox" checked /> 显示所属迭代</label>
+    <label class="check-row"><input type="checkbox" checked /> 显示 PRD</label>
+    <label class="check-row"><input type="checkbox" checked /> 显示项目 / 父需求</label>
+  </section>
+
+  <div class="peek-backdrop" id="peekBackdrop"></div>
+  <aside class="peek" aria-label="产品需求详情">
+    <div class="peek-head">
+      <div class="peek-kicker">
+        <span id="peekNo">PRD-1842</span>
+        <button class="icon-btn" id="closePeek" title="关闭">
+          <svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <h2 class="peek-title" id="peekTitle">交付看板增加省级督办字段与筛选</h2>
+      <div class="peek-tags" id="peekTags"></div>
+    </div>
+    <div class="peek-body">
+      <section class="section">
+        <h3>用户故事</h3>
+        <div class="story-card primary">
+          <p class="story-copy" id="peekDescription">作为用户，我希望在当前场景中完成明确目标，并减少跨角色沟通成本。</p>
+        </div>
+      </section>
+      <section class="section">
+        <h3>产品经理分析</h3>
+        <div class="story-card">
+          <ul class="analysis-list" id="peekPmAnalysis"></ul>
+        </div>
+      </section>
+      <section class="section">
+        <h3>原始需求追加说明</h3>
+        <div class="story-card">
+          <p class="story-copy" id="peekRawAppend">补充上游原始需求中的背景、约束和业务判定。</p>
+        </div>
+      </section>
+      <section class="section support-section">
+        <h3>辅助判断信息</h3>
+        <div class="prop-grid" id="peekProps"></div>
+      </section>
+      <section class="section support-section">
+        <h3>父需求与业务字段</h3>
+        <div class="prop-grid" id="peekBusinessFields"></div>
+      </section>
+      <section class="section support-section">
+        <h3>排期、价值与材料</h3>
+        <div class="assessment" id="peekAssessment"></div>
+        <p id="peekLinked">PRD 已补充，设计稿待评审。</p>
+      </section>
+      <section class="section support-section">
+        <h3>活动记录</h3>
+        <div class="activity" id="peekHistory"></div>
+      </section>
+    </div>
+    <div class="peek-actions">
+      <button class="action-btn primary" id="peekDetailBtn">详情</button>
+    </div>
+  </aside>
+
+  <section class="detail-page" id="detailPage" aria-label="产品需求详情页">
+    <div class="detail-topbar">
+      <button class="toolbar-btn" id="backToList">
+        <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+        返回产品需求池
+      </button>
+      <span class="detail-route" id="detailRoute">产品需求 / PRD-1842</span>
+    </div>
+    <div class="detail-scroll">
+      <header class="detail-hero">
+        <div>
+          <div class="peek-kicker" id="detailKicker">产品需求</div>
+          <h1 id="detailTitle">交付看板增加省级督办字段与筛选</h1>
+          <div class="peek-tags" id="detailTags"></div>
+        </div>
+        <button class="create-btn" id="detailSplitBtn">价值回归</button>
+      </header>
+      <div class="detail-layout">
+        <section class="detail-section wide">
+          <h2>用户故事</h2>
+          <div class="story-card primary">
+            <p class="story-copy" id="detailDescription">作为用户，我希望在当前场景中完成明确目标，并减少跨角色沟通成本。</p>
+          </div>
+        </section>
+        <section class="detail-section wide">
+          <h2>产品经理分析</h2>
+          <div class="story-card">
+            <ul class="analysis-list" id="detailPmAnalysis"></ul>
+          </div>
+        </section>
+        <section class="detail-section wide">
+          <h2>原始需求追加说明</h2>
+          <div class="story-card">
+            <p class="story-copy" id="detailRawAppend">补充上游原始需求中的背景、约束和业务判定。</p>
+          </div>
+        </section>
+        <section class="detail-section wide support-section">
+          <h2>辅助判断信息</h2>
+          <div class="detail-field-grid" id="detailMasterFields"></div>
+        </section>
+        <section class="detail-section support-section">
+          <h2>父需求与业务字段</h2>
+          <div class="detail-field-grid" id="detailBusinessFields"></div>
+        </section>
+        <section class="detail-section support-section">
+          <h2>排期、价值与材料</h2>
+          <div class="assessment" id="detailAssessment"></div>
+          <p id="detailLinked">PRD 已补充，设计稿待评审。</p>
+        </section>
+        <section class="detail-section wide" id="detailSplitSection">
+          <div class="section-head">
+            <div>
+              <h2>价值回归</h2>
+              <div class="split-summary" id="splitSummary">价值评分 4/5</div>
+            </div>
+            <div class="section-actions">
+              <button class="action-btn" id="suggestSplitBtn" type="button">记录评分</button>
+              <button class="create-btn" id="addSplitBtn" type="button">新增备注</button>
+            </div>
+          </div>
+          <div class="split-context" id="splitContext"></div>
+          <div class="split-board" id="splitBoard"></div>
+        </section>
+        <section class="detail-section wide">
+          <h2>历史活动记录</h2>
+          <div class="activity" id="detailHistory"></div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <section class="field-menu" id="fieldMenu" aria-label="字段编辑菜单"></section>
+
+  <aside class="raw-drawer" id="rawDrawer" aria-label="父原始需求预览">
+    <div class="raw-drawer-head">
+      <div class="raw-drawer-title">
+        <span id="rawDrawerNo">父原始需求</span>
+        <strong id="rawDrawerTitle">来源需求摘要</strong>
+      </div>
+      <button class="icon-btn" id="closeRawDrawer" title="关闭">
+        <svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="raw-drawer-body">
+      <section class="section">
+        <h3>业务提交</h3>
+        <p id="rawDrawerDescription">从产品需求池回看上游原始需求，帮助确认来源上下文。</p>
+      </section>
+      <section class="section">
+        <h3>来源字段</h3>
+        <div class="prop-grid" id="rawDrawerFields"></div>
+      </section>
+      <section class="section">
+        <h3>最近记录</h3>
+        <div class="activity" id="rawDrawerHistory"></div>
+      </section>
+    </div>
+  </aside>
+
+  <section class="reason-dialog" id="rejectDialog" aria-label="作废原因">
+    <div class="reason-card">
+      <h2>填写作废原因</h2>
+      <p id="rejectTarget">状态设置为“作废”前，需要补充备注原因。</p>
+      <textarea id="rejectReason" placeholder="请输入作废原因，例如：不属于当前产品线、合同范围外、信息不足等"></textarea>
+      <div class="reason-actions">
+        <button class="action-btn" id="rejectCancel">取消</button>
+        <button class="action-btn primary" id="rejectConfirm">确认作废</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="toast" class="toast">原型动作已触发</div>
+
+  <script>
+    const iconCube = '<svg viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12 4 7.5"/><path d="M12 12v9"/><path d="m12 12 8-4.5"/></svg>';
+    const urgentIcon = '<svg viewBox="0 0 24 24"><path d="M13 2 6 13h6l-1 9 7-12h-6l1-8z"/></svg>';
+    const externalIcon = '<svg viewBox="0 0 24 24"><path d="M14 3h7v7"/><path d="M10 14 21 3"/><path d="M19 14v5H5V5h5"/></svg>';
+    const statusOptions = ['待设计', '设计中', '开发中', '测试中', '已上线', '验收不通过', '作废'];
+    const priorityOptions = ['P0', 'P1', 'P2', 'P3'];
+    const splitOwnerOptions = ['林知予', '何书雅', '沈清和', '陈炎'];
+    const splitStatusOptions = ['待设计', '设计中', '待评审', '已确认'];
+    const seededSplits = {
+      'PRD-1842': [
+        { no: 'PRD-1842', title: '交付看板增加省级督办字段与筛选', owner: '林知予', priority: 'P1', status: '待设计' },
+        { no: 'PRD-1843', title: '风险策略提示带入合同与验收上下文', owner: '林知予', priority: 'P1', status: '待评审' }
+      ],
+      'PRD-1831': [
+        { no: 'PRD-1831', title: '导入失败错误解释器', owner: '林知予', priority: 'P1', status: '设计中' }
+      ],
+      'PRD-1848': [
+        { no: 'PRD-1848', title: '附件原名保留与预览入口', owner: '何书雅', priority: 'P2', status: '待设计' }
+      ],
+      'PRD-1826': [
+        { no: 'PRD-1826', title: '判定规则版本展示', owner: '沈清和', priority: 'P3', status: '已确认' }
+      ]
+    };
+
+    const rows = [
+      {
+        no: 'PRD-1842',
+        title: '交付看板增加省级督办字段与筛选',
+        ticket: 'PRD-DOC-1842',
+        ticketUrl: '#PRD-DOC-1842',
+        line: '政企交付',
+        status: '待设计',
+        priority: 'P1',
+        product: '林知予',
+        project: '周启明',
+        proposer: 'XY2606_01',
+        expected: '2026-07-20',
+        created: '2026-07-08',
+        urgent: true,
+        external: true,
+        description: '客户要求在交付看板里识别省级督办诉求，并同步带出合同、回款和验收风险，避免产品拆分时遗漏关键背景。',
+        linked: 'PRD 已补充，设计稿待评审。',
+        assessment: ['价值评分 4/5', '本迭代 XY2606_01', '工作量 5 人日'],
+        business: [['提交来源', '直接创建'], ['客户名称', '华东省厅'], ['合同编号', 'HT-2026-0719'], ['刚性交付日期', '2026-08-10'], ['回款风险', '中'], ['验收风险', '高']],
+        history: ['10:42 系统完成优先级判定，生效等级为 P1。', '昨天 处理人补充了合同编号和交付日期。', '周一 需求由外部入口提交到产品需求池。']
+      },
+      {
+        no: 'PRD-1845',
+        title: '外部提单自动提醒补充合同范围',
+        ticket: 'PRD-DOC-1845',
+        ticketUrl: '#PRD-DOC-1845',
+        line: '客户成功',
+        status: '待设计',
+        priority: 'P2',
+        product: '何书雅',
+        project: '唐骁',
+        proposer: '未排期',
+        expected: '待确认',
+        created: '2026-07-08',
+        urgent: false,
+        external: true,
+        description: '外部提单经常缺少合同范围，导致处理人无法快速判断是否属于交付承诺。',
+        linked: '暂无 PRD 或设计文档。',
+        assessment: ['价值评分 3/5', '未排期', '待补充 PRD'],
+        business: [['提交来源', '直接创建'], ['客户名称', '明远集团'], ['合同编号', '缺失'], ['刚性交付日期', '待确认'], ['回款风险', '低'], ['验收风险', '未排期']],
+        history: ['12分钟前 系统识别待补充 PRD。', '今天 客户成功收到补充提醒。']
+      },
+      {
+        no: 'PRD-1831',
+        title: '导入失败展示可复制错误明细和处理建议',
+        ticket: 'PRD-DOC-1831',
+        ticketUrl: '#PRD-DOC-1831',
+        line: '数据平台',
+        status: '开发中',
+        priority: 'P1',
+        product: '林知予',
+        project: '苏明澈',
+        proposer: 'SJ2606_01',
+        expected: '2026-07-28',
+        created: '2026-07-07',
+        urgent: true,
+        external: false,
+        description: '批量导入客户清单失败时，当前只提示失败，无法定位字段、行号和建议处理方式。',
+        linked: 'PRD 与设计稿均已挂载。',
+        assessment: ['价值评分 4/5', '本迭代 SJ2606_01', '工作量 8 人日'],
+        business: [['提交来源', '内部提交'], ['影响角色', '实施顾问'], ['发生频率', '每周'], ['价值判断', '减少返工'], ['预估工时', '5 人日'], ['可复用性', '高']],
+        history: ['43分钟前 开发确认错误映射方案。', '昨天 产品完成设计说明。']
+      },
+      {
+        no: 'PRD-1846',
+        title: '移动审批列表展示优先级和期望上线',
+        ticket: 'PRD-DOC-1846',
+        ticketUrl: '#PRD-DOC-1846',
+        line: '移动端',
+        status: '待设计',
+        priority: 'P3',
+        product: '沈清和',
+        project: '顾南星',
+        proposer: '未排期',
+        expected: '2026-08-15',
+        created: '2026-07-07',
+        urgent: false,
+        external: false,
+        description: '移动审批场景下审批人需要快速看到优先级和上线时间，减少来回沟通。',
+        linked: '暂无 PRD 或设计文档。',
+        assessment: ['价值评分 2/5', '未排期', '工作量 2 人日'],
+        business: [['提交来源', '内部提交'], ['影响角色', '审批人'], ['发生频率', '每天'], ['价值判断', '体验提升'], ['风险依赖', '无'], ['建议策略', '排入低优先级']],
+        history: ['今天 需求进入未排期队列。']
+      },
+      {
+        no: 'PRD-1848',
+        title: '附件同步保留原名并支持 Peek 预览',
+        ticket: 'PRD-DOC-1848',
+        ticketUrl: '#PRD-DOC-1848',
+        line: '客户成功',
+        status: '待设计',
+        priority: 'P2',
+        product: '何书雅',
+        project: '周启明',
+        proposer: 'XY2606_01',
+        expected: '2026-08-05',
+        created: '2026-07-06',
+        urgent: false,
+        external: true,
+        description: '外部客户上传的附件在同步后名称不稳定，分诊人员难以判断是否为同一批材料。',
+        linked: 'PRD 已创建，设计文档待补充。',
+        assessment: ['价值评分 3/5', '本迭代 XY2606_01', '工作量 3 人日'],
+        business: [['提交来源', '直接创建'], ['客户名称', '辰星软件'], ['附件数量', '4'], ['验收风险', '中'], ['建议策略', '进入设计'], ['缺失字段', '无']],
+        history: ['昨天 负责人承接。', '周二 附件同步完成。']
+      },
+      {
+        no: 'PRD-1849',
+        title: '承接后自动生成待补充清单',
+        ticket: 'PRD-DOC-1849',
+        ticketUrl: '#PRD-DOC-1849',
+        line: '政企交付',
+        status: '待设计',
+        priority: 'P2',
+        product: '林知予',
+        project: '唐骁',
+        proposer: '未排期',
+        expected: '待确认',
+        created: '2026-07-05',
+        urgent: false,
+        external: false,
+        description: '承接动作后，系统应根据迭代与排期缺失字段生成待补充清单，避免人工逐项翻找。',
+        linked: '暂无 PRD 或设计文档。',
+        assessment: ['价值评分 3/5', '未排期', '工作量待评估'],
+        business: [['提交来源', '内部提交'], ['缺失字段', '商务负责人'], ['项目阶段', '交付中'], ['风险依赖', '合同范围'], ['建议策略', '要求补充'], ['规则版本', 'v3.2']],
+        history: ['周一 系统生成补充建议。']
+      },
+      {
+        no: 'PRD-1826',
+        title: '判定说明展示规则版本号',
+        ticket: 'PRD-DOC-1826',
+        ticketUrl: '#PRD-DOC-1826',
+        line: '数据平台',
+        status: '已上线',
+        priority: 'P3',
+        product: '沈清和',
+        project: '苏明澈',
+        proposer: 'SJ2606_00',
+        expected: '2026-07-05',
+        created: '2026-06-30',
+        urgent: false,
+        external: false,
+        description: '规则升级后，业务方需要知道某次优先级判定使用的是哪个规则版本。',
+        linked: '上线说明与回归记录已补齐。',
+        assessment: ['价值评分 2/5', '已上线', '价值评分 4/5'],
+        business: [['提交来源', '内部提交'], ['规则版本', 'v3.2'], ['上线批次', '2026.07.05'], ['验收结果', '通过'], ['复用性', '高'], ['风险', '无']],
+        history: ['7月5日 功能上线。', '7月4日 验收通过。']
+      },
+      {
+        no: 'PRD-1850',
+        title: '长标题场景：这是一条非常非常长的产品需求标题，用于验证列表在 Linear 密度下仍然不会把处理人、状态、迭代和项目列挤出可读区域',
+        ticket: 'PRD-DOC-1850',
+        ticketUrl: '#PRD-DOC-1850',
+        line: '政企交付',
+        status: '开发中',
+        priority: 'P0',
+        product: '林知予',
+        project: '顾南星',
+        proposer: 'XY2606_01',
+        expected: '2026-07-20',
+        created: '2026-07-01',
+        urgent: true,
+        external: true,
+        description: '该样例专门验证长标题截断、列宽稳定和 Peek 可读性。',
+        linked: '暂无 PRD 或设计文档。',
+        assessment: ['价值评分 5/5', '本迭代 XY2606_01', '工作量 13 人日'],
+        business: [['提交来源', '直接创建'], ['客户名称', '示例客户'], ['刚性交付日期', '2026-07-25'], ['履约风险', '高'], ['回款风险', '高'], ['建议策略', '立即推进']],
+        history: ['7月1日 创建产品需求。']
+      }
+    ];
+
+    const productMeta = {
+      'PRD-1842': { reqType: '功能优化', handler: '周启明', sprint: 'XY2606_01', prdState: '已补充', projectName: '华东省厅交付', rawNo: 'RAW-202607-001' },
+      'PRD-1845': { reqType: '流程优化', handler: '唐骁', sprint: '未排期', prdState: '待补充', projectName: '明远集团', rawNo: 'RAW-202607-002' },
+      'PRD-1831': { reqType: '平台能力', handler: '苏明澈', sprint: 'SJ2606_01', prdState: '已补充', projectName: '数据导入治理', rawNo: 'RAW-202607-003' },
+      'PRD-1846': { reqType: '体验优化', handler: '顾南星', sprint: '未排期', prdState: '草稿', projectName: '移动审批', rawNo: '直接创建' },
+      'PRD-1848': { reqType: '体验优化', handler: '周启明', sprint: 'XY2606_01', prdState: '已补充', projectName: '辰星软件交付', rawNo: 'RAW-202607-005' },
+      'PRD-1849': { reqType: '流程优化', handler: '唐骁', sprint: '未排期', prdState: '待补充', projectName: '政企交付协同', rawNo: 'RAW-202607-006' },
+      'PRD-1826': { reqType: '平台能力', handler: '苏明澈', sprint: 'SJ2606_00', prdState: '已归档', projectName: '规则引擎', rawNo: 'RAW-202607-007' },
+      'PRD-1850': { reqType: '高风险交付', handler: '顾南星', sprint: 'XY2606_01', prdState: '评审中', projectName: '示例客户', rawNo: 'RAW-202607-008' }
+    };
+
+    function enrichProductRow(row) {
+      Object.assign(row, productMeta[row.no] || {});
+      row.reqType = row.reqType || '功能优化';
+      row.handler = row.handler || '未设置';
+      row.sprint = row.sprint || '未排期';
+      row.prdState = row.prdState || '草稿';
+      row.projectName = row.projectName || '未关联项目';
+      row.rawNo = row.rawNo || '直接创建';
+      row.userStory = `作为${row.business?.find(([label]) => ['影响角色', '客户名称'].includes(label))?.[1] || '业务用户'}，我希望${row.title}，以便${row.business?.find(([label]) => label === '价值判断')?.[1] || '提升需求处理效率并减少上下文丢失'}。`;
+      row.pmAnalysis = [
+        `故事边界：优先验证 ${row.reqType || '产品能力'} 的最小可交付范围，避免把上游原始诉求整体搬入本期。`,
+        `推进判断：当前优先级为 ${row.priority}，处理人为 ${row.handler || '未设置'}，所属迭代为 ${row.sprint || '未排期'}。`,
+        `验收关注：需要确认 PRD、设计稿和父原始需求背景是否足够支撑研发进入。`
+      ];
+      row.rawAppend = row.rawNo === '直接创建'
+        ? '该条为直接创建的用户故事，没有父原始需求；需要产品经理自行补齐业务背景、使用场景、验收标准和排期依据。'
+        : `来源 ${row.rawNo}：${row.description} 追加说明应聚焦上游没有说清楚的约束、异常场景、验收口径和与其他产品需求的边界。`;
+      return row;
+    }
+
+    rows.forEach(enrichProductRow);
+
+    const state = {
+      view: 'all',
+      query: '',
+      selected: null,
+      hoverNo: null,
+      peekPinned: false,
+      detailNo: null,
+      holdTimer: null,
+      spaceActive: false,
+      pendingReject: null,
+      calendarMonth: null
+    };
+
+    const rowsEl = document.getElementById('rows');
+    const emptyState = document.getElementById('emptyState');
+    const searchInput = document.getElementById('searchInput');
+    const filterPanel = document.getElementById('filterPanel');
+    const displayPanel = document.getElementById('displayPanel');
+    const toast = document.getElementById('toast');
+    const rejectDialog = document.getElementById('rejectDialog');
+    const rejectReason = document.getElementById('rejectReason');
+    const fieldMenu = document.getElementById('fieldMenu');
+    const rawDrawer = document.getElementById('rawDrawer');
+
+    function statusDot(status) {
+      if (status === '已上线') return 'green';
+      if (status === '待设计' || status === '设计中') return 'orange';
+      if (status === '开发中' || status === '测试中') return 'purple';
+      return '';
+    }
+
+    function priorityClass(priority) {
+      return priority.toLowerCase();
+    }
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      }[char]));
+    }
+
+    function initials(value) {
+      return String(value || '').slice(0, 1) || '?';
+    }
+
+    function fieldIconHtml(key, value) {
+      if (['expected', 'created'].includes(key)) {
+        return '<span class="date-icon"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4"/><path d="M16 3v4"/><path d="M4 10h16"/></svg></span>';
+      }
+      return '';
+    }
+
+    function fieldHtml(row, key, variant = 'text') {
+      const value = row[key] || '';
+      const display = value || '未设置';
+      const variantClass = variant === 'priority' ? ` priority ${priorityClass(value)}` : '';
+      return `<button class="editable-trigger${value ? '' : ' empty-value'}${variantClass}" data-edit="${key}" data-no="${row.no}" type="button">
+        ${fieldIconHtml(key, value)}
+        <span class="value">${escapeHtml(display)}</span>
+      </button>`;
+    }
+
+    function tagFieldHtml(row, key, dotClass = '') {
+      const value = row[key] || '未设置';
+      return `<button class="editable-trigger${value ? '' : ' empty-value'}" data-edit="${key}" data-no="${row.no}" type="button">
+        <span class="tag-dot ${dotClass}"></span>
+        <span class="value">${escapeHtml(value)}</span>
+      </button>`;
+    }
+
+    function statusGroupMeta(status) {
+      const map = {
+        '待设计': { title: 'Todo', ring: '', order: 1, createStatus: '待设计' },
+        '设计中': { title: 'Active', ring: '', order: 2, createStatus: '设计中' },
+        '开发中': { title: 'Active', ring: '', order: 2, createStatus: '设计中' },
+        '测试中': { title: 'Active', ring: '', order: 2, createStatus: '设计中' },
+        '已上线': { title: 'Done', ring: 'done', order: 3, createStatus: '已上线' },
+        '验收不通过': { title: 'Blocked', ring: '', order: 4, createStatus: '验收不通过' },
+        '作废': { title: 'Voided', ring: '', order: 5, createStatus: '作废' }
+      };
+      return map[status] || { title: status || '未设置', ring: '', order: 9, createStatus: status || '待设计' };
+    }
+
+    function groupedRows(data) {
+      const groups = new Map();
+      data.forEach((row) => {
+        const meta = statusGroupMeta(row.status);
+        const key = meta.title;
+        if (!groups.has(key)) groups.set(key, { key, meta, rows: [] });
+        groups.get(key).rows.push(row);
+      });
+      return Array.from(groups.values()).sort((a, b) => a.meta.order - b.meta.order);
+    }
+
+    function nextProductNo() {
+      const maxNo = rows
+        .map((row) => Number(String(row.no).replace(/\D/g, '')))
+        .filter(Boolean)
+        .reduce((max, value) => Math.max(max, value), 1850);
+      return `PRD-${maxNo + 1}`;
+    }
+
+    function clearListNarrowing() {
+      state.query = '';
+      searchInput.value = '';
+      ['statusFilter', 'lineFilter', 'priorityFilter'].forEach((id) => {
+        document.getElementById(id).value = '';
+      });
+      ['urgentFilter', 'externalFilter'].forEach((id) => {
+        document.getElementById(id).checked = false;
+      });
+      if (state.view === 'empty') {
+        state.view = 'all';
+        document.querySelectorAll('[data-view]').forEach((item) => item.classList.toggle('active', item.dataset.view === 'all'));
+      }
+    }
+
+    function createProductRequirement(status = '待设计') {
+      const no = nextProductNo();
+      const row = enrichProductRow({
+        no,
+        title: status === '已上线' ? '新增已完成用户故事：补充上线回归记录' : '新增用户故事：请补充用户场景和验收口径',
+        ticket: `PRD-DOC-${no.replace('PRD-', '')}`,
+        ticketUrl: `#PRD-DOC-${no.replace('PRD-', '')}`,
+        line: '政企交付',
+        status,
+        priority: 'P2',
+        product: '林知予',
+        project: '未设置',
+        proposer: status === '待设计' ? '未排期' : 'XY2606_01',
+        expected: '待确认',
+        created: formatDate(new Date()),
+        urgent: status !== '待设计',
+        external: true,
+        reqType: '功能优化',
+        handler: '未设置',
+        sprint: status === '待设计' ? '未排期' : 'XY2606_01',
+        prdState: '草稿',
+        projectName: '未关联项目',
+        rawNo: '直接创建',
+        description: '新建用户故事后，产品经理需要补充用户场景、问题背景、验收标准和边界说明。',
+        linked: 'PRD 草稿待补充，设计稿未关联。',
+        assessment: ['价值评分待评估', status === '待设计' ? '未排期' : '本迭代 XY2606_01', '工作量待评估'],
+        business: [['提交来源', '直接创建'], ['影响角色', '业务用户'], ['价值判断', '待产品经理分析'], ['建议策略', '补充故事说明']],
+        history: [`刚刚 创建 ${no}，状态为 ${status}。`]
+      });
+      rows.unshift(row);
+      clearListNarrowing();
+      state.hoverNo = row.no;
+      state.selected = row.no;
+      renderRows();
+      showToast(`已新增 ${row.no} 到 ${statusGroupMeta(status).title}`);
+      window.setTimeout(() => {
+        document.querySelector(`[data-no="${row.no}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }, 30);
+    }
+
+    function filteredRows() {
+      if (state.view === 'empty') return [];
+
+      const status = document.getElementById('statusFilter').value;
+      const line = document.getElementById('lineFilter').value;
+      const priority = document.getElementById('priorityFilter').value;
+      const urgentOnly = document.getElementById('urgentFilter').checked;
+      const externalOnly = document.getElementById('externalFilter').checked;
+      const query = state.query.trim().toLowerCase();
+
+      return rows.filter((row) => {
+        if (state.view === 'triage' && row.sprint !== '未排期') return false;
+        if (state.view === 'split' && row.status !== '待设计') return false;
+        if (state.view === 'urgent' && !row.urgent) return false;
+        if (status && row.status !== status) return false;
+        if (line && row.line !== line) return false;
+        if (priority && row.priority !== priority) return false;
+        if (urgentOnly && !row.urgent) return false;
+        if (externalOnly && !row.external) return false;
+        if (!query) return true;
+        return [row.no, row.ticket, row.title, row.reqType, row.line, row.status, row.priority, row.handler, row.sprint, row.projectName, row.rawNo]
+          .join(' ')
+          .toLowerCase()
+          .includes(query);
+      });
+    }
+
+    function renderRows() {
+      const data = filteredRows();
+      const groups = groupedRows(data);
+      rowsEl.innerHTML = groups.map((group) => `
+        <div class="group-header" data-group="${escapeHtml(group.key)}">
+          <div class="group-title">
+            <span class="group-caret">⌄</span>
+            <span class="issue-status-ring ${group.meta.ring}"></span>
+            <span>${escapeHtml(group.key)}</span>
+            <span class="group-count">${group.rows.length}</span>
+          </div>
+          <button class="group-add" type="button" title="在此分组新建" data-create-status="${escapeHtml(group.meta.createStatus)}">+</button>
+        </div>
+        ${group.rows.map((row) => `
+        <div class="row grid ${state.selected === row.no ? 'selected' : ''} ${state.hoverNo === row.no ? 'hovered' : ''}" data-no="${row.no}">
+          <div class="td title-cell issue-title-cell">
+            <span class="issue-key">---</span>
+            <span class="issue-key">${row.no}</span>
+            <span class="title-wrap">
+              <span class="title-main">${row.title}</span>
+              <span class="title-meta">
+                <span>${row.rawNo === '直接创建' ? '直接创建' : `父需求 ${row.rawNo}`}</span>
+                <span class="flag-icons">
+                  ${row.urgent ? `<span class="flat-icon urgent-icon" title="本迭代">${urgentIcon}</span>` : ''}
+                  ${row.external ? `<span class="flat-icon external-icon" title="直接创建">${externalIcon}</span>` : ''}
+                </span>
+              </span>
+            </span>
+          </div>
+          <div class="td tag-list">
+            ${tagFieldHtml(row, 'reqType')}
+            ${tagFieldHtml(row, 'line', 'blue')}
+            ${fieldHtml(row, 'priority', 'priority')}
+            ${tagFieldHtml(row, 'handler')}
+            ${tagFieldHtml(row, 'sprint', row.sprint === '未排期' ? 'red' : '')}
+            <a class="tag-pill" data-link="ticket" href="${row.ticketUrl}" title="打开 PRD">${escapeHtml(row.prdState || 'PRD')}</a>
+            <button class="tag-pill" data-link="raw" data-no="${row.no}" type="button" title="预览父原始需求">${escapeHtml(row.projectName || row.rawNo || '直接创建')}</button>
+          </div>
+        </div>
+        `).join('')}
+      `).join('');
+
+      emptyState.classList.toggle('visible', data.length === 0);
+    }
+
+    function syncRowStateClasses() {
+      rowsEl.querySelectorAll('.row').forEach((rowEl) => {
+        rowEl.classList.toggle('hovered', rowEl.dataset.no === state.hoverNo);
+        rowEl.classList.toggle('selected', rowEl.dataset.no === state.selected);
+      });
+    }
+
+    function getRow(no) {
+      return rows.find((item) => item.no === no) || rows[0];
+    }
+
+    function ensureSplitItems(row) {
+      if (!row.splits) {
+        row.splits = (seededSplits[row.no] || []).map((item, index) => ({
+          id: `${row.no}-split-${index + 1}`,
+          ...item
+        }));
+      }
+      return row.splits;
+    }
+
+    function getActiveDetailRow() {
+      return getRow(state.detailNo);
+    }
+
+    function nextSplitNo(row) {
+      const numbers = ensureSplitItems(row)
+        .map((item) => Number(String(item.no).replace(/\D/g, '')))
+        .filter(Boolean);
+      const fallback = 1900 + rows.findIndex((item) => item.no === row.no) * 10;
+      return `PRD-${Math.max(fallback, ...numbers) + 1}`;
+    }
+
+    function optionHtml(options, value) {
+      return options.map((option) => `<option value="${escapeHtml(option)}"${option === value ? ' selected' : ''}>${escapeHtml(option)}</option>`).join('');
+    }
+
+    function renderSplitSection(row) {
+      const score = row.priority === 'P0' ? '5/5' : row.priority === 'P1' ? '4/5' : row.priority === 'P2' ? '3/5' : '2/5';
+      document.getElementById('splitSummary').textContent = `价值评分 ${score}`;
+      document.getElementById('splitContext').innerHTML = [
+        `产品需求 ${row.no}`,
+        `业务线 ${row.line}`,
+        `迭代 ${row.sprint || '未排期'}`,
+        `期望上线 ${row.expected}`
+      ].map((item) => `<span>${escapeHtml(item)}</span>`).join('');
+
+      document.getElementById('splitBoard').innerHTML = `
+        <div class="split-row header">
+          <div class="split-cell">类型</div>
+          <div class="split-cell">内容</div>
+          <div class="split-cell">负责人</div>
+          <div class="split-cell">评分</div>
+          <div class="split-cell">状态</div>
+          <div class="split-cell"></div>
+        </div>
+        <div class="split-row" data-split-id="${row.no}-value-1">
+          <div class="split-cell split-no">上线回归</div>
+          <div class="split-cell">
+            <input class="split-input" data-split-field="title" value="${escapeHtml(row.linked)}" aria-label="回归备注">
+          </div>
+          <div class="split-cell">
+            <select class="split-select" data-split-field="owner" aria-label="负责人">${optionHtml(splitOwnerOptions, row.product)}</select>
+          </div>
+          <div class="split-cell">
+            <select class="split-select" data-split-field="priority" aria-label="价值评分">${optionHtml(['1/5', '2/5', '3/5', '4/5', '5/5'], score)}</select>
+          </div>
+          <div class="split-cell">
+            <select class="split-select" data-split-field="status" aria-label="状态">${optionHtml(['待回归', '回归中', '已完成'], row.status === '已上线' ? '已完成' : '待回归')}</select>
+          </div>
+          <div class="split-cell"></div>
+        </div>
+        <div class="split-row" data-split-id="${row.no}-value-2">
+          <div class="split-cell split-no">交付材料</div>
+          <div class="split-cell">
+            <input class="split-input" data-split-field="title" value="${escapeHtml(row.ticket)} · 设计稿待评审" aria-label="交付材料">
+          </div>
+          <div class="split-cell">
+            <select class="split-select" data-split-field="owner" aria-label="负责人">${optionHtml(splitOwnerOptions, row.product)}</select>
+          </div>
+          <div class="split-cell">-</div>
+          <div class="split-cell">
+            <select class="split-select" data-split-field="status" aria-label="状态">${optionHtml(['待补充', '待评审', '已归档'], row.linked.includes('暂无') ? '待补充' : '待评审')}</select>
+          </div>
+          <div class="split-cell"></div>
+        </div>
+      `;
+    }
+
+    function renderUnusedSplitSection(row) {
+      const splits = ensureSplitItems(row);
+      document.getElementById('splitBoard').innerHTML = `
+        ${splits.length ? splits.map((item) => `
+          <div class="split-row" data-split-id="${item.id}">
+            <div class="split-cell split-no">${escapeHtml(item.no)}</div>
+            <div class="split-cell">
+              <input class="split-input" data-split-field="title" value="${escapeHtml(item.title)}" aria-label="产品需求标题">
+            </div>
+            <div class="split-cell">
+              <select class="split-select" data-split-field="owner" aria-label="负责人">${optionHtml(splitOwnerOptions, item.owner)}</select>
+            </div>
+            <div class="split-cell">
+              <select class="split-select" data-split-field="priority" aria-label="优先级">${optionHtml(priorityOptions, item.priority)}</select>
+            </div>
+            <div class="split-cell">
+              <select class="split-select" data-split-field="status" aria-label="状态">${optionHtml(splitStatusOptions, item.status)}</select>
+            </div>
+            <div class="split-cell">
+              <button class="split-delete" data-delete-split="${item.id}" title="删除记录" type="button">
+                <svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </div>
+          </div>
+        `).join('') : '<div class="split-empty">暂无记录</div>'}
+      `;
+    }
+
+    function openPeek(row, pinned = state.peekPinned) {
+      if (!row) return;
+      closePeekCompanions();
+      state.selected = row.no;
+      state.peekPinned = pinned;
+      document.getElementById('peekNo').textContent = row.no;
+      document.getElementById('peekTitle').textContent = row.title;
+      document.getElementById('peekDescription').textContent = row.userStory || row.description;
+      document.getElementById('peekPmAnalysis').innerHTML = (row.pmAnalysis || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('');
+      document.getElementById('peekRawAppend').textContent = row.rawAppend || row.description;
+      document.getElementById('peekLinked').textContent = row.linked;
+      document.getElementById('peekTags').innerHTML = `
+        <span class="tag">${row.status}</span>
+        <span class="priority ${priorityClass(row.priority)}">${row.priority}</span>
+        ${row.urgent ? `<span class="flat-icon urgent-icon" title="本迭代">${urgentIcon}</span>` : ''}
+        ${row.external ? `<span class="flat-icon external-icon" title="直接创建">${externalIcon}</span>` : ''}
+        ${state.peekPinned ? '<span class="tag">已固定预览</span>' : '<span class="tag">空格再次关闭</span>'}
+      `;
+      document.getElementById('peekProps').innerHTML = [
+        ['类型', row.reqType],
+        ['业务线', row.line],
+        ['状态', row.status],
+        ['优先级', row.priority],
+        ['处理人', row.handler],
+        ['所属迭代', row.sprint],
+        ['期望上线', row.expected]
+      ].map(([label, value]) => `<div class="prop"><span>${label}</span><strong>${value}</strong></div>`).join('');
+      document.getElementById('peekBusinessFields').innerHTML = [
+        ['父原始需求', row.rawNo],
+        ['项目', row.projectName],
+        ['PRD', row.ticket],
+        ...(row.business || []).slice(0, 3)
+      ].map(([label, value]) => `<div class="prop"><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
+      document.getElementById('peekAssessment').innerHTML = row.assessment.map((item) => `<span>${escapeHtml(item)}</span>`).join('');
+      document.getElementById('peekHistory').innerHTML = row.history.map((item) => {
+        const firstSpace = item.indexOf(' ');
+        return `<div class="activity-item"><time>${item.slice(0, firstSpace)}</time><span>${item.slice(firstSpace + 1)}</span></div>`;
+      }).join('');
+      document.body.classList.add('peek-open');
+      renderRows();
+    }
+
+    function closePeek() {
+      document.body.classList.remove('peek-open');
+      state.selected = null;
+      state.peekPinned = false;
+      state.spaceActive = false;
+      window.clearTimeout(state.holdTimer);
+      renderRows();
+    }
+
+    function openDetail(row) {
+      closePeek();
+      state.detailNo = row.no;
+      document.body.classList.add('detail-open');
+      document.getElementById('detailRoute').textContent = `产品需求 / ${row.no}`;
+      document.getElementById('detailKicker').textContent = `${row.no} · ${row.ticket}`;
+      document.getElementById('detailTitle').textContent = row.title;
+      document.getElementById('detailDescription').textContent = row.userStory || row.description;
+      document.getElementById('detailPmAnalysis').innerHTML = (row.pmAnalysis || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('');
+      document.getElementById('detailRawAppend').textContent = row.rawAppend || row.description;
+      document.getElementById('detailLinked').textContent = row.linked;
+      document.getElementById('detailTags').innerHTML = `
+        <span class="tag">${row.status}</span>
+        <span class="priority ${priorityClass(row.priority)}">${row.priority}</span>
+        ${row.urgent ? `<span class="flat-icon urgent-icon" title="本迭代">${urgentIcon}</span>` : ''}
+        ${row.external ? `<span class="flat-icon external-icon" title="直接创建">${externalIcon}</span>` : ''}
+      `;
+      document.getElementById('detailMasterFields').innerHTML = [
+        ['产品需求编号', row.no],
+        ['类型', row.reqType],
+        ['业务线', row.line],
+        ['状态', row.status],
+        ['优先级', row.priority],
+        ['处理人', row.handler],
+        ['所属迭代', row.sprint],
+        ['期望上线', row.expected],
+        ['创建时间', row.created],
+        ['PRD', row.ticket]
+      ].map(([label, value]) => `<div class="detail-field"><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
+      document.getElementById('detailBusinessFields').innerHTML = [
+        ['父原始需求', row.rawNo],
+        ['项目', row.projectName],
+        ...(row.business || [])
+      ].map(([label, value]) => `<div class="detail-field"><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
+      document.getElementById('detailAssessment').innerHTML = row.assessment.map((item) => `<span>${escapeHtml(item)}</span>`).join('');
+      renderSplitSection(row);
+      document.getElementById('detailHistory').innerHTML = row.history.map((item) => {
+        const firstSpace = item.indexOf(' ');
+        return `<div class="activity-item"><time>${item.slice(0, firstSpace)}</time><span>${item.slice(firstSpace + 1)}</span></div>`;
+      }).join('');
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('visible');
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => toast.classList.remove('visible'), 1500);
+    }
+
+    function openRawDrawer(row) {
+      document.getElementById('rawDrawerNo').textContent = row.rawNo === '直接创建' ? '直接创建' : row.rawNo;
+      document.getElementById('rawDrawerTitle').textContent = row.rawNo === '直接创建' ? '无父原始需求，直接进入产品池维护' : `${row.projectName} · 上游需求摘要`;
+      document.getElementById('rawDrawerDescription').textContent = row.rawNo === '直接创建'
+        ? '这条产品需求由产品经理直接创建，当前维护重点是补齐 PRD、处理人、迭代和交付材料。'
+        : row.description;
+      document.getElementById('rawDrawerFields').innerHTML = [
+        ['业务线', row.line],
+        ['项目', row.projectName],
+        ['产品需求', row.no],
+        ['状态', row.status],
+        ['优先级', row.priority],
+        ['处理人', row.handler]
+      ].map(([label, value]) => `<div class="prop"><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
+      document.getElementById('rawDrawerHistory').innerHTML = row.history.map((item) => {
+        const firstSpace = item.indexOf(' ');
+        return `<div class="activity-item"><time>${escapeHtml(item.slice(0, firstSpace))}</time><span>${escapeHtml(item.slice(firstSpace + 1))}</span></div>`;
+      }).join('');
+      rawDrawer.classList.add('visible');
+    }
+
+    function closeRawDrawer() {
+      rawDrawer.classList.remove('visible');
+    }
+
+    function closePeekCompanions() {
+      filterPanel.classList.remove('visible');
+      displayPanel.classList.remove('visible');
+      closeFieldMenu();
+      closeRejectDialog();
+      closeRawDrawer();
+      document.body.classList.remove('detail-open');
+    }
+
+    function fieldOptions(key, currentValue) {
+      const pools = {
+        line: ['政企交付', '客户成功', '数据平台', '移动端', '商业化'],
+        reqType: ['功能优化', '流程优化', '平台能力', '体验优化', '高风险交付'],
+        status: statusOptions,
+        priority: priorityOptions,
+        handler: ['未设置', '周启明', '唐骁', '苏明澈', '顾南星'],
+        sprint: ['未排期', 'XY2606_01', 'SJ2606_01', 'SJ2606_00', 'TC2606_01'],
+        product: ['未设置', '林知予', '何书雅', '沈清和', '陈炎'],
+        project: ['未设置', '周启明', '唐骁', '苏明澈', '顾南星'],
+        proposer: ['未设置', 'XY2606_01', '未排期', 'SJ2606_01', '未排期', 'XY2606_01'],
+        expected: ['待确认', '2026-07-20', '2026-07-28', '2026-08-05', '2026-08-15'],
+        created: ['2026-07-08', '2026-07-07', '2026-07-06', '2026-07-05', '2026-07-01'],
+      };
+      const options = pools[key] || [];
+      if (currentValue && !options.includes(currentValue)) return [currentValue, ...options];
+      return options;
+    }
+
+    function optionIconHtml(key, value) {
+      if (key === 'status') return `<span class="dot ${statusDot(value)}"></span>`;
+      if (key === 'priority') return `<span class="priority ${priorityClass(value)}">${escapeHtml(value)}</span>`;
+      if (['product', 'project', 'proposer'].includes(key)) {
+        return '<span></span>';
+      }
+      if (['expected', 'created'].includes(key)) return fieldIconHtml(key, value);
+      return '<span></span>';
+    }
+
+    function fieldMenuTitle(key) {
+      return {
+        line: '选择业务线',
+        reqType: '选择类型',
+        status: '更改状态',
+        priority: '更改优先级',
+        handler: '选择处理人',
+        sprint: '选择所属迭代',
+        product: '选择负责人',
+        project: '选择处理人',
+        proposer: '选择迭代',
+        expected: '选择期望上线',
+        created: '选择创建时间',
+      }[key] || '编辑字段';
+    }
+
+    function isDateField(key) {
+      return key === 'expected' || key === 'created';
+    }
+
+    function parseDateValue(value) {
+      if (!value || value === '待确认') return null;
+      const parts = value.split('-').map(Number);
+      if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+      return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+
+    function formatDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function sameDate(a, b) {
+      return !!a && !!b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    }
+
+    function monthLabel(date) {
+      return `${date.getFullYear()}年${date.getMonth() + 1}月`;
+    }
+
+    function renderCalendarMenu(row, key, trigger) {
+      const selectedDate = parseDateValue(row[key]);
+      const today = new Date();
+      if (!state.calendarMonth || fieldMenu.dataset.no !== row.no || fieldMenu.dataset.key !== key) {
+        const base = selectedDate || today;
+        state.calendarMonth = new Date(base.getFullYear(), base.getMonth(), 1);
+      }
+      const firstDay = new Date(state.calendarMonth.getFullYear(), state.calendarMonth.getMonth(), 1);
+      const start = new Date(firstDay);
+      start.setDate(firstDay.getDate() - ((firstDay.getDay() + 6) % 7));
+      const days = Array.from({ length: 42 }, (_, index) => {
+        const date = new Date(start);
+        date.setDate(start.getDate() + index);
+        const muted = date.getMonth() !== state.calendarMonth.getMonth();
+        return `<button class="calendar-day${muted ? ' muted' : ''}${sameDate(date, today) ? ' today' : ''}${sameDate(date, selectedDate) ? ' selected' : ''}" data-calendar-date="${formatDate(date)}" type="button">${date.getDate()}</button>`;
+      }).join('');
+      fieldMenu.classList.add('calendar-menu');
+      fieldMenu.dataset.no = row.no;
+      fieldMenu.dataset.key = key;
+      fieldMenu.innerHTML = `
+        <div class="calendar-head">
+          <button class="calendar-nav" data-calendar-nav="-1" type="button">‹</button>
+          <div class="calendar-title">${fieldMenuTitle(key)} · ${monthLabel(state.calendarMonth)}</div>
+          <button class="calendar-nav" data-calendar-nav="1" type="button">›</button>
+        </div>
+        <div class="calendar-week"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+        <div class="calendar-grid">${days}</div>
+        <div class="calendar-actions">
+          <button class="calendar-action" data-calendar-clear type="button">清空</button>
+          <button class="calendar-action" data-calendar-today type="button">今天</button>
+        </div>
+      `;
+      positionFieldMenu(trigger);
+    }
+
+    function positionFieldMenu(trigger) {
+      const box = trigger.getBoundingClientRect();
+      const menuWidth = fieldMenu.classList.contains('calendar-menu') ? 292 : 300;
+      const left = Math.min(window.innerWidth - menuWidth - 12, Math.max(12, box.left));
+      const top = Math.min(window.innerHeight - 380, box.bottom + 8);
+      fieldMenu.style.left = `${left}px`;
+      fieldMenu.style.top = `${Math.max(12, top)}px`;
+      fieldMenu.classList.add('visible');
+    }
+
+    function openFieldMenu(trigger) {
+      const row = getRow(trigger.dataset.no);
+      const key = trigger.dataset.edit;
+      const current = row[key] || '未设置';
+      document.querySelectorAll('.editable-trigger.active').forEach((item) => item.classList.remove('active'));
+      trigger.classList.add('active');
+      fieldMenu.classList.remove('calendar-menu');
+      if (isDateField(key)) {
+        renderCalendarMenu(row, key, trigger);
+        return;
+      }
+      const options = fieldOptions(key, current);
+      fieldMenu.dataset.no = row.no;
+      fieldMenu.dataset.key = key;
+      fieldMenu.innerHTML = `
+        <button class="menu-option" data-menu-value="${escapeHtml(current)}" type="button">
+          ${optionIconHtml(key, current)}
+          <span class="label">${escapeHtml(current)}</span>
+          <span class="menu-check">✓</span>
+        </button>
+        <div class="menu-section-title">${fieldMenuTitle(key)}</div>
+        ${options
+          .filter((item) => item !== current)
+          .map((item, index) => `<button class="menu-option" data-menu-value="${escapeHtml(item)}" type="button">
+            ${optionIconHtml(key, item)}
+            <span class="label">${escapeHtml(item)}</span>
+            <span class="menu-count">${index}</span>
+          </button>`)
+          .join('')}
+      `;
+      positionFieldMenu(trigger);
+    }
+
+    function closeFieldMenu() {
+      fieldMenu.classList.remove('visible');
+      fieldMenu.classList.remove('calendar-menu');
+      document.querySelectorAll('.editable-trigger.active').forEach((item) => item.classList.remove('active'));
+    }
+
+    function applyFieldValue(row, key, value) {
+      row[key] = value === '未设置' ? '' : value;
+      closeFieldMenu();
+      renderRows();
+      if (document.body.classList.contains('peek-open')) {
+        openPeek(row, state.peekPinned);
+      }
+    }
+
+    function applyMenuValue(value) {
+      const row = getRow(fieldMenu.dataset.no);
+      const key = fieldMenu.dataset.key;
+      if (!row || !key) return;
+      if (key === 'status' && value === '作废' && row.status !== '作废') {
+        state.pendingReject = { no: row.no, previous: row.status };
+        document.getElementById('rejectTarget').textContent = `${row.no} 将被设置为“作废”，请填写备注原因。`;
+        rejectReason.value = '';
+        closeFieldMenu();
+        rejectDialog.classList.add('visible');
+        rejectReason.focus();
+        return;
+      }
+      applyFieldValue(row, key, value);
+    }
+
+    rowsEl.addEventListener('click', (event) => {
+      const groupAdd = event.target.closest('.group-add[data-create-status]');
+      if (groupAdd) {
+        event.stopPropagation();
+        createProductRequirement(groupAdd.dataset.createStatus || '待设计');
+        return;
+      }
+      const rawLink = event.target.closest('[data-link="raw"]');
+      if (rawLink) {
+        event.stopPropagation();
+        closeFieldMenu();
+        openRawDrawer(getRow(rawLink.dataset.no));
+        return;
+      }
+      if (event.target.closest('[data-link="ticket"]')) {
+        event.stopPropagation();
+        closeFieldMenu();
+        showToast('PRD链接：后续可跳外链或打开系统内置页面');
+        return;
+      }
+      const editTrigger = event.target.closest('.editable-trigger[data-edit]');
+      if (editTrigger) {
+        event.stopPropagation();
+        openFieldMenu(editTrigger);
+        return;
+      }
+      const editCell = event.target.closest('[data-edit-cell]');
+      if (editCell) {
+        event.stopPropagation();
+        const trigger = editCell.querySelector('.editable-trigger[data-edit]');
+        if (trigger) openFieldMenu(trigger);
+        return;
+      }
+      const rowEl = event.target.closest('.row');
+      if (!rowEl) return;
+      const row = rows.find((item) => item.no === rowEl.dataset.no);
+      if (row) openDetail(row);
+    });
+
+    function handleRowHover(event) {
+      const rowEl = event.target.closest('.row');
+      if (!rowEl) return;
+      if (state.hoverNo === rowEl.dataset.no) return;
+      state.hoverNo = rowEl.dataset.no;
+      if (document.body.classList.contains('peek-open')) {
+        openPeek(getRow(state.hoverNo), state.peekPinned);
+      } else {
+        syncRowStateClasses();
+      }
+    }
+
+    rowsEl.addEventListener('pointerover', handleRowHover);
+    rowsEl.addEventListener('mouseover', handleRowHover);
+
+    function closeRejectDialog() {
+      rejectDialog.classList.remove('visible');
+      state.pendingReject = null;
+    }
+
+    function confirmReject() {
+      if (!state.pendingReject) return;
+      const reason = rejectReason.value.trim();
+      if (!reason) {
+        showToast('请先填写作废原因');
+        rejectReason.focus();
+        return;
+      }
+      const row = getRow(state.pendingReject.no);
+      row.status = '作废';
+      row.rejectReason = reason;
+      closeRejectDialog();
+      renderRows();
+      showToast('已记录作废原因');
+    }
+
+    fieldMenu.addEventListener('click', (event) => {
+      const nav = event.target.closest('[data-calendar-nav]');
+      if (nav) {
+        event.stopPropagation();
+        const row = getRow(fieldMenu.dataset.no);
+        const key = fieldMenu.dataset.key;
+        const trigger = document.querySelector(`.editable-trigger[data-no="${row.no}"][data-edit="${key}"]`);
+        state.calendarMonth.setMonth(state.calendarMonth.getMonth() + Number(nav.dataset.calendarNav));
+        if (trigger) renderCalendarMenu(row, key, trigger);
+        return;
+      }
+      const day = event.target.closest('[data-calendar-date]');
+      if (day) {
+        event.stopPropagation();
+        applyFieldValue(getRow(fieldMenu.dataset.no), fieldMenu.dataset.key, day.dataset.calendarDate);
+        return;
+      }
+      if (event.target.closest('[data-calendar-clear]')) {
+        event.stopPropagation();
+        applyFieldValue(getRow(fieldMenu.dataset.no), fieldMenu.dataset.key, fieldMenu.dataset.key === 'expected' ? '待确认' : '');
+        return;
+      }
+      if (event.target.closest('[data-calendar-today]')) {
+        event.stopPropagation();
+        applyFieldValue(getRow(fieldMenu.dataset.no), fieldMenu.dataset.key, formatDate(new Date()));
+        return;
+      }
+      const option = event.target.closest('[data-menu-value]');
+      if (option) {
+        event.stopPropagation();
+        applyMenuValue(option.dataset.menuValue);
+        return;
+      }
+    });
+
+    document.querySelectorAll('[data-view]').forEach((button) => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('[data-view]').forEach((item) => item.classList.remove('active'));
+        button.classList.add('active');
+        state.view = button.dataset.view;
+        renderRows();
+      });
+    });
+
+    searchInput.addEventListener('input', (event) => {
+      state.query = event.target.value;
+      renderRows();
+    });
+
+    document.getElementById('filterBtn').addEventListener('click', () => {
+      filterPanel.classList.toggle('visible');
+      displayPanel.classList.remove('visible');
+    });
+
+    document.getElementById('displayBtn').addEventListener('click', () => {
+      displayPanel.classList.toggle('visible');
+      filterPanel.classList.remove('visible');
+    });
+
+    ['statusFilter', 'lineFilter', 'priorityFilter', 'urgentFilter', 'externalFilter'].forEach((id) => {
+      document.getElementById(id).addEventListener('change', renderRows);
+    });
+
+    document.getElementById('densitySelect').addEventListener('change', (event) => {
+      document.body.classList.toggle('compact-density', event.target.value === '紧凑');
+      showToast(`密度已切换为${event.target.value}`);
+    });
+
+    document.getElementById('createBtn').addEventListener('click', () => createProductRequirement('待设计'));
+    document.getElementById('closePeek').addEventListener('click', closePeek);
+    document.getElementById('peekBackdrop').addEventListener('click', closePeek);
+    document.getElementById('peekDetailBtn').addEventListener('click', () => openDetail(getRow(state.selected || state.hoverNo)));
+    document.getElementById('backToList').addEventListener('click', () => {
+      document.body.classList.remove('detail-open');
+      state.detailNo = null;
+    });
+    document.getElementById('detailSplitBtn').addEventListener('click', () => {
+      document.getElementById('detailSplitSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    document.getElementById('addSplitBtn').addEventListener('click', () => {
+      const row = getActiveDetailRow();
+      const splits = ensureSplitItems(row);
+      splits.push({
+        id: `${row.no}-split-${Date.now()}`,
+        no: nextSplitNo(row),
+        title: '',
+        owner: row.product,
+        priority: row.priority,
+        status: '待设计'
+      });
+      renderSplitSection(row);
+      document.querySelector(`[data-split-id="${splits[splits.length - 1].id}"] .split-input`)?.focus();
+      showToast('已新增产品价值回归项');
+    });
+    document.getElementById('suggestSplitBtn').addEventListener('click', () => {
+      const row = getActiveDetailRow();
+      const splits = ensureSplitItems(row);
+      if (splits.length) {
+        showToast('当前需求已有回归记录');
+        return;
+      }
+      splits.push({
+        id: `${row.no}-split-suggest-1`,
+        no: nextSplitNo(row),
+        title: `${row.line}：${row.title.slice(0, 24)}`,
+        owner: row.product,
+        priority: row.priority,
+        status: '待设计'
+      });
+      renderSplitSection(row);
+      showToast('已生成回归建议');
+    });
+    document.getElementById('splitBoard').addEventListener('input', (event) => {
+      const field = event.target.dataset.splitField;
+      if (!field) return;
+      const row = getActiveDetailRow();
+      const splitId = event.target.closest('.split-row')?.dataset.splitId;
+      const item = ensureSplitItems(row).find((split) => split.id === splitId);
+      if (item) item[field] = event.target.value;
+    });
+    document.getElementById('splitBoard').addEventListener('change', (event) => {
+      const field = event.target.dataset.splitField;
+      if (!field) return;
+      const row = getActiveDetailRow();
+      const splitId = event.target.closest('.split-row')?.dataset.splitId;
+      const item = ensureSplitItems(row).find((split) => split.id === splitId);
+      if (item) item[field] = event.target.value;
+      showToast('价值回归信息已更新');
+    });
+    document.getElementById('splitBoard').addEventListener('click', (event) => {
+      const deleteBtn = event.target.closest('[data-delete-split]');
+      if (!deleteBtn) return;
+      const row = getActiveDetailRow();
+      row.splits = ensureSplitItems(row).filter((item) => item.id !== deleteBtn.dataset.deleteSplit);
+      renderSplitSection(row);
+      showToast('已移除回归记录');
+    });
+    document.getElementById('rejectCancel').addEventListener('click', closeRejectDialog);
+    document.getElementById('rejectConfirm').addEventListener('click', confirmReject);
+    document.getElementById('closeRawDrawer').addEventListener('click', closeRawDrawer);
+
+    document.addEventListener('keydown', (event) => {
+      if (event.code === 'Space' && !event.target.closest('input, select, textarea')) {
+        event.preventDefault();
+        if (event.repeat || state.spaceActive) return;
+        state.spaceActive = true;
+        window.clearTimeout(state.holdTimer);
+        if (document.body.classList.contains('peek-open')) {
+          closePeek();
+          return;
+        }
+        if (document.body.classList.contains('detail-open')) {
+          state.spaceActive = false;
+          return;
+        }
+        if (!state.hoverNo) {
+          state.spaceActive = false;
+          return;
+        }
+        const row = getRow(state.hoverNo);
+        if (!row) {
+          state.spaceActive = false;
+          return;
+        }
+        openPeek(row, false);
+        state.holdTimer = window.setTimeout(() => {
+          if (state.spaceActive && document.body.classList.contains('peek-open') && state.selected === row.no) {
+            openPeek(row, true);
+          }
+        }, 420);
+        return;
+      }
+
+      if ((event.key === 'ArrowDown' || event.key === 'ArrowUp') && document.body.classList.contains('peek-open')) {
+        event.preventDefault();
+        const data = filteredRows();
+        const currentIndex = Math.max(0, data.findIndex((row) => row.no === (state.selected || state.hoverNo)));
+        const nextIndex = event.key === 'ArrowDown'
+          ? Math.min(data.length - 1, currentIndex + 1)
+          : Math.max(0, currentIndex - 1);
+        const nextRow = data[nextIndex];
+        if (nextRow) {
+          state.hoverNo = nextRow.no;
+          openPeek(nextRow, state.peekPinned);
+        }
+      }
+
+      if (event.key === 'Escape') {
+        filterPanel.classList.remove('visible');
+        displayPanel.classList.remove('visible');
+        closeFieldMenu();
+        closeRejectDialog();
+        closeRawDrawer();
+        document.body.classList.remove('detail-open');
+        closePeek();
+      }
+    });
+
+    document.addEventListener('keyup', (event) => {
+      if (event.code === 'Space') {
+        state.spaceActive = false;
+        window.clearTimeout(state.holdTimer);
+      }
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('#fieldMenu') && !event.target.closest('.editable-trigger')) {
+        closeFieldMenu();
+      }
+      if (!event.target.closest('#filterPanel') && !event.target.closest('#filterBtn')) {
+        filterPanel.classList.remove('visible');
+      }
+      if (!event.target.closest('#displayPanel') && !event.target.closest('#displayBtn')) {
+        displayPanel.classList.remove('visible');
+      }
+    });
+
+    renderRows();
+  </script>
+</body>
+</html>

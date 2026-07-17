@@ -1,14 +1,24 @@
 <template>
   <div v-if="!isCurrentStageOpen" class="disabled-page">
     <div class="disabled-card">
-      <div class="disabled-badge">暂未开放</div>
+      <div class="disabled-badge wb-meta-pill">暂未开放</div>
       <h2 class="disabled-title">系统设置已从当前阶段正式入口移出</h2>
       <p class="disabled-desc">
         当前阶段先收敛到需求处理主链路，这里的配置能力暂不对正式用户开放，避免把原型态管理页误当成可用后台。
       </p>
+      <div class="disabled-points">
+        <div class="disabled-point">
+          <span>当前策略</span>
+          <strong>先把一线工作台体验做深做稳</strong>
+        </div>
+        <div class="disabled-point">
+          <span>设置类能力</span>
+          <strong>保留内部原型，不作为阶段性正式入口</strong>
+        </div>
+      </div>
       <div class="disabled-actions">
-        <button class="action-btn action-btn-primary" @click="router.push('/raw-pool')">前往原始需求池</button>
-        <button class="action-btn" @click="router.push('/my-tasks')">前往我的待办</button>
+        <LnButton @click="router.push('/raw-pool')">前往原始需求池</LnButton>
+        <LnButton variant="ghost" @click="router.push('/my-tasks')">前往我的工作</LnButton>
       </div>
     </div>
   </div>
@@ -16,17 +26,7 @@
   <div v-else class="settings-view">
     <!-- 顶部 Tab 切换 -->
     <div class="settings-header">
-      <div class="view-tabs">
-        <button
-          v-for="tab in tabs"
-          :key="tab.key"
-          class="view-tab"
-          :class="{ active: activeTab === tab.key }"
-          @click="activeTab = tab.key"
-        >
-          {{ tab.label }}
-        </button>
-      </div>
+      <LnTabs v-model="activeTab" :options="tabs" aria-label="系统设置分类" />
     </div>
 
     <!-- Tab 内容区 -->
@@ -34,19 +34,8 @@
       <!-- Tab 1: 状态流配置 -->
       <div v-if="activeTab === 'workflow'" class="tab-panel">
         <div class="panel-header">
-          <div class="sub-tabs">
-            <button
-              class="view-tab"
-              :class="{ active: workflowSubTab === 'raw' }"
-              @click="workflowSubTab = 'raw'"
-            >原始需求流转</button>
-            <button
-              class="view-tab"
-              :class="{ active: workflowSubTab === 'product' }"
-              @click="workflowSubTab = 'product'"
-            >产品需求流转</button>
-          </div>
-          <button class="btn btn-primary" @click="openWorkflowDialog()">+ 新增流转</button>
+          <LnTabs v-model="workflowSubTab" :options="workflowTabs" variant="segmented" aria-label="需求流转类型" />
+          <LnButton @click="openWorkflowDialog()">＋新增流转</LnButton>
         </div>
         <div class="table-wrap">
           <table class="data-table">
@@ -74,8 +63,8 @@
                   </span>
                 </td>
                 <td>
-                  <button class="btn btn-ghost btn-sm" @click="openWorkflowDialog(row)">编辑</button>
-                  <button class="btn btn-danger btn-sm" @click="deleteWorkflow(row)">删除</button>
+                  <LnButton size="small" variant="ghost" @click="openWorkflowDialog(row)">编辑</LnButton>
+                  <LnButton size="small" variant="danger" @click="deleteWorkflow(row)">删除</LnButton>
                 </td>
               </tr>
             </tbody>
@@ -87,7 +76,7 @@
       <div v-if="activeTab === 'business'" class="tab-panel">
         <div class="panel-header">
           <h3 class="panel-title">业务线列表</h3>
-          <button class="btn btn-primary" @click="openBusinessDialog()">+ 新增业务线</button>
+          <LnButton @click="openBusinessDialog()">＋新增业务线</LnButton>
         </div>
         <div class="table-wrap">
           <table class="data-table">
@@ -107,8 +96,8 @@
                 <td>{{ item.description }}</td>
                 <td>{{ item.owner }}</td>
                 <td>
-                  <button class="btn btn-ghost btn-sm" @click="openBusinessDialog(item)">编辑</button>
-                  <button class="btn btn-danger btn-sm" @click="deleteBusiness(item)">删除</button>
+                  <LnButton size="small" variant="ghost" @click="openBusinessDialog(item)">编辑</LnButton>
+                  <LnButton size="small" variant="danger" @click="deleteBusiness(item)">删除</LnButton>
                 </td>
               </tr>
             </tbody>
@@ -120,13 +109,13 @@
       <div v-if="activeTab === 'tags'" class="tab-panel">
         <div class="panel-header">
           <h3 class="panel-title">标签列表</h3>
-          <button class="btn btn-primary" @click="openTagDialog()">+ 新增标签</button>
+          <LnButton @click="openTagDialog()">＋新增标签</LnButton>
         </div>
         <div class="tag-grid">
           <div v-for="tag in tagData" :key="tag.id" class="tag-card">
             <span class="tag-dot" :style="{ background: tag.color }"></span>
             <span class="tag-name">{{ tag.name }}</span>
-            <button class="tag-delete" @click="deleteTag(tag)">✕</button>
+            <LnButton class="tag-delete" size="small" icon-only variant="ghost" aria-label="删除标签" @click="deleteTag(tag)"><template #icon>×</template></LnButton>
           </div>
         </div>
       </div>
@@ -135,7 +124,7 @@
       <div v-if="activeTab === 'users'" class="tab-panel">
         <div class="panel-header">
           <h3 class="panel-title">用户列表</h3>
-          <button class="btn btn-primary" @click="openUserDialog()">+ 新增用户</button>
+          <LnButton @click="openUserDialog()">＋新增用户</LnButton>
         </div>
         <div class="table-wrap">
           <table class="data-table">
@@ -161,10 +150,10 @@
                   </span>
                 </td>
                 <td>
-                  <button class="btn btn-ghost btn-sm" @click="openUserDialog(user)">编辑</button>
-                  <button class="btn btn-danger btn-sm" @click="toggleUserStatus(user)">
+                  <LnButton size="small" variant="ghost" @click="openUserDialog(user)">编辑</LnButton>
+                  <LnButton size="small" :variant="user.active ? 'danger' : 'secondary'" @click="toggleUserStatus(user)">
                     {{ user.active ? '禁用' : '启用' }}
-                  </button>
+                  </LnButton>
                 </td>
               </tr>
             </tbody>
@@ -174,159 +163,135 @@
     </div>
 
     <!-- 状态流配置弹窗 -->
-    <el-dialog
+    <LnDialog
       v-model="workflowDialogVisible"
       :title="workflowForm.id ? '编辑流转规则' : '新增流转规则'"
       width="520px"
-      :close-on-click-modal="false"
-      class="settings-dialog"
+      :close-on-backdrop="false"
     >
       <div class="dialog-form">
         <div class="form-item">
           <label class="form-label">源状态</label>
-          <input v-model="workflowForm.fromStatus" class="form-input" placeholder="如：待判定" />
+          <LnInput v-model="workflowForm.fromStatus" placeholder="如：待判定" clearable />
         </div>
         <div class="form-item">
           <label class="form-label">目标状态</label>
-          <input v-model="workflowForm.toStatus" class="form-input" placeholder="如：设计中" />
+          <LnInput v-model="workflowForm.toStatus" placeholder="如：设计中" clearable />
         </div>
         <div class="form-item">
           <label class="form-label">允许角色</label>
-          <input v-model="workflowForm.rolesStr" class="form-input" placeholder="如：产品经理,开发组长（逗号分隔）" />
+          <LnInput v-model="workflowForm.rolesStr" placeholder="如：产品经理,开发组长（逗号分隔）" clearable />
         </div>
         <div class="form-item">
           <label class="form-label">操作名称</label>
-          <input v-model="workflowForm.actionName" class="form-input" placeholder="如：确认推进" />
+          <LnInput v-model="workflowForm.actionName" placeholder="如：确认推进" clearable />
         </div>
         <div class="form-item">
           <label class="form-label">是否需审批</label>
-          <label class="form-switch">
-            <input v-model="workflowForm.needApproval" type="checkbox" />
-            <span class="switch-slider"></span>
-            <span class="switch-text">{{ workflowForm.needApproval ? '是' : '否' }}</span>
-          </label>
+          <LnSwitch v-model="workflowForm.needApproval" :label="workflowForm.needApproval ? '需要审批' : '无需审批'" />
         </div>
       </div>
       <template #footer>
-        <button class="btn btn-ghost" @click="workflowDialogVisible = false">取消</button>
-        <button class="btn btn-primary" @click="saveWorkflow">保存</button>
+        <LnButton variant="ghost" @click="workflowDialogVisible = false">取消</LnButton>
+        <LnButton variant="primary" @click="saveWorkflow">保存</LnButton>
       </template>
-    </el-dialog>
+    </LnDialog>
 
     <!-- 业务线弹窗 -->
-    <el-dialog
+    <LnDialog
       v-model="businessDialogVisible"
       :title="businessForm.id ? '编辑业务线' : '新增业务线'"
       width="520px"
-      :close-on-click-modal="false"
-      class="settings-dialog"
+      :close-on-backdrop="false"
     >
       <div class="dialog-form">
         <div class="form-item">
           <label class="form-label">名称</label>
-          <input v-model="businessForm.name" class="form-input" placeholder="如：核心交易" />
+          <LnInput v-model="businessForm.name" placeholder="如：核心交易" clearable />
         </div>
         <div class="form-item">
           <label class="form-label">编码</label>
-          <input v-model="businessForm.code" class="form-input" placeholder="如：CORE_TRADE" />
+          <LnInput v-model="businessForm.code" placeholder="如：CORE_TRADE" clearable />
         </div>
         <div class="form-item">
           <label class="form-label">描述</label>
-          <textarea v-model="businessForm.description" class="form-input form-textarea" placeholder="业务线描述" rows="3"></textarea>
+          <LnTextarea v-model="businessForm.description" placeholder="业务线描述" :rows="3" />
         </div>
         <div class="form-item">
           <label class="form-label">负责人</label>
-          <input v-model="businessForm.owner" class="form-input" placeholder="负责人姓名" />
+          <LnInput v-model="businessForm.owner" placeholder="负责人姓名" clearable />
         </div>
       </div>
       <template #footer>
-        <button class="btn btn-ghost" @click="businessDialogVisible = false">取消</button>
-        <button class="btn btn-primary" @click="saveBusiness">保存</button>
+        <LnButton variant="ghost" @click="businessDialogVisible = false">取消</LnButton>
+        <LnButton variant="primary" @click="saveBusiness">保存</LnButton>
       </template>
-    </el-dialog>
+    </LnDialog>
 
     <!-- 标签弹窗 -->
-    <el-dialog
+    <LnDialog
       v-model="tagDialogVisible"
       title="新增标签"
       width="420px"
-      :close-on-click-modal="false"
-      class="settings-dialog"
+      :close-on-backdrop="false"
     >
       <div class="dialog-form">
         <div class="form-item">
           <label class="form-label">标签名称</label>
-          <input v-model="tagForm.name" class="form-input" placeholder="如：紧急" />
+          <LnInput v-model="tagForm.name" placeholder="如：紧急" clearable />
         </div>
         <div class="form-item">
           <label class="form-label">标签颜色</label>
-          <div class="color-picker">
-            <span
-              v-for="color in colorOptions"
-              :key="color"
-              class="color-option"
-              :class="{ active: tagForm.color === color }"
-              :style="{ background: color }"
-              @click="tagForm.color = color"
-            ></span>
-          </div>
+          <LnColorPicker v-model="tagForm.color" :colors="colorOptions" aria-label="标签颜色" show-value />
         </div>
       </div>
       <template #footer>
-        <button class="btn btn-ghost" @click="tagDialogVisible = false">取消</button>
-        <button class="btn btn-primary" @click="saveTag">保存</button>
+        <LnButton variant="ghost" @click="tagDialogVisible = false">取消</LnButton>
+        <LnButton variant="primary" @click="saveTag">保存</LnButton>
       </template>
-    </el-dialog>
+    </LnDialog>
 
     <!-- 用户弹窗 -->
-    <el-dialog
+    <LnDialog
       v-model="userDialogVisible"
       :title="userForm.id ? '编辑用户' : '新增用户'"
       width="520px"
-      :close-on-click-modal="false"
-      class="settings-dialog"
+      :close-on-backdrop="false"
     >
       <div class="dialog-form">
         <div class="form-item">
           <label class="form-label">用户名</label>
-          <input v-model="userForm.username" class="form-input" placeholder="登录用户名" />
+          <LnInput v-model="userForm.username" placeholder="登录用户名" autocomplete="username" clearable />
         </div>
         <div class="form-item">
           <label class="form-label">姓名</label>
-          <input v-model="userForm.realName" class="form-input" placeholder="真实姓名" />
+          <LnInput v-model="userForm.realName" placeholder="真实姓名" clearable />
         </div>
         <div class="form-item">
           <label class="form-label">角色</label>
-          <select v-model="userForm.roleName" class="form-input">
-            <option value="">请选择角色</option>
-            <option value="管理员">管理员</option>
-            <option value="产品经理">产品经理</option>
-            <option value="开发组长">开发组长</option>
-            <option value="开发人员">开发人员</option>
-            <option value="测试人员">测试人员</option>
-          </select>
+          <LnSelect v-model="userForm.roleName" :options="roleOptions" placeholder="请选择角色" searchable clearable />
         </div>
         <div class="form-item">
           <label class="form-label">部门</label>
-          <input v-model="userForm.department" class="form-input" placeholder="所属部门" />
+          <LnInput v-model="userForm.department" placeholder="所属部门" clearable />
         </div>
         <div v-if="!userForm.id" class="form-item">
           <label class="form-label">初始密码</label>
-          <input v-model="userForm.password" type="password" class="form-input" placeholder="初始登录密码" />
+          <LnPasswordInput v-model="userForm.password" placeholder="初始登录密码" autocomplete="new-password" />
         </div>
       </div>
       <template #footer>
-        <button class="btn btn-ghost" @click="userDialogVisible = false">取消</button>
-        <button class="btn btn-primary" @click="saveUser">保存</button>
+        <LnButton variant="ghost" @click="userDialogVisible = false">取消</LnButton>
+        <LnButton variant="primary" @click="saveUser">保存</LnButton>
       </template>
-    </el-dialog>
+    </LnDialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { lnToast, LnButton, LnColorPicker, LnDialog, LnInput, LnPasswordInput, LnSelect, LnSwitch, LnTabs, LnTextarea, type LnOption, type LnTabOption } from '@/components/linear'
 import { getFlowConfig } from '@/api/workflow'
 import type { FlowConfigNode } from '@/api/workflow'
 
@@ -334,16 +299,21 @@ const router = useRouter()
 const isCurrentStageOpen = false
 
 // ==================== Tab 配置 ====================
-const tabs = [
-  { key: 'workflow', label: '状态流配置' },
-  { key: 'business', label: '业务线管理' },
-  { key: 'tags', label: '标签管理' },
-  { key: 'users', label: '用户管理' },
+const tabs: LnTabOption[] = [
+  { value: 'workflow', label: '状态流配置' },
+  { value: 'business', label: '业务线管理' },
+  { value: 'tags', label: '标签管理' },
+  { value: 'users', label: '用户管理' },
 ]
 const activeTab = ref('workflow')
+const roleOptions: LnOption[] = ['管理员', '产品经理', '开发组长', '开发人员', '测试人员'].map((label) => ({ label, value: label }))
 
 // ==================== Tab 1: 状态流配置 ====================
 const workflowSubTab = ref<'raw' | 'product'>('raw')
+const workflowTabs: LnTabOption[] = [
+  { value: 'raw', label: '原始需求流转' },
+  { value: 'product', label: '产品需求流转' },
+]
 
 interface WorkflowRow {
   id: number
@@ -410,7 +380,7 @@ function openWorkflowDialog(row?: WorkflowRow) {
 function saveWorkflow() {
   const form = workflowForm.value
   if (!form.fromStatus || !form.toStatus || !form.actionName) {
-    ElMessage.warning('请填写必填字段')
+    lnToast.warning('请填写必填字段')
     return
   }
   const roles = form.rolesStr.split(/[,，]/).map(s => s.trim()).filter(Boolean)
@@ -430,7 +400,7 @@ function saveWorkflow() {
     targetData.value.push(newRow)
   }
   workflowDialogVisible.value = false
-  ElMessage.success('保存成功')
+  lnToast.success('保存成功')
 }
 
 function deleteWorkflow(row: WorkflowRow) {
@@ -438,7 +408,7 @@ function deleteWorkflow(row: WorkflowRow) {
   const idx = targetData.value.findIndex(r => r.id === row.id)
   if (idx !== -1) {
     targetData.value.splice(idx, 1)
-    ElMessage.success('删除成功')
+    lnToast.success('删除成功')
   }
 }
 
@@ -508,7 +478,7 @@ function openBusinessDialog(item?: BusinessLine) {
 function saveBusiness() {
   const form = businessForm.value
   if (!form.name || !form.code) {
-    ElMessage.warning('请填写必填字段')
+    lnToast.warning('请填写必填字段')
     return
   }
   if (form.id) {
@@ -518,14 +488,14 @@ function saveBusiness() {
     businessData.value.push({ ...form, id: Date.now() } as BusinessLine)
   }
   businessDialogVisible.value = false
-  ElMessage.success('保存成功')
+  lnToast.success('保存成功')
 }
 
 function deleteBusiness(item: BusinessLine) {
   const idx = businessData.value.findIndex(b => b.id === item.id)
   if (idx !== -1) {
     businessData.value.splice(idx, 1)
-    ElMessage.success('删除成功')
+    lnToast.success('删除成功')
   }
 }
 
@@ -563,19 +533,19 @@ function openTagDialog() {
 
 function saveTag() {
   if (!tagForm.value.name) {
-    ElMessage.warning('请填写标签名称')
+    lnToast.warning('请填写标签名称')
     return
   }
   tagData.value.push({ id: Date.now(), ...tagForm.value })
   tagDialogVisible.value = false
-  ElMessage.success('保存成功')
+  lnToast.success('保存成功')
 }
 
 function deleteTag(tag: TagItem) {
   const idx = tagData.value.findIndex(t => t.id === tag.id)
   if (idx !== -1) {
     tagData.value.splice(idx, 1)
-    ElMessage.success('删除成功')
+    lnToast.success('删除成功')
   }
 }
 
@@ -615,7 +585,7 @@ function openUserDialog(user?: UserRow) {
 function saveUser() {
   const form = userForm.value
   if (!form.username || !form.realName || !form.roleName) {
-    ElMessage.warning('请填写必填字段')
+    lnToast.warning('请填写必填字段')
     return
   }
   if (form.id) {
@@ -625,12 +595,12 @@ function saveUser() {
     userData.value.push({ ...form, id: Date.now() } as UserRow)
   }
   userDialogVisible.value = false
-  ElMessage.success('保存成功')
+  lnToast.success('保存成功')
 }
 
 function toggleUserStatus(user: UserRow) {
   user.active = !user.active
-  ElMessage.success(user.active ? '已启用' : '已禁用')
+  lnToast.success(user.active ? '已启用' : '已禁用')
 }
 
 // 初始化时尝试加载后端流转配置
@@ -647,22 +617,15 @@ loadFlowConfig()
 
 .disabled-card {
   width: min(560px, 100%);
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(17, 24, 39, 0.06);
   border-radius: 20px;
   padding: 32px;
-  box-shadow: var(--shadow);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(16px);
 }
 
 .disabled-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(0, 113, 227, 0.08);
-  color: var(--primary, #0071e3);
-  font-size: 12px;
-  font-weight: 600;
   margin-bottom: 16px;
 }
 
@@ -678,27 +641,36 @@ loadFlowConfig()
   line-height: 1.7;
 }
 
+.disabled-points {
+  margin-top: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.disabled-point {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(17, 24, 39, 0.035);
+
+  span {
+    display: block;
+    font-size: 11px;
+    color: var(--text-tertiary);
+  }
+
+  strong {
+    display: block;
+    margin-top: 5px;
+    font-size: 13px;
+    color: var(--text-primary);
+  }
+}
+
 .disabled-actions {
   display: flex;
   gap: 12px;
   margin-top: 24px;
   flex-wrap: wrap;
-}
-
-.action-btn {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text-primary);
-  border-radius: 10px;
-  padding: 10px 16px;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.action-btn-primary {
-  border-color: transparent;
-  background: var(--primary, #0071e3);
-  color: #fff;
 }
 
 .settings-view {
@@ -737,12 +709,6 @@ loadFlowConfig()
   background: var(--bg);
   padding: 4px;
   border-radius: var(--radius-sm);
-}
-
-/* 表格行内按钮缩小 */
-.btn-sm {
-  padding: 4px 10px;
-  font-size: 12px;
 }
 
 .font-medium {
@@ -806,13 +772,7 @@ loadFlowConfig()
 }
 
 .tag-delete {
-  border: none;
-  background: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: 12px;
-  padding: 2px 4px;
-  border-radius: 4px;
+  margin-left: auto;
   opacity: 0;
   transition: var(--transition);
 
@@ -820,35 +780,6 @@ loadFlowConfig()
     opacity: 1;
   }
 
-  &:hover {
-    color: var(--danger);
-    background: rgba(255, 59, 48, 0.08);
-  }
-}
-
-/* 颜色选择器 */
-.color-picker {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.color-option {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: var(--transition);
-  border: 2px solid transparent;
-
-  &:hover {
-    transform: scale(1.15);
-  }
-
-  &.active {
-    border-color: var(--text-primary);
-    box-shadow: 0 0 0 2px var(--surface);
-  }
 }
 
 /* 表单样式 */
@@ -868,33 +799,6 @@ loadFlowConfig()
   font-size: 13px;
   font-weight: 500;
   color: var(--text-primary);
-}
-
-.form-input {
-  padding: 11px 14px;
-  border-radius: 8px;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  background: #fafafa;
-  font-size: 13px;
-  outline: none;
-  transition: var(--transition);
-  font-family: inherit;
-
-  &:focus {
-    border-color: var(--primary);
-    background: var(--surface);
-    box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.08);
-  }
-
-  &::placeholder {
-    color: var(--text-secondary);
-    opacity: 0.6;
-  }
-}
-
-.form-textarea {
-  resize: vertical;
-  min-height: 72px;
 }
 
 /* 开关 */
@@ -941,36 +845,6 @@ loadFlowConfig()
   .switch-text {
     font-size: 13px;
     color: var(--text-secondary);
-  }
-}
-
-/* 弹窗样式覆盖 */
-:deep(.settings-dialog) {
-  .el-dialog {
-    border-radius: 12px;
-    box-shadow: var(--shadow-modal);
-  }
-
-  .el-dialog__header {
-    padding: 20px 24px 12px;
-    border-bottom: none;
-  }
-
-  .el-dialog__title {
-    font-size: 15px;
-    font-weight: 600;
-  }
-
-  .el-dialog__body {
-    padding: 12px 24px;
-  }
-
-  .el-dialog__footer {
-    padding: 12px 24px 20px;
-    border-top: none;
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
   }
 }
 

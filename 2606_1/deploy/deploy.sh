@@ -13,6 +13,8 @@
 set -euo pipefail
 
 PROJECT_DIR="${PROJECT_DIR:-/opt/req-mgmt/app}"
+APP_SUBDIR="${APP_SUBDIR:-2606_1}"
+RUNTIME_DIR="${RUNTIME_DIR:-$PROJECT_DIR/$APP_SUBDIR}"
 REPO_URL="${REPO_URL:-https://github.com/fanliads/-.git}"
 # GitHub Personal Access Token authentication
 # Set GITHUB_USER and GITHUB_TOKEN in environment or in .env file
@@ -104,7 +106,11 @@ checkout_ref() {
 }
 
 build_and_start() {
-  cd "$PROJECT_DIR"
+  if [ ! -f "$RUNTIME_DIR/$COMPOSE_FILE" ]; then
+    echo "Compose file not found at $RUNTIME_DIR/$COMPOSE_FILE"
+    exit 1
+  fi
+  cd "$RUNTIME_DIR"
   compose_cmd down
   compose_cmd build --pull
   compose_cmd up -d
@@ -153,12 +159,12 @@ case "${1:-status}" in
     ;;
   logs)
     require_repo
-    cd "$PROJECT_DIR"
+    cd "$RUNTIME_DIR"
     compose_cmd logs -f --tail=100
     ;;
   backup)
     require_repo
-    cd "$PROJECT_DIR"
+    cd "$RUNTIME_DIR"
     mkdir -p /opt/req-mgmt/shared/backup
     BACKUP_FILE="/opt/req-mgmt/shared/backup/req_mgmt_$(date +%Y%m%d_%H%M%S).sql"
     set -a

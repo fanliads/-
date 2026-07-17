@@ -1,105 +1,169 @@
 <template>
   <div class="list-view">
-    <!-- 顶部工具栏 -->
-    <div class="toolbar">
-      <div class="toolbar-left">
-        <input
+    <section class="page-header wb-page-header">
+      <div class="title-block">
+        <div class="title-row wb-title-row">
+          <h2 class="page-title wb-page-title">列表视图</h2>
+          <span class="page-count wb-page-meta">{{ total }} 条</span>
+          <span class="page-hint wb-page-meta">高密度扫视全部原始需求</span>
+        </div>
+        <p class="page-subtitle wb-page-subtitle">把传统表格改成更紧凑的列表工作台，减少噪音列，把详情放到右侧聚焦区。</p>
+      </div>
+
+      <div class="header-actions wb-actions-row">
+        <LnInput
           v-model="queryForm.keyword"
-          class="search-box"
-          placeholder="搜索编号/标题/描述..."
-          @keyup.enter="handleSearch"
-        />
-        <select v-model="queryForm.status" class="filter-select" @change="handleSearch">
-          <option value="">全部状态</option>
-          <option v-for="(label, key) in RAW_STATUS_MAP" :key="key" :value="key">{{ label }}</option>
-        </select>
-        <select v-model="queryForm.priority" class="filter-select" @change="handleSearch">
-          <option value="">全部优先级</option>
-          <option v-for="(label, key) in PRIORITY_MAP" :key="key" :value="key">{{ label }}</option>
-        </select>
-        <select v-model="queryForm.source" class="filter-select" @change="handleSearch">
-          <option value="">全部来源</option>
-          <option v-for="(label, key) in SOURCE_MAP" :key="key" :value="key">{{ label }}</option>
-        </select>
+          class="line-search"
+          placeholder="搜索编号、标题或描述"
+          clearable
+          @keydown.enter="handleSearch"
+        ><template #prefix>⌕</template></LnInput>
+        <LnButton variant="ghost" @click="handleReset">清空筛选</LnButton>
+        <LnButton variant="primary" @click="router.push('/submit')"><template #icon>＋</template>新建需求</LnButton>
       </div>
-      <div class="toolbar-right">
-        <button class="btn btn-primary" @click="$router.push('/submit')">+ 新建需求</button>
-      </div>
-    </div>
+    </section>
 
-    <!-- 表格容器 -->
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th><input type="checkbox" v-model="selectAll" @change="toggleSelectAll" /></th>
-            <th>需求编号</th>
-            <th>标题</th>
-            <th>状态</th>
-            <th>优先级</th>
-            <th>来源</th>
-            <th>负责人</th>
-            <th>创建时间</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="loading">
-            <td colspan="8" class="empty-cell">加载中...</td>
-          </tr>
-          <tr v-else-if="tableData.length === 0">
-            <td colspan="8" class="empty-cell">暂无数据</td>
-          </tr>
-          <tr
-            v-else
-            v-for="row in tableData"
-            :key="row.id"
-            @click="handleRowClick(row)"
-            style="cursor: pointer"
-          >
-            <td><input type="checkbox" :value="row.id" v-model="selectedIds" @click.stop /></td>
-            <td>{{ row.reqNo }}</td>
-            <td class="req-title">{{ row.title }}</td>
-            <td>
-              <span class="status-tag" :class="getStatusClass(row.status, row.statusName)">
-                {{ getRawRequirementStatusLabel(row.status, row.statusName) }}
-              </span>
-            </td>
-            <td>
-              <span class="priority-pill" :class="'priority-' + row.priority?.toLowerCase()">
-                {{ row.priority }}
-              </span>
-            </td>
-            <td>{{ SOURCE_MAP[row.source] || row.source || '-' }}</td>
-            <td>{{ row.assigneeName || '-' }}</td>
-            <td>{{ formatDate(row.createTime) }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <section class="filter-strip wb-filter-strip">
+      <LnSelect v-model="queryForm.status" :options="statusOptions" placeholder="全部状态" clearable @change="handleSearch" />
+      <LnSelect v-model="queryForm.priority" :options="priorityOptions" placeholder="全部优先级" clearable @change="handleSearch" />
+      <LnSelect v-model="queryForm.source" :options="sourceOptions" placeholder="全部来源" clearable @change="handleSearch" />
+      <LnBadge v-if="activeFilterCount" tone="accent">{{ activeFilterCount }} 个筛选条件</LnBadge>
+    </section>
 
-    <!-- 分页 -->
-    <div class="pagination-wrapper">
-      <div class="pagination-info">共 {{ total }} 条</div>
-      <div class="pagination-controls">
-        <button class="page-btn" :disabled="queryForm.page <= 1" @click="goPage(1)">«</button>
-        <button class="page-btn" :disabled="queryForm.page <= 1" @click="goPage(queryForm.page - 1)">‹</button>
-        <span class="page-current">{{ queryForm.page }}</span>
-        <button class="page-btn" :disabled="queryForm.page >= totalPages" @click="goPage(queryForm.page + 1)">›</button>
-        <button class="page-btn" :disabled="queryForm.page >= totalPages" @click="goPage(totalPages)">»</button>
+    <section class="workspace-shell wb-shell">
+      <div class="list-panel wb-panel">
+        <div class="list-header wb-list-header row-grid">
+          <div class="head-cell title-head">需求</div>
+          <div class="head-cell">状态</div>
+          <div class="head-cell">优先级</div>
+          <div class="head-cell">来源</div>
+          <div class="head-cell">负责人</div>
+          <div class="head-cell">创建时间</div>
+        </div>
+
+        <div v-if="loading" class="loading-list" aria-label="正在加载需求">
+          <div v-for="index in 6" :key="index" class="loading-row row-grid">
+            <div class="loading-title"><LnSkeleton :width="`${48 + index * 4}%`"/><LnSkeleton width="78%"/></div>
+            <LnSkeleton width="64px"/><LnSkeleton width="50px"/><LnSkeleton width="70px"/><LnSkeleton width="64px"/><LnSkeleton width="82px"/>
+          </div>
+        </div>
+
+        <LnPressable
+          v-for="row in tableData"
+          v-else
+          :key="row.id"
+          class="list-row wb-list-row row-grid"
+          :selected="selectedRequirementId === row.id"
+          :aria-label="`查看需求 ${row.reqNo} ${row.title}`"
+          @click="selectRequirement(row)"
+        >
+          <div class="cell title-cell">
+            <div class="title-meta">
+              <span class="req-no">{{ row.reqNo }}</span>
+              <span v-if="row.isUrgent === 1" class="meta-chip urgent">加急</span>
+              <span v-if="row.submitOrigin === 'external'" class="meta-chip">外部提报</span>
+            </div>
+            <div class="title-text">{{ row.title }}</div>
+            <div class="title-subline">{{ row.description || row.projectName || '暂无补充描述' }}</div>
+          </div>
+
+          <div class="cell">
+            <span class="status-tag" :class="getStatusClass(row.status, row.statusName)">
+              {{ getRawRequirementStatusLabel(row.status, row.statusName) }}
+            </span>
+          </div>
+
+          <div class="cell">
+            <span class="priority-pill" :class="`priority-${(row.effectiveLevel || row.priority || 'p2').toLowerCase()}`">
+              {{ row.effectiveLevel || row.priority || '-' }}
+            </span>
+          </div>
+
+          <div class="cell text-muted">{{ SOURCE_MAP[row.source] || row.source || '-' }}</div>
+          <div class="cell text-muted">{{ row.assigneeName || row.proposer || '-' }}</div>
+          <div class="cell text-muted">{{ formatDate(row.createTime) }}</div>
+        </LnPressable>
+
+        <LnEmptyState v-if="tableData.length === 0 && !loading" title="没有匹配的需求" description="调整搜索或筛选条件后重试。">
+          <LnButton v-if="activeFilterCount || queryForm.keyword" size="small" @click="handleReset">清空筛选</LnButton>
+        </LnEmptyState>
+
+        <div class="pagination-line">
+          <LnPagination v-model:page="queryForm.page" v-model:page-size="queryForm.size" :page-sizes="[10, 20, 50]" :total="total" @change="loadData" />
+        </div>
       </div>
-      <select v-model="queryForm.size" class="size-select" @change="handleSearch">
-        <option :value="10">10条/页</option>
-        <option :value="20">20条/页</option>
-        <option :value="50">50条/页</option>
-      </select>
-    </div>
+
+      <aside class="detail-panel wb-panel">
+        <template v-if="selectedRequirement">
+          <div class="detail-scroll wb-detail-scroll">
+            <div class="detail-header">
+              <div class="detail-id">{{ selectedRequirement.reqNo }}</div>
+              <h3 class="detail-title wb-detail-title">{{ selectedRequirement.title }}</h3>
+              <div class="detail-tags">
+                <span class="status-tag" :class="getStatusClass(selectedRequirement.status, selectedRequirement.statusName)">
+                  {{ getRawRequirementStatusLabel(selectedRequirement.status, selectedRequirement.statusName) }}
+                </span>
+                <span class="priority-pill" :class="`priority-${(selectedRequirement.effectiveLevel || selectedRequirement.priority || 'p2').toLowerCase()}`">
+                  {{ selectedRequirement.effectiveLevel || selectedRequirement.priority || '-' }}
+                </span>
+                <span v-if="selectedRequirement.isUrgent === 1" class="meta-chip urgent">加急</span>
+              </div>
+            </div>
+
+            <div class="info-section">
+              <div class="section-title">基础信息</div>
+              <div class="info-grid">
+                <div class="info-item wb-info-item">
+                  <span class="info-label">来源</span>
+                  <span class="info-value">{{ SOURCE_MAP[selectedRequirement.source] || selectedRequirement.source || '-' }}</span>
+                </div>
+                <div class="info-item wb-info-item">
+                  <span class="info-label">业务线</span>
+                  <span class="info-value">{{ selectedRequirement.businessLineName || '-' }}</span>
+                </div>
+                <div class="info-item wb-info-item">
+                  <span class="info-label">负责人</span>
+                  <span class="info-value">{{ selectedRequirement.assigneeName || selectedRequirement.proposer || '-' }}</span>
+                </div>
+                <div class="info-item wb-info-item">
+                  <span class="info-label">项目名称</span>
+                  <span class="info-value">{{ selectedRequirement.projectName || '-' }}</span>
+                </div>
+                <div class="info-item wb-info-item">
+                  <span class="info-label">期望日期</span>
+                  <span class="info-value">{{ formatDate(selectedRequirement.expectedDate) }}</span>
+                </div>
+                <div class="info-item wb-info-item">
+                  <span class="info-label">更新时间</span>
+                  <span class="info-value">{{ formatDateTime(selectedRequirement.updateTime) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="info-section">
+              <div class="section-title">描述</div>
+              <p class="section-copy">{{ selectedRequirement.description || '暂无描述' }}</p>
+            </div>
+
+            <div class="info-section" v-if="selectedRequirement.strategyHint">
+              <div class="section-title">优先级提示</div>
+              <p class="section-copy">{{ selectedRequirement.strategyHint }}</p>
+            </div>
+          </div>
+        </template>
+
+        <LnEmptyState v-else title="选择一条需求" description="左侧专注于连续扫视，右侧承接上下文阅读和判断确认。" />
+      </aside>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { pageQueryRawRequirements } from '@/api/raw-requirement'
 import type { RawRequirementListVO } from '@/types/requirement'
+import { LnBadge, LnButton, LnEmptyState, LnInput, LnPagination, LnPressable, LnSelect, LnSkeleton, type LnOption } from '@/components/linear'
 import {
   RAW_STATUS_MAP,
   PRIORITY_MAP,
@@ -108,6 +172,7 @@ import {
   getRawRequirementStatusLabel,
 } from '@/types/requirement'
 
+const router = useRouter()
 
 const queryForm = reactive({
   page: 1,
@@ -123,10 +188,12 @@ const queryForm = reactive({
 const loading = ref(false)
 const tableData = ref<RawRequirementListVO[]>([])
 const total = ref(0)
-const selectedIds = ref<number[]>([])
-const selectAll = ref(false)
-
-const totalPages = computed(() => Math.ceil(total.value / queryForm.size) || 1)
+const selectedRequirementId = ref<number | null>(null)
+const selectedRequirement = computed(() => tableData.value.find((item) => item.id === selectedRequirementId.value) || null)
+const statusOptions: LnOption[] = Object.entries(RAW_STATUS_MAP).map(([value, label]) => ({ value, label }))
+const priorityOptions: LnOption[] = Object.entries(PRIORITY_MAP).map(([value, label]) => ({ value, label }))
+const sourceOptions: LnOption[] = Object.entries(SOURCE_MAP).map(([value, label]) => ({ value, label }))
+const activeFilterCount = computed(() => [queryForm.status, queryForm.priority, queryForm.source].filter(Boolean).length)
 
 function getStatusClass(status: string, statusName?: string): string {
   const rawClass = getRawRequirementStatusClass(status, statusName)
@@ -142,23 +209,29 @@ function getStatusClass(status: string, statusName?: string): string {
   return map[rawClass] || 'status-eval'
 }
 
-function formatDate(dt: string): string {
+function formatDate(dt?: string): string {
   if (!dt) return '-'
   return dt.substring(0, 10)
 }
 
-function toggleSelectAll() {
-  if (selectAll.value) {
-    selectedIds.value = tableData.value.map(r => r.id)
-  } else {
-    selectedIds.value = []
+function formatDateTime(dt?: string): string {
+  if (!dt) return '-'
+  return dt.substring(0, 16).replace('T', ' ')
+}
+
+function ensureSelectedRequirement() {
+  if (!tableData.value.length) {
+    selectedRequirementId.value = null
+    return
+  }
+  const exists = tableData.value.some((item) => item.id === selectedRequirementId.value)
+  if (!exists) {
+    selectedRequirementId.value = tableData.value[0].id
   }
 }
 
-function goPage(page: number) {
-  if (page < 1 || page > totalPages.value) return
-  queryForm.page = page
-  loadData()
+function selectRequirement(row: RawRequirementListVO) {
+  selectedRequirementId.value = row.id
 }
 
 async function loadData() {
@@ -168,8 +241,11 @@ async function loadData() {
     const data = res.data
     tableData.value = data.list || []
     total.value = data.total || 0
+    ensureSelectedRequirement()
   } catch {
-    // error handled by interceptor
+    tableData.value = []
+    total.value = 0
+    selectedRequirementId.value = null
   } finally {
     loading.value = false
   }
@@ -180,9 +256,14 @@ function handleSearch() {
   loadData()
 }
 
-function handleRowClick(row: RawRequirementListVO) {
-  // 可以后续跳转详情
-  console.log('点击需求:', row.reqNo)
+function handleReset() {
+  queryForm.page = 1
+  queryForm.size = 10
+  queryForm.status = ''
+  queryForm.priority = ''
+  queryForm.source = ''
+  queryForm.keyword = ''
+  loadData()
 }
 
 onMounted(() => {
@@ -195,255 +276,276 @@ onMounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 24px 32px;
+  gap: 16px;
 }
 
-.toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-  flex-shrink: 0;
-
-  .toolbar-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .toolbar-right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-}
-
-.search-box {
-  width: 240px;
-  padding: 8px 14px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--bg);
-  font-size: 13px;
-  outline: none;
-  transition: border-color 0.2s;
-
-  &:focus {
-    border-color: var(--primary);
-  }
-}
-
-.filter-select {
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--surface);
+.page-count,
+.page-hint,
+.page-subtitle {
   font-size: 13px;
   color: var(--text-secondary);
-  outline: none;
-  cursor: pointer;
-
-  &:focus {
-    border-color: var(--primary);
-  }
 }
 
-.btn {
-  padding: 8px 18px;
-  border-radius: var(--radius-sm);
-  border: none;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  transition: var(--transition);
-  display: inline-flex;
+.page-subtitle {
+  margin: 0;
+}
+
+.line-search {
+  width: 220px;
+}
+
+.workspace-shell {
+  grid-template-columns: minmax(0, 1.2fr) 380px;
+}
+
+.list-panel,
+.detail-panel {
+  min-height: 0;
+}
+
+.list-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.row-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2.4fr) 108px 96px 108px 108px 112px;
+  column-gap: 12px;
   align-items: center;
-  gap: 6px;
 }
 
-.btn-primary {
-  background: var(--primary);
-  color: #fff;
+.list-header {
+  padding: 0 18px;
+  min-height: 36px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.head-cell {
+  white-space: nowrap;
+}
+
+.list-row {
+  width: 100%;
+  text-align: left;
+  padding: 12px 18px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  transition: var(--transition);
 
   &:hover {
-    background: var(--primary-hover);
+    background: rgba(17, 24, 39, 0.022);
+  }
+
+  &.selected {
+    background: rgba(59, 130, 246, 0.06);
+    box-shadow: inset 2px 0 0 rgba(59, 130, 246, 0.78);
   }
 }
 
-.table-wrap {
-  background: var(--surface);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-  flex: 1;
-  overflow-y: auto;
+.loading-list {
+  display: grid;
 }
 
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
+.loading-row {
+  min-height: 76px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--ln-border);
+}
+
+.loading-title {
+  display: grid;
+  gap: 9px;
+}
+
+.cell {
+  min-width: 0;
   font-size: 13px;
-
-  th {
-    text-align: left;
-    padding: 12px 16px;
-    background: var(--bg);
-    font-weight: 600;
-    color: var(--text-secondary);
-    font-size: 12px;
-    border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: 0;
-    z-index: 1;
-  }
-
-  td {
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--border);
-    vertical-align: middle;
-  }
-
-  tr:last-child td {
-    border-bottom: none;
-  }
-
-  tr:hover td {
-    background: rgba(0, 113, 227, 0.02);
-  }
+  color: var(--text-primary);
 }
 
-.req-title {
-  font-weight: 500;
+.title-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
 }
 
-.status-tag {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 500;
+.req-no,
+.title-subline,
+.text-muted {
+  color: var(--text-secondary);
+}
+
+.req-no,
+.title-subline {
+  font-size: 12px;
+}
+
+.title-text {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.title-subline {
+  line-height: 1.6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-tag,
+.priority-pill,
+.meta-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
 }
 
 .status-eval {
-  background: rgba(0, 113, 227, 0.10);
-  color: var(--primary);
+  background: rgba(255, 149, 0, 0.12);
+  color: #b56a00;
 }
 
 .status-dev {
-  background: rgba(52, 199, 89, 0.10);
-  color: #248a3d;
-}
-
-.status-reject {
-  background: rgba(255, 59, 48, 0.10);
-  color: #ff3b30;
+  background: rgba(0, 113, 227, 0.1);
+  color: var(--primary);
 }
 
 .status-closed {
-  background: rgba(142, 142, 147, 0.10);
-  color: var(--text-secondary);
+  background: rgba(52, 199, 89, 0.12);
+  color: #1d7f42;
 }
 
-.priority-pill {
-  display: inline-block;
-  padding: 2px 10px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
+.status-reject {
+  background: rgba(255, 59, 48, 0.12);
+  color: #c0392b;
 }
 
+.priority-pill,
+.meta-chip {
+  background: rgba(0, 113, 227, 0.08);
+  color: var(--primary);
+}
+
+.meta-chip.urgent,
 .priority-p0 {
-  background: rgba(255, 59, 48, 0.10);
-  color: var(--danger);
+  background: rgba(255, 59, 48, 0.12);
+  color: #c0392b;
 }
 
 .priority-p1 {
-  background: rgba(255, 149, 0, 0.10);
-  color: #b75c00;
+  background: rgba(255, 149, 0, 0.12);
+  color: #b56a00;
 }
 
-.priority-p2 {
-  background: rgba(255, 204, 0, 0.12);
-  color: #9a7d00;
-}
-
-.priority-p3 {
-  background: rgba(142, 142, 147, 0.08);
-  color: var(--text-secondary);
-}
-
-.empty-cell {
-  text-align: center;
-  padding: 40px 16px;
-  color: var(--text-secondary);
-  font-size: 14px;
-}
-
-.pagination-wrapper {
+.pagination-line {
   display: flex;
-  align-items: center;
   justify-content: flex-end;
-  gap: 16px;
-  padding-top: 16px;
-  flex-shrink: 0;
+  padding: 16px 20px 18px;
+}
 
-  .pagination-info {
-    font-size: 13px;
-    color: var(--text-secondary);
+.detail-panel {
+  overflow: hidden;
+}
+
+.detail-id {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.info-section {
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.section-copy {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.info-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.info-value {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.empty-copy {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  max-width: 240px;
+}
+
+@media (max-width: 1280px) {
+  .workspace-shell {
+    grid-template-columns: 1fr;
   }
 
-  .pagination-controls {
-    display: flex;
-    align-items: center;
-    gap: 4px;
+  .detail-panel {
+    min-height: 320px;
+  }
+}
+
+@media (max-width: 768px) {
+  .row-grid,
+  .info-grid {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 10px;
   }
 
-  .page-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    cursor: pointer;
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: var(--transition);
-
-    &:hover:not(:disabled) {
-      border-color: var(--primary);
-      color: var(--primary);
-    }
-
-    &:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
+  .list-header {
+    display: none;
   }
 
-  .page-current {
-    min-width: 32px;
-    height: 32px;
-    border-radius: 6px;
-    background: var(--primary);
-    color: #fff;
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 500;
-  }
-
-  .size-select {
-    padding: 6px 10px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    font-size: 12px;
-    color: var(--text-secondary);
-    outline: none;
-    cursor: pointer;
+  .line-search {
+    width: 100%;
   }
 }
 </style>

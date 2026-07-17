@@ -1,63 +1,50 @@
 <template>
-  <div class="editable-field" @click="startEdit">
-    <template v-if="!isEditing">
+  <div class="editable-field" :class="{ 'is-select': type === 'select' }" @click="handleContainerClick">
+    <LnInlineSelect
+      v-if="type === 'select'"
+      :model-value="value"
+      :options="options"
+      :placeholder="placeholder"
+      @save="emit('save', $event)"
+    />
+    <template v-else-if="!isEditing">
       <span class="display-value" :class="{ 'editable-hint': !isReadonly, 'is-placeholder': isEmpty && !!placeholder }">
         {{ displayValue }}
       </span>
       <span v-if="!isReadonly" class="edit-icon" :class="{ 'always-show': isEmpty && !!placeholder }">&#9998;</span>
     </template>
-    <template v-else>
-      <el-input
-        v-if="type === 'text' || type === 'textarea'"
-        ref="inputRef"
+    <span v-else ref="editorRef" class="editable-field__editor" @click.stop @focusout="handleFocusOut">
+      <LnInput
+        v-if="type === 'text'"
         v-model="editValue"
-        :type="type === 'textarea' ? 'textarea' : 'text'"
-        :rows="type === 'textarea' ? 2 : 1"
-        size="small"
-        @blur="confirmEdit"
-        @keyup.enter="confirmEdit"
+        :placeholder="placeholder"
+        @keydown="handleKeydown"
       />
-      <el-select
-        v-else-if="type === 'select'"
-        ref="inputRef"
+      <LnTextarea
+        v-else-if="type === 'textarea'"
         v-model="editValue"
-        size="small"
-        style="width: 100%"
-        @change="confirmEdit"
-        @blur="confirmEdit"
-      >
-        <el-option
-          v-for="opt in options"
-          :key="opt.value"
-          :label="opt.label"
-          :value="opt.value"
-        />
-      </el-select>
-      <el-date-picker
+        :rows="2"
+        :placeholder="placeholder"
+        @keydown="handleTextareaKeydown"
+      />
+      <LnDateInput
         v-else-if="type === 'date'"
-        ref="inputRef"
         v-model="editValue"
-        type="date"
-        value-format="YYYY-MM-DD"
-        size="small"
-        style="width: 100%"
         @change="confirmEdit"
       />
-      <el-switch
+      <LnSwitch
         v-else-if="type === 'switch'"
-        ref="inputRef"
-        v-model="editValue"
-        :active-value="1"
-        :inactive-value="0"
-        size="small"
-        @change="confirmEdit"
+        :model-value="editValue === 1"
+        aria-label="切换值"
+        @update:model-value="confirmSwitch"
       />
-    </template>
+    </span>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue'
+import { LnDateInput, LnInlineSelect, LnInput, LnSwitch, LnTextarea } from './linear'
 
 interface OptionItem {
   label: string
@@ -77,7 +64,7 @@ const emit = defineEmits<{
 
 const isEditing = ref(false)
 const editValue = ref<any>(props.value)
-const inputRef = ref<any>(null)
+const editorRef = ref<HTMLElement | null>(null)
 const isReadonly = computed(() => !props.type || props.type === 'text' && props.value === undefined && false)
 
 const isEmpty = computed(() => {
@@ -89,7 +76,7 @@ const displayValue = computed(() => {
     return props.value === 1 ? '是' : '否'
   }
   if (props.type === 'select' && props.options) {
-    const found = props.options.find(o => o.value === props.value)
+    const found = props.options.find(o => String(o.value) === String(props.value ?? ''))
     return found ? found.label : (props.value || props.placeholder || '-')
   }
   if (props.type === 'date' && !props.value) {
@@ -98,18 +85,44 @@ const displayValue = computed(() => {
   return props.value || props.placeholder || '-'
 })
 
+function handleContainerClick() {
+  if (props.type === 'select') return
+  startEdit()
+}
+
 function startEdit() {
   if (!props.type) return
   editValue.value = props.value
   isEditing.value = true
-  nextTick(() => {
-    if (inputRef.value) {
-      inputRef.value.focus?.()
-    }
-  })
+  nextTick(() => editorRef.value?.querySelector<HTMLElement>('input, textarea, button')?.focus())
+}
+
+function cancelEdit() {
+  isEditing.value = false
+  editValue.value = props.value
+}
+
+function handleKeydown(event: KeyboardEvent) {
+  if (event.key === 'Enter') confirmEdit()
+  if (event.key === 'Escape') cancelEdit()
+}
+
+function handleTextareaKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') cancelEdit()
+  if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') confirmEdit()
+}
+
+function handleFocusOut(event: FocusEvent) {
+  if (!editorRef.value?.contains(event.relatedTarget as Node | null)) confirmEdit()
+}
+
+function confirmSwitch(value: boolean) {
+  editValue.value = value ? 1 : 0
+  confirmEdit()
 }
 
 function confirmEdit() {
+  if (!isEditing.value) return
   isEditing.value = false
   if (editValue.value !== props.value) {
     emit('save', editValue.value)
@@ -124,6 +137,10 @@ function confirmEdit() {
   gap: 6px;
   cursor: pointer;
   min-width: 40px;
+}
+.editable-field.is-select {
+  display: flex;
+  width: 100%;
 }
 .display-value {
   border-bottom: 1px dashed transparent;
@@ -153,4 +170,5 @@ function confirmEdit() {
 .editable-field:hover .edit-icon {
   opacity: 1;
 }
+.editable-field__editor { display: block; width: 100%; min-width: 160px; }
 </style>

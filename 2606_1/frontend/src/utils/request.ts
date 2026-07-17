@@ -1,6 +1,6 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios'
-import { ElMessage } from 'element-plus'
 import router from '@/router'
+import { lnToast } from '@/components/linear'
 
 const service = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
@@ -27,7 +27,7 @@ service.interceptors.response.use(
     const res = response.data
     // 后端返回格式为 { code, data, message }
     if (res.code !== undefined && res.code !== 0 && res.code !== 200) {
-      ElMessage.error(res.message || '请求失败')
+      lnToast.error(res.message || '请求失败')
       // Token 过期或未授权
       if (res.code === 401) {
         clearAuthAndRedirect()
@@ -41,29 +41,41 @@ service.interceptors.response.use(
       const { status } = error.response
       switch (status) {
         case 401:
-          ElMessage.error('登录已过期，请重新登录')
-          clearAuthAndRedirect()
+          // 登录页的 401 应交给登录表单处理；开发预览 token 则需要
+          // 继续保留，以便在后端未启动时验证整体页面。否则延迟跳转
+          // 会在预览登录成功后再次清空 token，造成 /login redirect 循环。
+          if (!shouldPreserveAuthOnUnauthorized()) {
+            lnToast.error('登录已过期，请重新登录')
+            clearAuthAndRedirect()
+          }
           break
         case 403:
-          ElMessage.error('没有权限访问该资源')
+          lnToast.error('没有权限访问该资源')
           break
         case 404:
-          ElMessage.error('请求的资源不存在')
+          lnToast.error('请求的资源不存在')
           break
         case 500:
-          ElMessage.error('服务器内部错误')
+          lnToast.error('服务器内部错误')
           break
         default:
-          ElMessage.error(error.response.data?.message || '请求失败')
+          lnToast.error(error.response.data?.message || '请求失败')
       }
     } else if (error.message.includes('timeout')) {
-      ElMessage.error('请求超时，请稍后重试')
+      lnToast.error('请求超时，请稍后重试')
     } else {
-      ElMessage.error('网络异常，请检查网络连接')
+      lnToast.error('网络异常，请检查网络连接')
     }
     return Promise.reject(error)
   }
 )
+
+function shouldPreserveAuthOnUnauthorized() {
+  const isLoginPage = router.currentRoute.value.path === '/login'
+  const isDevPreviewSession =
+    import.meta.env.DEV && localStorage.getItem('token') === 'dev-preview-token'
+  return isLoginPage || isDevPreviewSession
+}
 
 function clearAuthAndRedirect() {
   localStorage.removeItem('token')

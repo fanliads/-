@@ -1,180 +1,193 @@
 <template>
   <div class="kanban-view">
-    <!-- 顶部工具栏 -->
-    <div class="kanban-toolbar">
-      <div class="toolbar-left">
-        <!-- Tab 切换 (view-tabs 样式) -->
-        <div class="view-tabs">
-          <div
-            v-for="tab in tabs"
-            :key="tab.key"
-            class="view-tab"
-            :class="{ active: activeTab === tab.key }"
-            @click="activeTab = tab.key"
-          >
-            {{ tab.label }}
-          </div>
+    <section class="page-header wb-page-header wb-panel">
+      <div class="title-block">
+        <div class="title-row wb-title-row">
+          <h2 class="page-title wb-page-title">看板视图</h2>
+          <span class="page-count wb-page-meta">{{ activeTab === 'kanban' ? `${totalCardCount} 项` : '多视图入口' }}</span>
         </div>
+        <p class="page-subtitle wb-page-subtitle">
+          {{ activeTab === 'kanban'
+            ? '把看板作为对象工作区的另一种扫读方式。'
+            : '保留其他视图能力，并逐步拉回统一工作台语言。'
+          }}
+        </p>
       </div>
 
-      <!-- 看板Tab专属筛选 -->
-      <div v-if="activeTab === 'kanban'" class="toolbar-right">
-        <!-- 使用自定义分段按钮替代 el-segmented -->
-        <div class="board-type-switch">
-          <div
-            v-for="opt in boardTypeOptions"
-            :key="opt.value"
-            class="switch-item"
-            :class="{ active: boardType === opt.value }"
-            @click="switchBoardType(opt.value)"
-          >
-            {{ opt.label }}
-          </div>
+      <LnTabs class="view-tabs" :model-value="activeTab" :options="tabOptions" aria-label="工作台视图" @update:model-value="selectTab" />
+    </section>
+
+    <template v-if="activeTab === 'kanban'">
+      <section class="summary-strip wb-summary-strip">
+        <div class="summary-pill wb-summary-pill active">
+          <span class="summary-label wb-summary-label">当前视角</span>
+          <span class="summary-value wb-summary-value small">{{ boardType === 'product' ? '产品需求' : '原始需求' }}</span>
         </div>
-
-        <!-- 使用原生 select 代替 el-select，避免 Element Plus 无限渲染循环 -->
-        <select
-          v-model="queryForm.priority"
-          class="native-select"
-          @change="loadKanbanData"
-        >
-          <option value="">优先级</option>
-          <option value="P0">P0</option>
-          <option value="P1">P1</option>
-          <option value="P2">P2</option>
-          <option value="P3">P3</option>
-        </select>
-
-        <select
-          v-model="queryForm.businessLineId"
-          class="native-select"
-          @change="loadKanbanData"
-        >
-          <option value="">业务线</option>
-          <option
-            v-for="item in businessLineOptions"
-            :key="item.value"
-            :value="item.value"
-          >
-            {{ item.label }}
-          </option>
-        </select>
-
-        <select
-          v-model="queryForm.assigneeId"
-          class="native-select"
-          @change="loadKanbanData"
-        >
-          <option value="">负责人</option>
-          <option
-            v-for="item in assigneeOptions"
-            :key="item.value"
-            :value="item.value"
-          >
-            {{ item.label }}
-          </option>
-        </select>
-
-        <select
-          v-if="boardType === 'product'"
-          v-model="queryForm.sprintId"
-          class="native-select"
-          @change="loadKanbanData"
-        >
-          <option value="">迭代</option>
-          <option
-            v-for="item in sprintOptions"
-            :key="item.value"
-            :value="item.value"
-          >
-            {{ item.label }}
-          </option>
-        </select>
-
-        <!-- 搜索框 -->
-        <input
-          v-model="queryForm.keyword"
-          class="search-box"
-          placeholder="搜索需求编号、标题..."
-          @keyup.enter="loadKanbanData"
-        />
-      </div>
-    </div>
-
-    <!-- 看板Tab内容 -->
-    <div v-if="activeTab === 'kanban'" class="board-scroll">
-      <div class="board-summary">
-        <div class="board-summary-card">
-          <div class="summary-label">当前视角</div>
-          <div class="summary-value">{{ boardType === 'product' ? '产品需求看板' : '原始需求看板' }}</div>
+        <div class="summary-pill wb-summary-pill">
+          <span class="summary-label wb-summary-label">总需求数</span>
+          <span class="summary-value wb-summary-value">{{ totalCardCount }}</span>
         </div>
-        <div class="board-summary-card">
-          <div class="summary-label">总需求数</div>
-          <div class="summary-value">{{ totalCardCount }}</div>
+        <div class="summary-pill wb-summary-pill">
+          <span class="summary-label wb-summary-label">筛选状态</span>
+          <span class="summary-value wb-summary-value small">{{ hasFilters ? '已应用筛选' : '查看全部' }}</span>
         </div>
-        <div class="board-summary-card">
-          <div class="summary-label">筛选状态</div>
-          <div class="summary-value summary-inline">{{ hasFilters ? '已应用筛选' : '查看全部' }}</div>
-        </div>
-      </div>
+      </section>
 
-      <div v-if="loading" class="kanban-loading">
-        <el-icon class="is-loading"><Loading /></el-icon>
-        <span>加载中...</span>
-      </div>
+      <section class="workspace-shell wb-shell">
+        <div class="board-panel wb-panel">
+          <div class="board-toolbar wb-panel-toolbar">
+            <LnTabs class="board-type-switch" :model-value="boardType" :options="boardTypeOptions" variant="segmented" aria-label="需求类型" @update:model-value="switchBoardTypeValue" />
 
-      <div v-else class="board">
-        <div
-          v-for="column in columns"
-          :key="column.status"
-          class="column"
-        >
-          <!-- 列头 -->
-          <div class="column-header">
-            <span class="column-title">{{ column.statusName }}</span>
-            <span class="column-count">{{ getColumnCount(column.status) }}</span>
-          </div>
-
-          <!-- 列内容 -->
-          <div class="column-body">
-            <div
-              v-for="item in (kanbanDataMap[column.status] || [])"
-              :key="item.id"
-              class="kanban-card-simple"
-            >
-              <div class="card-title">{{ item.title }}</div>
-              <div class="card-meta">{{ item.statusName }} | {{ item.priority }}</div>
+            <div class="filter-row wb-actions-row">
+              <LnSelect v-model="queryForm.priority" :options="priorityOptions" placeholder="优先级" clearable @change="loadKanbanData" />
+              <LnSelect v-model="queryBusinessLineValue" :options="linearBusinessLineOptions" placeholder="业务线" searchable clearable @change="loadKanbanData" />
+              <LnSelect v-model="queryAssigneeValue" :options="linearAssigneeOptions" placeholder="负责人" searchable clearable @change="loadKanbanData" />
+              <LnSelect v-if="boardType === 'product'" v-model="querySprintValue" :options="linearSprintOptions" placeholder="迭代" searchable clearable @change="loadKanbanData" />
+              <LnInput v-model="queryForm.keyword" class="linear-board-search" placeholder="搜索需求编号、标题..." clearable @keydown.enter="loadKanbanData"><template #prefix>⌕</template></LnInput>
             </div>
+          </div>
 
-            <!-- 空状态 -->
-            <div v-if="getColumnCount(column.status) === 0" class="column-empty">
-              暂无需求
+          <div v-if="loading" class="board-scroll"><div class="board"><div v-for="column in 4" :key="column" class="linear-column-skeleton"><div class="skeleton-column-head"><LnSkeleton circle width="9px"/><LnSkeleton width="70px"/></div><LnSkeleton v-for="card in 4" :key="card" height="126px"/></div></div></div>
+
+          <div v-else class="board-scroll">
+            <div class="board">
+              <LnBoardColumn v-for="(column,index) in columns" :key="column.status" :title="column.statusName" :count="getColumnCount(column.status)" :color="columnColors[index % columnColors.length]">
+                  <LnIssueCard
+                    v-for="item in (kanbanDataMap[column.status] || [])"
+                    :key="getCardKey(item)"
+                    :req-no="item.reqNo" :title="item.title" :type-label="boardType === 'product' ? '产品需求' : '原始需求'" :priority="item.priority || 'P2'"
+                    :context-main="getCardContextMain(item)" :context-tail="getCardContextTail(item)" :footer="getCardFooter(item)" :owner="getCardOwner(item)"
+                    :selected="selectedCardKey === getCardKey(item)"
+                    @click="selectCard(item)"
+                  />
+              </LnBoardColumn>
             </div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- 其他Tab内容 -->
-    <div v-else class="sub-view-wrapper">
-      <component :is="tabComponentMap[activeTab]" />
+        <aside class="detail-panel wb-panel">
+          <template v-if="selectedCard">
+            <div class="detail-scroll wb-detail-scroll">
+              <div class="detail-header">
+                <div class="detail-id">{{ selectedCard.reqNo }}</div>
+                <h3 class="detail-title wb-detail-title">{{ selectedCard.title }}</h3>
+                <div class="detail-tags">
+                  <span class="status-tag">{{ selectedCard.statusName || selectedCard.status }}</span>
+                  <span class="priority-pill" :class="`priority-${(selectedCard.priority || 'p2').toLowerCase()}`">{{ selectedCard.priority || 'P2' }}</span>
+                  <span class="meta-chip">{{ boardType === 'product' ? '产品需求' : '原始需求' }}</span>
+                </div>
+                <div class="detail-meta-line">
+                  <span class="detail-meta-item">负责人 {{ getCardOwner(selectedCard) }}</span>
+                  <span class="detail-meta-sep">·</span>
+                  <span class="detail-meta-item">业务线 {{ getCardBusinessLine(selectedCard) }}</span>
+                  <span class="detail-meta-sep">·</span>
+                  <span class="detail-meta-item">{{ boardType === 'product' ? '迭代' : '来源' }} {{ getCardFooter(selectedCard) }}</span>
+                </div>
+              </div>
+
+              <div class="detail-facts wb-detail-facts">
+                <div class="detail-fact wb-detail-fact">
+                  <span>业务线</span>
+                  <strong>{{ getCardBusinessLine(selectedCard) }}</strong>
+                </div>
+                <div class="detail-fact wb-detail-fact">
+                  <span>负责人</span>
+                  <strong>{{ getCardOwner(selectedCard) }}</strong>
+                </div>
+                <div class="detail-fact wb-detail-fact">
+                  <span>{{ boardType === 'product' ? '迭代' : '来源' }}</span>
+                  <strong>{{ getCardFooter(selectedCard) }}</strong>
+                </div>
+                <div class="detail-fact wb-detail-fact">
+                  <span>{{ boardType === 'product' ? '模块 / 工作量' : '提出人' }}</span>
+                  <strong>{{ getSecondaryDetail(selectedCard) }}</strong>
+                </div>
+              </div>
+
+              <div class="info-section wb-section surface-section primary-section">
+                <div class="section-head wb-section-head">
+                  <div class="section-title wb-section-title">详情概览</div>
+                  <div class="section-note wb-section-note">只补齐当前卡片最关键的上下文。</div>
+                </div>
+                <div class="info-grid">
+                  <div class="info-item wb-info-item">
+                    <span class="info-label">负责人</span>
+                    <span class="info-value">{{ getCardOwner(selectedCard) }}</span>
+                  </div>
+                  <div class="info-item wb-info-item">
+                    <span class="info-label">业务线</span>
+                    <span class="info-value">{{ getCardBusinessLine(selectedCard) }}</span>
+                  </div>
+                  <div class="info-item wb-info-item">
+                    <span class="info-label">状态</span>
+                    <span class="info-value">{{ selectedCard.statusName || selectedCard.status }}</span>
+                  </div>
+                  <div class="info-item wb-info-item">
+                    <span class="info-label">{{ boardType === 'product' ? '迭代' : '来源' }}</span>
+                    <span class="info-value">{{ getCardFooter(selectedCard) }}</span>
+                  </div>
+                  <div class="info-item wb-info-item">
+                    <span class="info-label">预计时间</span>
+                    <span class="info-value">{{ formatDate(selectedCard.expectedDate) }}</span>
+                  </div>
+                  <div class="info-item wb-info-item">
+                    <span class="info-label">{{ boardType === 'product' ? '模块 / 工作量' : '提出人' }}</span>
+                    <span class="info-value">{{ getSecondaryDetail(selectedCard) }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="info-section wb-section surface-section soft-section">
+                <div class="section-head wb-section-head">
+                  <div class="section-title wb-section-title">推进判断</div>
+                  <div class="section-note wb-section-note">帮助快速判断它现在更像阻塞、处理中还是待补充。</div>
+                </div>
+                <div class="insight-card">
+                  <div class="insight-title">{{ getCardInsightTitle(selectedCard) }}</div>
+                  <p class="insight-copy">{{ getCardInsightCopy(selectedCard) }}</p>
+                </div>
+              </div>
+
+              <div class="info-section wb-section">
+                <div class="section-head wb-section-head">
+                  <div class="section-title wb-section-title">描述</div>
+                  <div class="section-note wb-section-note">保持连续阅读，不把看板扩展成过重管理页。</div>
+                </div>
+                <p class="section-copy">{{ selectedCard.description || '当前卡片未补充详细描述。' }}</p>
+              </div>
+            </div>
+          </template>
+
+          <LnEmptyState v-else title="选择一张卡片" description="右侧详情区只承担聚焦阅读，横向流转仍然留在左侧看板中完成。" />
+        </aside>
+      </section>
+    </template>
+
+    <div v-else class="sub-view-shell">
+      <div class="sub-view-head">
+        <div class="sub-view-title">{{ tabs.find((item) => item.key === activeTab)?.label }}</div>
+        <div class="sub-view-copy">保留原有能力，后续我们再逐个拉回这套统一工作台结构。</div>
+      </div>
+      <div class="sub-view-wrapper">
+        <component :is="tabComponentMap[activeTab]" />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, defineAsyncComponent, type Component, computed } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Loading } from '@element-plus/icons-vue'
+import dayjs from 'dayjs'
 import { getKanbanColumns, getProductKanbanData, getRawKanbanData } from '@/api/kanban'
 import { listDictData } from '@/api/dict'
 import { listSprintOptions } from '@/api/sprint'
 import { PRODUCT_STATUS_MAP, RAW_STATUS_MAP } from '@/types/requirement'
 import type { KanbanColumn, ProductRequirementVO, RawRequirementVO } from '@/types/kanban'
+import { lnToast, LnBoardColumn, LnEmptyState, LnInput, LnIssueCard, LnSelect, LnSkeleton, LnTabs, type LnOption, type LnTabOption } from '@/components/linear'
 
-/** Tab定义 */
 type TabKey = 'kanban' | 'priority' | 'pm-tasks' | 'progress' | 'list' | 'calendar'
 type BoardType = 'product' | 'raw'
+type BoardCard = ProductRequirementVO | RawRequirementVO
 
 const tabs: { key: TabKey; label: string }[] = [
   { key: 'kanban', label: '看板' },
@@ -184,30 +197,26 @@ const tabs: { key: TabKey; label: string }[] = [
   { key: 'list', label: '列表视图' },
   { key: 'calendar', label: '日历视图' },
 ]
+const tabOptions: LnTabOption[] = tabs.map((tab) => ({ label: tab.label, value: tab.key }))
 
 const tabComponentMap: Record<string, Component> = {
-  'priority': defineAsyncComponent(() => import('@/views/priority/PriorityView.vue')),
+  priority: defineAsyncComponent(() => import('@/views/priority/PriorityView.vue')),
   'pm-tasks': defineAsyncComponent(() => import('@/views/pm-tasks/PmTasksView.vue')),
-  'progress': defineAsyncComponent(() => import('@/views/progress/ProgressView.vue')),
-  'list': defineAsyncComponent(() => import('@/views/list/ListView.vue')),
-  'calendar': defineAsyncComponent(() => import('@/views/calendar/CalendarView.vue')),
+  progress: defineAsyncComponent(() => import('@/views/progress/ProgressView.vue')),
+  list: defineAsyncComponent(() => import('@/views/list/ListView.vue')),
+  calendar: defineAsyncComponent(() => import('@/views/calendar/CalendarView.vue')),
 }
 
-/** 当前Tab */
 const activeTab = ref<TabKey>('kanban')
 const boardType = ref<BoardType>('raw')
-const boardTypeOptions = [
-  { label: '产品需求', value: 'product' as BoardType },
-  { label: '原始需求', value: 'raw' as BoardType },
-]
+const boardTypeOptions: LnTabOption[] = [{ label: '产品需求', value: 'product' }, { label: '原始需求', value: 'raw' }]
 
-/** 加载状态 - 初始为 true 防止数据未加载时渲染 */
+function selectTab(value: string) { activeTab.value = value as TabKey }
+function switchBoardTypeValue(value: string) { switchBoardType(value as BoardType) }
+
 const loading = ref(true)
-
-/** 初始化标志，防止初始化过程中重复触发加载 */
 let initialized = false
 
-/** 查询条件 - 使用空字符串代替 undefined，避免与原生 select 的兼容性问题 */
 const queryForm = reactive<Record<string, any>>({
   priority: '',
   businessLineId: '',
@@ -216,56 +225,86 @@ const queryForm = reactive<Record<string, any>>({
   keyword: '',
 })
 
-/** 看板列配置 */
 const columns = ref<KanbanColumn[]>([])
-
-/** 看板数据（按状态分组） */
-const kanbanDataMap = ref<Record<string, Array<ProductRequirementVO | RawRequirementVO>>>({})
-
-/** 筛选选项 */
+const kanbanDataMap = ref<Record<string, Array<BoardCard>>>({})
 const businessLineOptions = ref<{ label: string; value: number }[]>([])
-const assigneeOptions = ref<{ label: string; value: number }[]>([])
+const assigneeOptions = ref<{ label: string; value: number | string }[]>([])
 const sprintOptions = ref<{ label: string; value: number }[]>([])
+const selectedCardKey = ref('')
 const OPTION_TIMEOUT_MS = 5000
-const totalCardCount = computed(() =>
-  columns.value.reduce((sum, column) => sum + getColumnCount(column.status), 0)
-)
+const columnColors = ['#9b9ba4', '#d28b36', '#5e6ad2', '#2f9e6f', '#d05757', '#6f6f78']
+const priorityOptions: LnOption[] = [
+  { label:'P0',value:'P0',color:'#d05757' },{ label:'P1',value:'P1',color:'#d28b36' },
+  { label:'P2',value:'P2',color:'#5e6ad2' },{ label:'P3',value:'P3',color:'#6f6f78' },
+]
+const linearBusinessLineOptions = computed<LnOption[]>(() => businessLineOptions.value.map(item => ({ label:item.label,value:String(item.value),icon:'◇' })))
+const linearAssigneeOptions = computed<LnOption[]>(() => assigneeOptions.value.map(item => ({ label:item.label,value:String(item.value),icon:'◉' })))
+const linearSprintOptions = computed<LnOption[]>(() => sprintOptions.value.map(item => ({ label:item.label,value:String(item.value),icon:'◆' })))
+function optionValue(options:{value:number|string}[], value:string){ return options.find(item=>String(item.value)===value)?.value ?? '' }
+const queryBusinessLineValue = computed({get:()=>String(queryForm.businessLineId||''),set:(value:string)=>{queryForm.businessLineId=optionValue(businessLineOptions.value,value)}})
+const queryAssigneeValue = computed({get:()=>String(queryForm.assigneeId||''),set:(value:string)=>{queryForm.assigneeId=optionValue(assigneeOptions.value,value)}})
+const querySprintValue = computed({get:()=>String(queryForm.sprintId||''),set:(value:string)=>{queryForm.sprintId=optionValue(sprintOptions.value,value)}})
+
+const totalCardCount = computed(() => columns.value.reduce((sum, column) => sum + getColumnCount(column.status), 0))
 const hasFilters = computed(() =>
-  Boolean(
-    queryForm.priority ||
-    queryForm.businessLineId ||
-    queryForm.assigneeId ||
-    queryForm.sprintId ||
-    queryForm.keyword
-  )
+  Boolean(queryForm.priority || queryForm.businessLineId || queryForm.assigneeId || queryForm.sprintId || queryForm.keyword)
 )
+const selectedCard = computed(() => flattenCards().find((item) => getCardKey(item) === selectedCardKey.value) || null)
 
 function unwrapResponseData<T>(payload: any, fallback: T): T {
-  if (payload == null) {
-    return fallback
-  }
-  if (payload.data !== undefined) {
-    return payload.data as T
-  }
+  if (payload == null) return fallback
+  if (payload.data !== undefined) return payload.data as T
   return payload as T
+}
+
+function dedupeOptions<T extends { label: string; value: number | string }>(items: T[]): T[] {
+  const seen = new Set<string>()
+  return items.filter((item) => {
+    const key = `${item.value}::${item.label}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
     promise,
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error('request timeout')), ms)
-    ),
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('request timeout')), ms)),
   ])
 }
 
-/** 确保每个状态都有对应的数组 */
+function getCardKey(item: BoardCard) {
+  return `${boardType.value}-${item.id}`
+}
+
+function flattenCards() {
+  return columns.value.flatMap((column) => kanbanDataMap.value[column.status] || [])
+}
+
 function ensureStatusKeys() {
   for (const col of columns.value) {
     if (!kanbanDataMap.value[col.status]) {
       kanbanDataMap.value[col.status] = []
     }
   }
+}
+
+function ensureSelectedCard() {
+  const cards = flattenCards()
+  if (cards.length === 0) {
+    selectedCardKey.value = ''
+    return
+  }
+
+  const exists = cards.some((item) => getCardKey(item) === selectedCardKey.value)
+  if (!exists) {
+    selectedCardKey.value = getCardKey(cards[0])
+  }
+}
+
+function selectCard(item: BoardCard) {
+  selectedCardKey.value = getCardKey(item)
 }
 
 async function rebuildColumns() {
@@ -283,12 +322,10 @@ async function rebuildColumns() {
   ensureStatusKeys()
 }
 
-/** 获取列数量 */
-function getColumnCount(status: string): number {
+function getColumnCount(status: string) {
   return (kanbanDataMap.value[status] || []).length
 }
 
-/** 加载看板数据 */
 async function loadKanbanData() {
   loading.value = true
   try {
@@ -302,22 +339,22 @@ async function loadKanbanData() {
     const res: any = boardType.value === 'product'
       ? await getProductKanbanData(params)
       : await getRawKanbanData(params)
-    const nextData = unwrapResponseData<Record<string, Array<ProductRequirementVO | RawRequirementVO>>>(res, {})
-    kanbanDataMap.value = nextData
+    kanbanDataMap.value = unwrapResponseData<Record<string, Array<BoardCard>>>(res, {})
     ensureStatusKeys()
+    ensureSelectedCard()
   } catch {
-    ElMessage.error('加载看板数据失败')
+    lnToast.error('加载看板数据失败')
   } finally {
     loading.value = false
   }
 }
 
-/** 切换看板类型 - 仅在初始化完成后才触发 */
 function switchBoardType(type: BoardType) {
   if (boardType.value === type) return
   boardType.value = type
+  selectedCardKey.value = ''
+  queryForm.sprintId = ''
   if (!initialized) return
-  queryForm.sprintId = undefined
   loadSprintOptions()
   rebuildColumns().then(loadKanbanData)
 }
@@ -325,10 +362,10 @@ function switchBoardType(type: BoardType) {
 async function loadBusinessLineOptions() {
   try {
     const res = await withTimeout(listDictData('business_line'), OPTION_TIMEOUT_MS)
-    businessLineOptions.value = unwrapResponseData<any[]>(res, []).map((item: any) => ({
+    businessLineOptions.value = dedupeOptions(unwrapResponseData<any[]>(res, []).map((item: any) => ({
       label: item.label,
       value: Number(item.value),
-    }))
+    })))
   } catch {
     businessLineOptions.value = []
   }
@@ -337,10 +374,10 @@ async function loadBusinessLineOptions() {
 async function loadAssigneeOptions() {
   try {
     const res = await withTimeout(listDictData('product_manager'), OPTION_TIMEOUT_MS)
-    assigneeOptions.value = unwrapResponseData<any[]>(res, []).map((item: any) => ({
+    assigneeOptions.value = dedupeOptions(unwrapResponseData<any[]>(res, []).map((item: any) => ({
       label: item.label,
       value: Number(item.value) || item.value,
-    }))
+    })))
   } catch {
     assigneeOptions.value = []
   }
@@ -363,12 +400,77 @@ async function loadSprintOptions() {
   }
 }
 
+function isProductCard(item: BoardCard): item is ProductRequirementVO {
+  return 'workload' in item || boardType.value === 'product'
+}
+
+function getCardOwner(item: BoardCard) {
+  return item.assigneeName || '-'
+}
+
+function getCardBusinessLine(item: BoardCard) {
+  return item.businessLineName || '-'
+}
+
+function getCardFooter(item: BoardCard) {
+  if (isProductCard(item)) {
+    return item.sprintName || '未分配迭代'
+  }
+  return item.source || '未标记来源'
+}
+
+function getCardContextMain(item: BoardCard) {
+  if (isProductCard(item)) {
+    return item.productModule || '未设模块'
+  }
+  return getCardBusinessLine(item)
+}
+
+function getCardContextTail(item: BoardCard) {
+  if (isProductCard(item)) {
+    return item.workload || '未估工'
+  }
+  return getSecondaryDetail(item)
+}
+
+function getSecondaryDetail(item: BoardCard) {
+  if (isProductCard(item)) {
+    const module = item.productModule || '未设置模块'
+    const workload = item.workload || '未估工'
+    return `${module} / ${workload}`
+  }
+  return item.proposerName || '-'
+}
+
+function getCardInsightTitle(item: BoardCard) {
+  if (item.priority === 'P0') return '高优先级关注项'
+  if (item.status === 'backlog' || item.status === 'researching' || item.statusName?.includes('待')) return '待进一步推进'
+  if (item.status === 'online' || item.statusName?.includes('上线')) return '已进入结果态'
+  return '处理中对象'
+}
+
+function getCardInsightCopy(item: BoardCard) {
+  const owner = getCardOwner(item)
+  const businessLine = getCardBusinessLine(item)
+  const footer = getCardFooter(item)
+
+  if (isProductCard(item)) {
+    return `当前由 ${owner} 跟进，归属 ${businessLine}，主要承接在 ${footer}。如果这张卡片仍停留在早期状态，优先确认模块范围、工作量和迭代承接关系是否已经收敛。`
+  }
+
+  return `当前对象归属 ${businessLine}，来源为 ${footer}。如果它仍停在前置判断状态，优先确认基础信息是否齐全，以及是否已经满足承接或拆分条件。`
+}
+
+function formatDate(value?: string) {
+  if (!value) return '-'
+  return dayjs(value).format('MM-DD HH:mm')
+}
+
 onMounted(async () => {
   void loadBusinessLineOptions()
   void loadAssigneeOptions()
   void loadSprintOptions()
   await rebuildColumns()
-  ensureStatusKeys()
   await loadKanbanData()
   initialized = true
 })
@@ -382,209 +484,124 @@ onMounted(async () => {
   gap: 16px;
 }
 
-.kanban-toolbar {
+.page-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  padding: 18px 20px;
-  background: rgba(255, 252, 247, 0.82);
-  border: 1px solid rgba(77, 63, 47, 0.08);
-  border-radius: 24px;
-  box-shadow: var(--shadow);
-  flex-shrink: 0;
-
-  .toolbar-left {
-    display: flex;
-    align-items: center;
-  }
-
-  .toolbar-right {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
+  gap: 16px;
 }
 
-.view-tabs {
-  display: inline-flex;
-  background: rgba(77, 63, 47, 0.08);
-  border-radius: 16px;
-  padding: 4px;
-}
-
-.view-tab {
-  padding: 8px 16px;
-  border-radius: 12px;
+.page-count,
+.page-subtitle {
   font-size: 13px;
-  cursor: pointer;
   color: var(--text-secondary);
-  transition: var(--transition);
-  white-space: nowrap;
-  border: none;
-  background: transparent;
+}
 
-  &:hover {
-    color: var(--text-primary);
-  }
+.page-subtitle {
+  margin: 0;
+}
 
+.summary-pill {
   &.active {
-    background: rgba(255, 255, 255, 0.96);
-    box-shadow: 0 12px 24px rgba(54, 41, 29, 0.08);
-    font-weight: 600;
-    color: var(--text-primary);
+    border-color: rgba(0, 113, 227, 0.18);
+    background: linear-gradient(180deg, rgba(0, 113, 227, 0.06) 0%, rgba(255, 255, 255, 0.96) 100%);
   }
-}
-
-.board-type-switch {
-  display: inline-flex;
-  background: rgba(77, 63, 47, 0.08);
-  border-radius: 14px;
-  padding: 3px;
-
-  .switch-item {
-    padding: 8px 14px;
-    border-radius: 11px;
-    font-size: 13px;
-    cursor: pointer;
-    color: var(--text-secondary);
-    transition: var(--transition);
-    white-space: nowrap;
-
-    &:hover {
-      color: var(--text-primary);
-    }
-
-    &.active {
-      background: linear-gradient(135deg, var(--primary) 0%, #245f58 100%);
-      color: #fff;
-      font-weight: 600;
-      box-shadow: 0 12px 24px rgba(31, 107, 92, 0.18);
-    }
-  }
-}
-
-.filter-select {
-  // 保留给后续必要时使用
-}
-
-.native-select {
-  padding: 9px 34px 9px 12px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.75);
-  font-size: 13px;
-  color: var(--text-secondary);
-  outline: none;
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2386868b'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  cursor: pointer;
-  transition: border-color 0.2s;
-
-  &:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 4px rgba(31, 107, 92, 0.08);
-  }
-}
-
-.search-box {
-  padding: 9px 14px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.75);
-  font-size: 13px;
-  color: var(--text-primary);
-  outline: none;
-  width: 180px;
-  transition: border-color 0.2s;
-
-  &:focus {
-    border-color: var(--primary);
-  }
-
-  &::placeholder {
-    color: var(--text-secondary);
-  }
-}
-
-.board-scroll {
-  flex: 1;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 2px 0 8px;
-}
-
-.board-summary {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 16px;
-}
-
-.board-summary-card {
-  padding: 16px 18px;
-  border-radius: 20px;
-  background: rgba(255, 252, 247, 0.78);
-  border: 1px solid rgba(77, 63, 47, 0.08);
-  box-shadow: var(--shadow);
 }
 
 .summary-label {
+  display: block;
+  margin-bottom: 6px;
   font-size: 12px;
   color: var(--text-secondary);
-  margin-bottom: 6px;
 }
 
 .summary-value {
   font-size: 24px;
+  line-height: 1;
   font-weight: 700;
   color: var(--text-primary);
-  font-family: var(--font-family-accent);
+
+  &.small {
+    font-size: 18px;
+  }
 }
 
-.summary-inline {
-  font-size: 18px;
+.workspace-shell {
+  grid-template-columns: minmax(0, 1fr) 380px;
 }
 
-.kanban-loading {
+.board-panel,
+.detail-panel,
+.sub-view-shell {
+  min-height: 0;
+}
+
+.board-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.board-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.native-select {
+  min-width: 92px;
+}
+
+.search-box {
+  width: 190px;
+}
+
+.linear-board-search { width: 210px; }
+:deep(.linear-board-search .ln-input-wrap) { width: 210px; }
+.filter-row :deep(.ln-select__trigger) { min-width: 112px; }
+.linear-column-skeleton { width: 292px; min-width: 292px; padding: 8px 5px; display: grid; align-content: start; gap: 8px; border: 1px solid var(--ln-border); border-radius: 9px; background: rgba(35,35,40,.025); }
+.skeleton-column-head { height: 28px; display: flex; align-items: center; gap: 8px; }
+.detail-panel :deep(.ln-empty-state) { height: 100%; }
+
+.board-loading,
+.detail-empty {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 280px;
   gap: 8px;
   color: var(--text-secondary);
-  font-size: 14px;
-  background: rgba(255, 252, 247, 0.66);
-  border: 1px dashed rgba(77, 63, 47, 0.14);
-  border-radius: 24px;
+}
 
-  .el-icon {
-    font-size: 20px;
-  }
+.board-scroll {
+  flex: 1;
+  overflow: auto;
+  padding: 14px 18px 18px;
 }
 
 .board {
   display: flex;
-  gap: 18px;
+  gap: 16px;
   min-width: max-content;
   height: 100%;
 }
 
 .column {
-  width: 320px;
+  width: 296px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   flex-shrink: 0;
 }
 
 .column-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 0 6px;
+  justify-content: space-between;
+  padding: 0 4px;
 }
 
 .column-title {
@@ -594,65 +611,282 @@ onMounted(async () => {
 }
 
 .column-count {
-  background: rgba(77, 63, 47, 0.08);
-  padding: 4px 10px;
   border-radius: 999px;
-  font-size: 11px;
+  padding: 4px 10px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  background: rgba(255, 255, 255, 0.86);
+  font-size: 12px;
   color: var(--text-secondary);
 }
 
-.column-body {
-  background: linear-gradient(180deg, rgba(255, 252, 247, 0.78) 0%, rgba(244, 239, 232, 0.78) 100%);
-  border: 1px solid rgba(77, 63, 47, 0.08);
-  border-radius: 24px;
-  padding: 14px;
-  min-height: 220px;
+.card-top,
+.card-bottom,
+.detail-tags {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  box-shadow: var(--shadow);
+  align-items: center;
+  gap: 8px;
 }
 
-.kanban-card-simple {
-  background: rgba(255, 255, 255, 0.88);
-  border-radius: 18px;
-  padding: 14px;
-  border: 1px solid var(--border);
-  transition: var(--transition);
-  box-shadow: 0 8px 18px rgba(54, 41, 29, 0.06);
+.card-top {
+  flex-wrap: wrap;
+}
 
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 16px 28px rgba(54, 41, 29, 0.12);
-  }
+.card-prefix {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
 
-  .card-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 8px;
-    line-height: 1.4;
-  }
+.card-flags {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
 
-  .card-meta {
-    font-size: 12px;
-    color: var(--text-secondary);
-  }
+.card-req-no,
+.card-bottom,
+.card-context-line {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.card-req-no {
+  color: #7b8595;
+  letter-spacing: 0.015em;
+}
+
+.card-meta-text {
+  display: inline-flex;
+  align-items: center;
+  min-height: 16px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.04);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.card-title {
+  margin: 7px 0 8px;
+  font-size: 13.5px;
+  line-height: 1.48;
+  font-weight: 650;
+  color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-context-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin-bottom: 7px;
+  flex-wrap: wrap;
+}
+
+.context-main,
+.context-tail,
+.card-bottom-main,
+.card-bottom-side {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.context-main,
+.card-bottom-main {
+  color: var(--text-primary);
+}
+
+.context-tail,
+.card-bottom-side {
+  color: var(--text-secondary);
+}
+
+.context-sep {
+  color: rgba(148, 163, 184, 0.82);
+}
+
+.card-bottom {
+  padding-top: 8px;
+  border-top: 1px solid rgba(17, 24, 39, 0.05);
+}
+
+.card-bottom-main,
+.card-bottom-side {
+  min-width: 0;
 }
 
 .column-empty {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 30px 0;
+  min-height: 120px;
+  border-radius: 16px;
+  border: 1px dashed rgba(0, 0, 0, 0.08);
   color: var(--text-secondary);
   font-size: 13px;
-  border: 1px dashed rgba(77, 63, 47, 0.16);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.4);
+}
+
+.detail-panel {
+  overflow: hidden;
+}
+
+.detail-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: -18px -18px 20px;
+  padding: 18px 18px 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, rgba(255, 255, 255, 0.93) 100%);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(14px);
+}
+
+.detail-id {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.status-tag,
+.priority-pill,
+.meta-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+.status-tag {
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--text-primary);
+}
+
+.priority-pill,
+.meta-chip {
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--primary);
+}
+
+.priority-p0 {
+  background: rgba(255, 59, 48, 0.12);
+  color: #c0392b;
+}
+
+.priority-p1 {
+  background: rgba(255, 149, 0, 0.12);
+  color: #b56a00;
+}
+
+.detail-meta-line {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.detail-meta-item {
+  white-space: nowrap;
+}
+
+.detail-meta-sep {
+  color: rgba(148, 163, 184, 0.82);
+}
+
+.surface-section .info-grid,
+.surface-section .insight-card {
+  margin-top: 12px;
+  padding: 12px 12px 4px;
+  border-radius: 14px;
+  border: 1px solid rgba(17, 24, 39, 0.05);
+  background: rgba(248, 250, 252, 0.72);
+}
+
+.soft-section .info-grid,
+.soft-section .insight-card {
+  background: rgba(246, 248, 251, 0.88);
+}
+
+.section-copy {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.insight-card {
+  padding: 12px 0 0;
+  border: none;
+  border-top: 1px dashed rgba(17, 24, 39, 0.08);
+  border-radius: 0;
+  background: transparent;
+}
+
+.insight-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.insight-copy {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.info-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.info-value {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.sub-view-shell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sub-view-head {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sub-view-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.sub-view-copy {
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .sub-view-wrapper {
@@ -661,20 +895,41 @@ onMounted(async () => {
   overflow: auto;
 }
 
-// 响应式
-@media (max-width: 768px) {
-  .kanban-toolbar {
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
-    padding: 16px;
+.empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
 
-    .toolbar-right {
-      flex-wrap: wrap;
-    }
+.empty-copy {
+  font-size: 13px;
+  color: var(--text-secondary);
+  max-width: 240px;
+  text-align: center;
+  line-height: 1.7;
+}
+
+@media (max-width: 1280px) {
+  .workspace-shell {
+    grid-template-columns: 1fr;
   }
 
-  .board-summary {
+  .detail-panel {
+    min-height: 320px;
+  }
+}
+
+@media (max-width: 768px) {
+  .board-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .filter-row {
+    justify-content: flex-start;
+  }
+
+  .info-grid {
     grid-template-columns: 1fr;
   }
 

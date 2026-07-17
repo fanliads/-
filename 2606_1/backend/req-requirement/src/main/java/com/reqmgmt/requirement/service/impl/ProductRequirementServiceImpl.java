@@ -46,6 +46,10 @@ public class ProductRequirementServiceImpl extends ServiceImpl<ProductRequiremen
     private final SysUserMapper sysUserMapper;
 
     private static final String REQ_TYPE = "product";
+    private static final Set<String> CREATE_STATUS_VALUES = Set.of(
+            "backlog", "researching", "pending_design", "designing", "developing",
+            "testing", "online", "accepted", "rejected", "suspended", "closed"
+    );
 
     private static final Map<String, String> STATUS_NAME_MAP = new LinkedHashMap<>();
     private static final Map<String, String> ACTION_NAME_MAP = new LinkedHashMap<>();
@@ -76,13 +80,28 @@ public class ProductRequirementServiceImpl extends ServiceImpl<ProductRequiremen
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long createProductRequirement(ProductRequirementCreateDTO dto) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (StrUtil.isNotBlank(dto.getClientRequestId())) {
+            ProductRequirement existing = this.getOne(new LambdaQueryWrapper<ProductRequirement>()
+                    .eq(ProductRequirement::getCreateBy, currentUserId)
+                    .eq(ProductRequirement::getClientRequestId, dto.getClientRequestId())
+                    .last("LIMIT 1"));
+            if (existing != null) {
+                return existing.getId();
+            }
+        }
+
         ProductRequirement entity = new ProductRequirement();
         BeanUtil.copyProperties(dto, entity);
 
         // 生成编号 PRD-YYYYMMDD-NNN
         entity.setReqNo(generateReqNo());
-        entity.setStatus("pending_design");
-        entity.setCreateBy(SecurityUtils.getCurrentUserId());
+        String requestedStatus = StrUtil.blankToDefault(dto.getStatus(), "pending_design");
+        if (!CREATE_STATUS_VALUES.contains(requestedStatus)) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "无效的产品需求状态");
+        }
+        entity.setStatus(requestedStatus);
+        entity.setCreateBy(currentUserId);
         if (entity.getPriority() == null) {
             entity.setPriority("P2");
         }
@@ -127,6 +146,9 @@ public class ProductRequirementServiceImpl extends ServiceImpl<ProductRequiremen
         BeanUtil.copyProperties(entity, vo);
         vo.setStatusName(STATUS_NAME_MAP.getOrDefault(entity.getStatus(), entity.getStatus()));
         vo.setSprintName(resolveSprintName(entity.getSprintId()));
+        vo.setBusinessLineName(resolveBusinessLineName(entity.getBusinessLineId()));
+        vo.setAssigneeName(resolveAssigneeName(entity.getAssigneeId(), entity.getHandler()));
+        vo.setCreateByName(resolveCreateByName(entity.getCreateBy(), entity.getCreator()));
 
         // 获取关联的原始需求标题
         if (entity.getRawReqId() != null) {
@@ -571,9 +593,15 @@ public class ProductRequirementServiceImpl extends ServiceImpl<ProductRequiremen
             return null;
         }
         SysDictData dictData = sysDictDataMapper.selectOne(new LambdaQueryWrapper<SysDictData>()
+                .eq(SysDictData::getId, businessLineId)
                 .eq(SysDictData::getDictCode, "business_line")
-                .eq(SysDictData::getValue, String.valueOf(businessLineId))
                 .last("LIMIT 1"));
+        if (dictData == null) {
+            dictData = sysDictDataMapper.selectOne(new LambdaQueryWrapper<SysDictData>()
+                    .eq(SysDictData::getDictCode, "business_line")
+                    .eq(SysDictData::getValue, String.valueOf(businessLineId))
+                    .last("LIMIT 1"));
+        }
         return dictData != null ? dictData.getLabel() : null;
     }
 

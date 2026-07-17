@@ -1,27 +1,19 @@
 <template>
-  <div class="inline-edit-select" @click="startEdit">
-    <span v-if="!isEditing" class="select-value">{{ displayLabel }}</span>
-    <el-select
-      v-else
-      ref="selectRef"
-      v-model="editValue"
-      size="small"
+  <div class="inline-edit-select">
+    <LnInlineSelect
+      :model-value="value"
+      :options="normalizedOptions"
       :placeholder="placeholder"
-      @change="save"
-      @blur="isEditing = false"
+      @save="emit('save', String($event))"
     >
-      <el-option
-        v-for="opt in normalizedOptions"
-        :key="opt.value"
-        :label="opt.label"
-        :value="opt.value"
-      />
-    </el-select>
+      <span class="select-value">{{ displayLabel }}</span>
+    </LnInlineSelect>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, computed } from 'vue'
+import { computed } from 'vue'
+import { LnInlineSelect } from './linear'
 
 interface OptionItem {
   label: string
@@ -38,10 +30,6 @@ const emit = defineEmits<{
   (e: 'save', value: string): void
 }>()
 
-const isEditing = ref(false)
-const editValue = ref('')
-const selectRef = ref<any>(null)
-
 const normalizedOptions = computed(() => {
   return props.options || []
 })
@@ -51,20 +39,6 @@ const displayLabel = computed(() => {
   return found?.label || props.value || props.placeholder || '点击编辑'
 })
 
-function startEdit() {
-  isEditing.value = true
-  editValue.value = props.value || ''
-  nextTick(() => {
-    selectRef.value?.focus()
-  })
-}
-
-function save() {
-  isEditing.value = false
-  if (editValue.value !== (props.value || '')) {
-    emit('save', editValue.value)
-  }
-}
 </script>
 
 <style lang="scss" scoped>
@@ -73,14 +47,14 @@ function save() {
   min-height: 20px;
 
   .select-value {
-    display: inline-block;
+    display: block;
     padding: 2px 4px;
     border-radius: 4px;
     transition: background 0.15s;
 
-    &:hover {
-      background: rgba(0, 113, 227, 0.06);
-    }
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 </style>

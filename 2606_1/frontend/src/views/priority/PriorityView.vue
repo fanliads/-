@@ -1,128 +1,168 @@
 <template>
   <div class="priority-view">
-    <!-- 顶部工具栏 -->
-    <div class="toolbar">
-      <div class="toolbar-left">
-        <input
-          v-model="searchKeyword"
-          class="search-box"
-          placeholder="搜索需求..."
-          @input="filterRequirements"
-        />
-      </div>
-      <div class="toolbar-right">
-        <button class="btn btn-primary" @click="$router.push('/submit')">+ 新建需求</button>
-      </div>
-    </div>
-
-    <!-- P0 提醒条 -->
-    <div v-if="p0Count > 0" class="alert-bar">
-      <span class="alert-dot"></span>
-      <span>当前有 {{ p0Count }} 个 一级A类（P0）需求待处理，请优先关注</span>
-    </div>
-
-    <!-- 优先级分组 -->
-    <div class="priority-scroll">
-      <div
-        v-for="group in priorityGroups"
-        :key="group.key"
-        class="priority-group"
-        :class="'group-' + group.key"
-      >
-        <div class="group-header">
-          <span>{{ group.label }}</span>
-          <span>{{ getGroupCount(group.key) }} 个需求</span>
+    <section class="page-header wb-page-header">
+      <div class="title-block">
+        <div class="title-row wb-title-row">
+          <h2 class="page-title wb-page-title">优先级视图</h2>
+          <span class="page-count wb-page-meta">{{ filteredRequirements.length }} 项</span>
+          <span class="page-hint wb-page-meta">按优先级做集中判断与复核</span>
         </div>
-        <div
-          class="group-body"
-          :class="{ 'drag-over': dragOverGroup === group.key }"
-          @dragover.prevent="onDragOver(group.key)"
-          @dragleave="onDragLeave"
-          @drop.prevent="onDrop(group.key)"
-        >
+        <p class="page-subtitle wb-page-subtitle">把优先级判断从零散卡片改成一眼可扫的分组工作台，保留重点提醒与详情确认。</p>
+      </div>
+
+      <div class="header-actions wb-actions-row">
+        <LnInput v-model="searchKeyword" class="line-search" placeholder="搜索需求标题或编号" clearable><template #prefix>⌕</template></LnInput>
+        <LnButton variant="primary" @click="router.push('/submit')"><template #icon>＋</template>新建需求</LnButton>
+      </div>
+    </section>
+
+    <section class="summary-strip wb-summary-strip">
+      <LnMetric label="P0 待关注" :value="p0Count" :tone="p0Count ? 'danger' : 'neutral'" description="需要最高优先级处理" />
+      <LnMetric label="P1 高优先级" :value="getGroupCount('p1')" tone="warning" description="建议在本轮推进" />
+      <LnMetric label="P2 / P3" :value="getGroupCount('p2') + getGroupCount('p3')" description="常规排期与待观察" />
+    </section>
+
+    <section class="workspace-shell wb-shell">
+      <div class="groups-panel wb-panel">
+        <div v-if="loading" class="groups-grid" aria-label="正在加载优先级需求">
+          <div v-for="index in 4" :key="index" class="priority-group wb-group-card skeleton-group">
+            <div class="group-header"><div class="skeleton-copy"><LnSkeleton width="120px"/><LnSkeleton width="190px"/></div><LnSkeleton circle width="28px"/></div>
+            <div class="group-body"><LnSkeleton v-for="row in 3" :key="row" height="116px"/></div>
+          </div>
+        </div>
+        <div v-else class="groups-grid">
           <div
-            v-for="req in getGroupItems(group.key)"
-            :key="req.id"
-            class="req-row"
-            :class="{ dragging: draggedItem?.id === req.id }"
-            draggable="true"
-            @dragstart="onDragStart(req, group.key)"
-            @dragend="onDragEnd"
+            v-for="group in priorityGroups"
+            :key="group.key"
+            class="priority-group wb-group-card"
+            :class="`group-${group.key}`"
           >
-            <!-- 标题 & 编号 -->
-            <div>
-              <div class="req-title">{{ req.title }}</div>
-              <div class="req-meta">{{ req.reqNo }}</div>
-              <div class="req-assessment">
-                <span class="assessment-chip effective">{{ getPriorityLabel(req.effectiveLevel || req.priority) }}</span>
-                <span v-if="req.systemLevel && req.systemLevel !== (req.effectiveLevel || req.priority)" class="assessment-chip system">
-                  系统 {{ getPriorityLabel(req.systemLevel) }}
-                </span>
+            <div class="group-header">
+              <div>
+                <div class="group-title">{{ group.label }}</div>
+                <div class="group-subtitle">{{ group.description }}</div>
               </div>
-              <div v-if="req.strategyHint" class="req-hint">{{ req.strategyHint }}</div>
+              <LnBadge :tone="getPriorityTone(priorityKeyMap[group.key])">{{ getGroupCount(group.key) }}</LnBadge>
             </div>
-            <!-- 业务线 -->
-            <div>
-              <span class="req-tag">{{ req.businessLineName || '-' }}</span>
-            </div>
-            <!-- 提出人 & 日期 -->
-            <div class="req-meta">
-              {{ req.assigneeName || req.proposer || '-' }}
-              <br />
-              {{ formatDate(req.createTime) }}
-            </div>
-            <!-- 期望上线 -->
-            <div class="req-meta">期望上线: {{ formatShortDate(req.expectedDate) }}</div>
-            <!-- 进度 -->
-            <div>
-              <div class="progress-bar">
-                <div class="progress-fill" :style="{ width: getProgressWidth(req) + '%' }"></div>
-              </div>
-              <div class="progress-text">{{ getRawRequirementStatusLabel(req.status, req.statusName) }}</div>
-            </div>
-            <!-- 工作量 -->
-            <div class="req-meta">工作量: {{ req.workload || '未估算' }}</div>
-            <!-- 风险 -->
-            <div :class="{ 'risk-high': isOverdue(req) }">
-              <template v-if="isOverdue(req)">逾期风险</template>
-            </div>
-          </div>
 
-          <!-- 空状态 -->
-          <div v-if="getGroupItems(group.key).length === 0" class="empty-group">
-            拖拽需求到此分组
+            <div class="group-body">
+              <LnPressable
+                v-for="req in getGroupItems(group.key)"
+                :key="req.id"
+                class="req-card wb-item-card"
+                :selected="selectedRequirementId === req.id"
+                :aria-label="`查看需求 ${req.reqNo} ${req.title}`"
+                @click="selectRequirement(req)"
+              >
+                <div class="card-top">
+                  <span class="req-no">{{ req.reqNo }}</span>
+                  <span class="priority-pill" :class="`priority-${(req.effectiveLevel || req.priority || 'p2').toLowerCase()}`">
+                    {{ req.effectiveLevel || req.priority || '-' }}
+                  </span>
+                </div>
+
+                <div class="req-title">{{ req.title }}</div>
+
+                <div class="req-meta-row">
+                  <span>{{ req.businessLineName || '-' }}</span>
+                  <span>{{ req.assigneeName || req.proposer || '-' }}</span>
+                </div>
+
+                <div class="req-meta-row">
+                  <span>{{ getRawRequirementStatusLabel(req.status, req.statusName) }}</span>
+                  <span :class="{ overdue: isOverdue(req) }">{{ getExpectedText(req.expectedDate) }}</span>
+                </div>
+
+                <div v-if="req.strategyHint" class="req-hint">{{ req.strategyHint }}</div>
+              </LnPressable>
+
+              <LnEmptyState v-if="getGroupItems(group.key).length === 0" title="当前分组暂无需求" description="需求调整优先级后会自动出现在这里。" />
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      <aside class="detail-panel wb-panel">
+        <template v-if="selectedRequirement">
+          <div class="detail-scroll wb-detail-scroll">
+            <div class="detail-header">
+              <div class="detail-id">{{ selectedRequirement.reqNo }}</div>
+              <h3 class="detail-title wb-detail-title">{{ selectedRequirement.title }}</h3>
+              <div class="detail-tags">
+                <LnBadge :tone="getPriorityTone(selectedRequirement.effectiveLevel || selectedRequirement.priority)">
+                  {{ getPriorityLabel(selectedRequirement.effectiveLevel || selectedRequirement.priority) }}
+                </LnBadge>
+                <LnBadge v-if="selectedRequirement.systemLevel && selectedRequirement.systemLevel !== (selectedRequirement.effectiveLevel || selectedRequirement.priority)" tone="neutral">
+                  系统 {{ getPriorityLabel(selectedRequirement.systemLevel) }}
+                </LnBadge>
+                <LnBadge tone="accent">{{ getRawRequirementStatusLabel(selectedRequirement.status, selectedRequirement.statusName) }}</LnBadge>
+              </div>
+            </div>
+
+            <div class="info-section">
+              <div class="section-title">优先级判断</div>
+              <div class="info-grid">
+                <div class="info-item wb-info-item">
+                  <span class="info-label">当前有效级别</span>
+                  <span class="info-value">{{ getPriorityLabel(selectedRequirement.effectiveLevel || selectedRequirement.priority) }}</span>
+                </div>
+                <div class="info-item wb-info-item">
+                  <span class="info-label">业务线</span>
+                  <span class="info-value">{{ selectedRequirement.businessLineName || '-' }}</span>
+                </div>
+                <div class="info-item wb-info-item">
+                  <span class="info-label">负责人</span>
+                  <span class="info-value">{{ selectedRequirement.assigneeName || selectedRequirement.proposer || '-' }}</span>
+                </div>
+                <div class="info-item wb-info-item">
+                  <span class="info-label">期望时间</span>
+                  <span class="info-value">{{ getExpectedText(selectedRequirement.expectedDate) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="info-section">
+              <div class="section-title">策略提示</div>
+              <p class="section-copy">{{ selectedRequirement.strategyHint || '当前需求未生成额外策略提示。' }}</p>
+            </div>
+
+            <div class="info-section">
+              <div class="section-title">需求描述</div>
+              <p class="section-copy">{{ selectedRequirement.description || '暂无描述' }}</p>
+            </div>
+          </div>
+        </template>
+
+        <LnEmptyState v-else title="选择一条需求" description="左侧负责快速扫视优先级分布，右侧负责确认单条需求的判断上下文。" />
+      </aside>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { pageQueryRawRequirements, updateRawRequirement } from '@/api/raw-requirement'
-import type { RawRequirementListVO } from '@/types/requirement'
-import { getRawRequirementStatusLabel, normalizeRawRequirementStatus } from '@/types/requirement'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
-import { ElMessage } from 'element-plus'
-
+import { pageQueryRawRequirements } from '@/api/raw-requirement'
+import type { RawRequirementListVO } from '@/types/requirement'
+import { getRawRequirementStatusLabel } from '@/types/requirement'
+import { LnBadge, LnButton, LnEmptyState, LnInput, LnMetric, LnPressable, LnSkeleton } from '@/components/linear'
 
 interface ReqItem extends RawRequirementListVO {
   workload?: string
 }
 
+const router = useRouter()
 const searchKeyword = ref('')
 const loading = ref(false)
 const allRequirements = ref<ReqItem[]>([])
-const draggedItem = ref<ReqItem | null>(null)
-const dragSourceGroup = ref<string>('')
-const dragOverGroup = ref<string>('')
+const selectedRequirementId = ref<number | null>(null)
 
 const priorityGroups = [
-  { key: 'p0', label: '一级A类（P0）' },
-  { key: 'p1', label: '一级B类（P1）' },
-  { key: 'p2', label: '二级（P2）' },
-  { key: 'p3', label: '三级（P3）' },
+  { key: 'p0', label: '一级A类（P0）', description: '需要最高优先级处理的需求' },
+  { key: 'p1', label: '一级B类（P1）', description: '高优先级，但可在本轮中排队推进' },
+  { key: 'p2', label: '二级（P2）', description: '常规排期，关注依赖与节奏' },
+  { key: 'p3', label: '三级（P3）', description: '低优先级或待观察需求' },
 ]
 
 const priorityKeyMap: Record<string, string> = {
@@ -132,26 +172,39 @@ const priorityKeyMap: Record<string, string> = {
   p3: 'P3',
 }
 
-const p0Count = computed(() => {
-  return allRequirements.value.filter(r => (r.effectiveLevel || r.priority) === 'P0').length
+const filteredRequirements = computed(() => {
+  let items = allRequirements.value
+  if (searchKeyword.value) {
+    const kw = searchKeyword.value.toLowerCase()
+    items = items.filter((r) => r.title?.toLowerCase().includes(kw) || r.reqNo?.toLowerCase().includes(kw))
+  }
+  return items
 })
+
+const selectedRequirement = computed(() =>
+  filteredRequirements.value.find((item) => item.id === selectedRequirementId.value) || null
+)
+
+const p0Count = computed(() => filteredRequirements.value.filter((r) => (r.effectiveLevel || r.priority) === 'P0').length)
+
+function ensureSelectedRequirement() {
+  if (!filteredRequirements.value.length) {
+    selectedRequirementId.value = null
+    return
+  }
+  const exists = filteredRequirements.value.some((item) => item.id === selectedRequirementId.value)
+  if (!exists) {
+    selectedRequirementId.value = filteredRequirements.value[0].id
+  }
+}
 
 function getGroupItems(groupKey: string): ReqItem[] {
   const priority = priorityKeyMap[groupKey]
-  let items = allRequirements.value.filter(r => (r.effectiveLevel || r.priority) === priority)
-  if (searchKeyword.value) {
-    const kw = searchKeyword.value.toLowerCase()
-    items = items.filter(r =>
-      r.title.toLowerCase().includes(kw) ||
-      r.reqNo.toLowerCase().includes(kw)
-    )
-  }
-  return items
+  return filteredRequirements.value.filter((r) => (r.effectiveLevel || r.priority) === priority)
 }
 
 function getGroupCount(groupKey: string): number {
-  const priority = priorityKeyMap[groupKey]
-  return allRequirements.value.filter(r => (r.effectiveLevel || r.priority) === priority).length
+  return getGroupItems(groupKey).length
 }
 
 function getPriorityLabel(priority?: string): string {
@@ -162,85 +215,26 @@ function getPriorityLabel(priority?: string): string {
   return priority || '-'
 }
 
-function formatDate(dt: string): string {
-  if (!dt) return '-'
-  return dt.substring(0, 10)
-}
-
-function formatShortDate(dt: string): string {
-  if (!dt) return '-'
-  const d = dayjs(dt)
-  return `${d.month() + 1}-${d.date()}`
-}
-
-function getProgressWidth(req: ReqItem): number {
-  const map: Record<string, number> = {
-    pending_judgement: 10,
-    pending_split: 30,
-    in_progress: 65,
-    online: 100,
-    suspended: 65,
-    rejected: 100,
-    closed: 100,
-  }
-  return map[normalizeRawRequirementStatus(req.status, req.statusName)] || 10
+function getPriorityTone(priority?: string): 'neutral' | 'accent' | 'warning' | 'danger' {
+  if (priority === 'P0') return 'danger'
+  if (priority === 'P1') return 'warning'
+  if (priority === 'P2') return 'accent'
+  return 'neutral'
 }
 
 function isOverdue(req: ReqItem): boolean {
   if (!req.expectedDate) return false
-  const expected = dayjs(req.expectedDate)
-  const now = dayjs()
-  const unifiedStatus = normalizeRawRequirementStatus(req.status, req.statusName)
-  if (['online', 'closed', 'rejected'].includes(unifiedStatus)) return false
-  return expected.isBefore(now, 'day')
+  return dayjs(req.expectedDate).isBefore(dayjs(), 'day')
 }
 
-function filterRequirements() {
-  // searchKeyword is reactive, computed getter will re-evaluate
+function getExpectedText(dt?: string): string {
+  if (!dt) return '未设置时间'
+  const date = dayjs(dt)
+  return `期望 ${date.format('MM-DD')}`
 }
 
-// 拖拽逻辑
-function onDragStart(req: ReqItem, groupKey: string) {
-  draggedItem.value = req
-  dragSourceGroup.value = groupKey
-}
-
-function onDragEnd() {
-  draggedItem.value = null
-  dragSourceGroup.value = ''
-  dragOverGroup.value = ''
-}
-
-function onDragOver(groupKey: string) {
-  dragOverGroup.value = groupKey
-}
-
-function onDragLeave() {
-  dragOverGroup.value = ''
-}
-
-async function onDrop(targetGroupKey: string) {
-  dragOverGroup.value = ''
-  if (!draggedItem.value) return
-  if (dragSourceGroup.value === targetGroupKey) return
-
-  const newPriority = priorityKeyMap[targetGroupKey]
-  const req = draggedItem.value
-
-  try {
-    await updateRawRequirement(req.id, { priority: newPriority })
-    // 更新本地数据
-    const idx = allRequirements.value.findIndex(r => r.id === req.id)
-    if (idx !== -1) {
-      allRequirements.value[idx].priority = newPriority
-    }
-    ElMessage.success(`✓ ${req.title}：${priorityKeyMap[dragSourceGroup.value]} → ${priorityGroups.find(g => g.key === targetGroupKey)?.label}`)
-  } catch {
-    ElMessage.error('优先级修改失败')
-  }
-
-  draggedItem.value = null
-  dragSourceGroup.value = ''
+function selectRequirement(req: ReqItem) {
+  selectedRequirementId.value = req.id
 }
 
 async function loadData() {
@@ -248,8 +242,10 @@ async function loadData() {
   try {
     const res = await pageQueryRawRequirements({ page: 1, size: 500 })
     allRequirements.value = (res.data?.list || []) as ReqItem[]
+    ensureSelectedRequirement()
   } catch {
     allRequirements.value = []
+    selectedRequirementId.value = null
   } finally {
     loading.value = false
   }
@@ -258,6 +254,8 @@ async function loadData() {
 onMounted(() => {
   loadData()
 })
+
+watch(filteredRequirements, ensureSelectedRequirement)
 </script>
 
 <style lang="scss" scoped>
@@ -265,271 +263,279 @@ onMounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  gap: 16px;
 }
 
-.toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 32px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-
-  .toolbar-left {
-    display: flex;
-    align-items: center;
-  }
-
-  .toolbar-right {
-    display: flex;
-    align-items: center;
-  }
-}
-
-.search-box {
-  width: 240px;
-  padding: 8px 14px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--bg);
+.page-count,
+.page-hint,
+.page-subtitle {
   font-size: 13px;
-  outline: none;
+  color: var(--text-secondary);
+}
 
-  &:focus {
-    border-color: var(--primary);
+.page-subtitle {
+  margin: 0;
+}
+
+.line-search {
+  width: 220px;
+}
+
+.summary-pill {
+  &.danger {
+    border-color: rgba(255, 59, 48, 0.18);
+    background: linear-gradient(180deg, rgba(255, 59, 48, 0.06) 0%, rgba(255, 255, 255, 0.96) 100%);
   }
 }
 
-.btn {
-  padding: 8px 18px;
-  border-radius: var(--radius-sm);
-  border: none;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  transition: var(--transition);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.summary-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
-.btn-primary {
-  background: var(--primary);
-  color: #fff;
-
-  &:hover {
-    background: var(--primary-hover);
-  }
+.summary-value {
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
-.alert-bar {
-  background: linear-gradient(90deg, rgba(255, 59, 48, 0.08), rgba(255, 59, 48, 0.04));
-  border-bottom: 1px solid rgba(255, 59, 48, 0.15);
-  padding: 12px 32px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  color: #b0281e;
-  flex-shrink: 0;
+.workspace-shell {
+  grid-template-columns: minmax(0, 1fr) 380px;
 }
 
-.alert-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--danger);
-  animation: pulse 2s infinite;
+.groups-panel,
+.detail-panel {
+  min-height: 0;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+.groups-panel {
+  overflow: auto;
+  padding: 18px;
 }
 
-.priority-scroll {
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px 32px;
+.groups-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
 }
 
-.priority-group {
-  margin-bottom: 24px;
-  border-radius: var(--radius);
-  overflow: hidden;
+.skeleton-copy {
+  display: grid;
+  gap: 9px;
+}
+
+.skeleton-group {
+  pointer-events: none;
 }
 
 .group-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  padding: 14px 20px;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.group-p0 {
-  .group-header {
-    background: linear-gradient(90deg, rgba(255, 59, 48, 0.12), rgba(255, 59, 48, 0.04));
-    color: var(--danger);
-  }
-}
-
-.group-p1 {
-  .group-header {
-    background: linear-gradient(90deg, rgba(255, 149, 0, 0.10), rgba(255, 149, 0, 0.03));
-    color: #b75c00;
-  }
-}
-
-.group-p2 {
-  .group-header {
-    background: linear-gradient(90deg, rgba(255, 204, 0, 0.10), rgba(255, 204, 0, 0.03));
-    color: #9a7d00;
-  }
-}
-
-.group-p3 {
-  .group-header {
-    background: linear-gradient(90deg, rgba(142, 142, 147, 0.08), rgba(142, 142, 147, 0.02));
-    color: var(--text-secondary);
-  }
-}
-
-.group-body {
-  background: var(--surface);
-  padding: 16px 20px;
-  transition: all 0.2s;
-
-  &.drag-over {
-    background: rgba(0, 113, 227, 0.06);
-    outline: 2px dashed var(--primary);
-    outline-offset: -2px;
-  }
-}
-
-.req-row {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr 1fr 120px 80px;
   gap: 12px;
-  align-items: center;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--border);
-  cursor: grab;
-  transition: all 0.2s;
-
-  &:last-child {
-    border-bottom: none;
-  }
-
-  &.dragging {
-    opacity: 0.5;
-    transform: rotate(2deg);
-  }
+  padding: 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.req-title {
-  font-weight: 500;
+.group-title {
   font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
 }
 
-.req-meta {
+.group-subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.group-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(128, 128, 128, 0.08);
   font-size: 12px;
   color: var(--text-secondary);
 }
 
-.req-assessment {
+.group-body {
   display: flex;
-  gap: 6px;
-  margin-top: 8px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
 }
 
-.assessment-chip {
-  display: inline-flex;
+.card-top,
+.req-meta-row,
+.detail-tags {
+  display: flex;
   align-items: center;
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-size: 11px;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.req-no,
+.req-meta-row {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.req-title {
+  margin: 8px 0;
+  font-size: 14px;
+  line-height: 1.45;
   font-weight: 600;
+  color: var(--text-primary);
 }
 
-.assessment-chip.effective {
-  background: rgba(16, 124, 65, 0.12);
-  color: #166534;
-}
-
-.assessment-chip.system {
-  background: rgba(33, 107, 255, 0.1);
-  color: #216bff;
+.req-meta-row + .req-meta-row {
+  margin-top: 6px;
 }
 
 .req-hint {
-  margin-top: 6px;
+  margin-top: 10px;
   font-size: 12px;
-  color: #5f6368;
-  line-height: 1.5;
+  line-height: 1.6;
+  color: var(--text-secondary);
 }
 
-.req-tag {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
+.overdue {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.priority-pill,
+.meta-chip,
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.priority-pill,
+.meta-chip {
   background: rgba(0, 113, 227, 0.08);
   color: var(--primary);
 }
 
-.progress-bar {
-  height: 6px;
-  background: var(--bg);
-  border-radius: 3px;
-  overflow: hidden;
+.priority-p0 {
+  background: rgba(255, 59, 48, 0.12);
+  color: #c0392b;
 }
 
-.progress-fill {
-  height: 100%;
-  background: var(--primary);
-  border-radius: 3px;
-  transition: width 0.3s;
+.priority-p1 {
+  background: rgba(255, 149, 0, 0.12);
+  color: #b56a00;
 }
 
-.progress-text {
-  font-size: 11px;
+.status-tag {
+  background: rgba(77, 63, 47, 0.08);
+  color: var(--text-primary);
+}
+
+.empty-group,
+.detail-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--text-secondary);
-  margin-top: 4px;
-  text-align: right;
-}
-
-.risk-high {
-  color: var(--danger);
-  font-weight: 500;
   font-size: 13px;
 }
 
 .empty-group {
-  padding: 24px 0;
-  text-align: center;
+  min-height: 120px;
+  border: 1px dashed rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+}
+
+.detail-panel {
+  overflow: hidden;
+}
+
+.detail-id {
+  font-size: 12px;
   color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.info-section {
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+}
+
+.section-title {
   font-size: 13px;
-  border: 1px dashed var(--border);
-  border-radius: 6px;
-  margin: 8px 0;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.section-copy {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.info-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.info-value {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.empty-copy {
+  font-size: 13px;
+  line-height: 1.7;
+  max-width: 240px;
+}
+
+@media (max-width: 1280px) {
+  .workspace-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-panel {
+    min-height: 320px;
+  }
 }
 
 @media (max-width: 768px) {
-  .toolbar {
-    padding: 0 16px;
-  }
-
-  .priority-scroll {
-    padding: 16px;
-  }
-
-  .req-row {
+  .groups-grid,
+  .info-grid {
     grid-template-columns: 1fr;
-    gap: 6px;
+  }
+
+  .line-search {
+    width: 100%;
   }
 }
 </style>

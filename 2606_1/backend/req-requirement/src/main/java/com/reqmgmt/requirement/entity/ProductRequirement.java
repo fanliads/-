@@ -19,6 +19,9 @@ public class ProductRequirement {
     @TableField("req_no")
     private String reqNo;
 
+    @TableField("client_request_id")
+    private String clientRequestId;
+
     @TableField("title")
     private String title;
 

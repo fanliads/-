@@ -89,6 +89,28 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // 放行错误路径
                 .requestMatchers("/error").permitAll()
+                // 原始需求池：页面隐藏之外，接口层也必须校验权限
+                .requestMatchers(HttpMethod.GET, "/api/raw-requirements/**")
+                    .hasAuthority("raw-pool:view")
+                .requestMatchers(HttpMethod.POST, "/api/raw-requirements")
+                    .hasAnyAuthority("raw-pool:add", "submit-form:add")
+                .requestMatchers(HttpMethod.PUT, "/api/raw-requirements/**")
+                    .hasAnyAuthority("raw-pool:edit", "raw-pool:evaluate", "raw-pool:approve")
+                .requestMatchers(HttpMethod.DELETE, "/api/raw-requirements/**")
+                    .hasAuthority("raw-pool:delete")
+                .requestMatchers(HttpMethod.POST, "/api/raw-requirements/**")
+                    .hasAnyAuthority("raw-pool:edit", "raw-pool:evaluate", "raw-pool:approve", "product-pool:add")
+                // 产品需求池
+                .requestMatchers(HttpMethod.GET, "/api/product-requirements/**")
+                    .hasAuthority("product-pool:view")
+                .requestMatchers(HttpMethod.POST, "/api/product-requirements")
+                    .hasAuthority("product-pool:add")
+                .requestMatchers(HttpMethod.PUT, "/api/product-requirements/**")
+                    .hasAnyAuthority("product-pool:edit", "product-pool:filter", "product-pool:judge")
+                .requestMatchers(HttpMethod.DELETE, "/api/product-requirements/**")
+                    .hasAuthority("product-pool:delete")
+                .requestMatchers(HttpMethod.POST, "/api/product-requirements/**")
+                    .hasAnyAuthority("product-pool:add", "product-pool:edit", "product-pool:filter", "product-pool:judge")
                 // 其余接口需要认证
                 .anyRequest().authenticated()
             )

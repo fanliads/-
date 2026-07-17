@@ -1,9 +1,11 @@
 <template>
   <router-view />
+  <LnConfirmDialog />
+  <LnToastStack :items="toastItems" @dismiss="dismissToast" />
 </template>
 
 <script setup lang="ts">
-</script>
+import { LnConfirmDialog, LnToastStack, useLnToast } from '@/components/linear'
 
-<style>
-</style>
+const { items: toastItems, dismiss: dismissToast } = useLnToast()
+</script>

@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Workbench Preview</title>
+  <style>
+    :root {
+      --bg: #f5f6f1;
+      --panel: rgba(255, 255, 255, 0.88);
+      --panel-strong: #ffffff;
+      --line: rgba(38, 44, 38, 0.08);
+      --line-strong: rgba(38, 44, 38, 0.14);
+      --text: #1f2420;
+      --muted: #6d746d;
+      --primary: #1f6b5c;
+      --primary-soft: rgba(31, 107, 92, 0.10);
+      --warning: #c87d18;
+      --warning-soft: rgba(200, 125, 24, 0.12);
+      --success: #2a8b5e;
+      --success-soft: rgba(42, 139, 94, 0.12);
+      --shadow: 0 14px 32px rgba(33, 31, 27, 0.06);
+      --radius: 20px;
+      --radius-sm: 14px;
+      --font: "SF Pro Display", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(31, 107, 92, 0.07), transparent 28%),
+        radial-gradient(circle at top right, rgba(200, 125, 24, 0.06), transparent 24%),
+        linear-gradient(180deg, #f7f8f4 0%, #f1f3ee 100%);
+    }
+
+    .shell {
+      min-height: 100%;
+      padding: 14px;
+    }
+
+    .layout {
+      height: calc(100vh - 28px);
+      display: grid;
+      grid-template-columns: 84px 1fr;
+      gap: 14px;
+    }
+
+    .sidebar, .main {
+      border-radius: 28px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      overflow: hidden;
+    }
+
+    .sidebar {
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      width: 52px;
+      height: 52px;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, rgba(31, 107, 92, 0.18), rgba(200, 125, 24, 0.16));
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      font-weight: 800;
+    }
+
+    .nav {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      align-items: center;
+      margin-top: 8px;
+      flex: 1;
+    }
+
+    .nav-item {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.66);
+      border: 1px solid transparent;
+    }
+
+    .nav-item.active {
+      background: rgba(31, 107, 92, 0.10);
+      border-color: rgba(31, 107, 92, 0.16);
+      color: var(--primary);
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--primary), #14473d);
+      color: #fff;
+      font-weight: 700;
+      margin-top: auto;
+    }
+
+    .main {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      min-width: 0;
+    }
+
+    .header {
+      padding: 18px 22px 14px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: -0.03em;
+    }
+
+    .title p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 36px;
+      padding: 0 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.74);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 0 6px rgba(42, 139, 94, 0.12);
+    }
+
+    .toolbar {
+      padding: 14px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .tabs, .filters {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .tab {
+      height: 36px;
+      padding: 0 14px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-size: 13px;
+    }
+
+    .tab.active {
+      color: var(--text);
+      background: #fff;
+      border-color: var(--line);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+    }
+
+    .chip {
+      height: 36px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.74);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font: inherit;
+      font-size: 13px;
+    }
+
+    .btn {
+      height: 36px;
+      padding: 0 14px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+      font-weight: 600;
+    }
+
+    .btn.primary {
+      background: var(--primary);
+      color: #fff;
+      border-color: transparent;
+    }
+
+    .content {
+      min-width: 0;
+      overflow: auto;
+      padding: 18px 18px 20px;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .card {
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.82);
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+
+    .card-label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .card-value {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+
+    .kanban {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(220px, 1fr));
+      gap: 12px;
+      min-width: max-content;
+    }
+
+    .lane {
+      border-radius: 20px;
+      background: rgba(255,255,255,0.8);
+      border: 1px solid var(--line);
+      padding: 12px;
+      min-height: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .lane-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .lane-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .count {
+      min-width: 28px;
+      height: 24px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: rgba(31, 107, 92, 0.10);
+      color: var(--primary);
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .lane-body {
+      border-radius: 16px;
+      border: 1px dashed var(--line);
+      background: rgba(255,255,255,0.56);
+      min-height: 360px;
+      padding: 10px;
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+
+    .empty {
+      min-height: 72px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 12px;
+      border: 1px dashed rgba(109, 116, 109, 0.18);
+      background: rgba(255,255,255,0.6);
+    }
+
+    .card-item {
+      border-radius: 16px;
+      background: #fff;
+      border: 1px solid var(--line);
+      padding: 12px;
+      box-shadow: 0 8px 18px rgba(33, 31, 27, 0.05);
+      display: grid;
+      gap: 8px;
+    }
+
+    .card-item h3 {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .pill {
+      height: 24px;
+      padding: 0 10px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .pill.status { background: var(--primary-soft); color: var(--primary); }
+    .pill.warn { background: var(--warning-soft); color: var(--warning); }
+    .pill.success { background: var(--success-soft); color: var(--success); }
+
+    .footer-tip {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px dashed var(--line-strong);
+      background: rgba(255,255,255,0.7);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    @media (max-width: 1200px) {
+      .layout { grid-template-columns: 72px 1fr; }
+      .kanban { grid-template-columns: repeat(6, 240px); }
+    }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .header, .toolbar { align-items: flex-start; flex-direction: column; }
+      .summary { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="logo">◇</div>
+        <div class="nav">
+          <div class="nav-item active">看</div>
+          <div class="nav-item">原</div>
+          <div class="nav-item">产</div>
+          <div class="nav-item">待</div>
+          <div class="nav-item">迭</div>
+        </div>
+        <div class="avatar">U</div>
+      </aside>
+
+      <main class="main">
+        <section class="header">
+          <div class="title">
+            <h1>沉浸式工作台</h1>
+            <p>把导航收窄，把空间让给主要内容和状态流转。</p>
+          </div>
+          <div class="status"><span class="dot"></span>在线协同中</div>
+        </section>
+
+        <section class="toolbar">
+          <div class="tabs">
+            <button class="tab active">看板</button>
+            <button class="tab">优先级</button>
+            <button class="tab">列表</button>
+          </div>
+          <div class="filters">
+            <button class="chip">原始需求</button>
+            <button class="chip">P1</button>
+            <button class="chip">业务线</button>
+            <input class="chip" style="width: 190px" placeholder="搜索需求编号、标题..." />
+            <button class="btn">重置</button>
+            <button class="btn primary">新建需求</button>
+          </div>
+        </section>
+
+        <section class="content">
+          <div class="summary">
+            <div class="card">
+              <div class="card-label">当前泳道</div>
+              <div class="card-value">原始需求看板</div>
+            </div>
+            <div class="card">
+              <div class="card-label">总数量</div>
+              <div class="card-value">24</div>
+            </div>
+            <div class="card">
+              <div class="card-label">筛选状态</div>
+              <div class="card-value">已应用筛选</div>
+            </div>
+          </div>
+
+          <div class="kanban">
+            <div class="lane">
+              <div class="lane-head"><div class="lane-title">待评估</div><div class="count">4</div></div>
+              <div class="lane-body">
+                <div class="card-item">
+                  <h3>统一提效入口与状态表达，减少页面跳转</h3>
+                  <div class="meta">
+                    <span class="pill status">评估中</span>
+                    <span class="pill warn">P1</span>
+                  </div>
+                </div>
+                <div class="empty">暂无更多卡片</div>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="lane-head"><div class="lane-title">待拆分</div><div class="count">6</div></div>
+              <div class="lane-body">
+                <div class="card-item">
+                  <h3>产品需求拆分后补充负责人和排期信息</h3>
+                  <div class="meta">
+                    <span class="pill status">待拆分</span>
+                    <span class="pill warn">P2</span>
+                    <span class="pill success">人工</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="lane-head"><div class="lane-title">进行中</div><div class="count">5</div></div>
+              <div class="lane-body">
+                <div class="card-item">
+                  <h3>看板只显示最关键的信息，详情放到展开区</h3>
+                  <div class="meta">
+                    <span class="pill status">推进中</span>
+                    <span class="pill warn">P1</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="lane-head"><div class="lane-title">待上线</div><div class="count">3</div></div>
+              <div class="lane-body">
+                <div class="card-item">
+                  <h3>上线前检查字段完整度和需求单链接</h3>
+                  <div class="meta">
+                    <span class="pill status">待上线</span>
+                    <span class="pill success">完整</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="lane-head"><div class="lane-title">已完成</div><div class="count">4</div></div>
+              <div class="lane-body">
+                <div class="card-item">
+                  <h3>已完成事项保留轻量摘要，方便回溯</h3>
+                  <div class="meta">
+                    <span class="pill status">已完成</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="lane-head"><div class="lane-title">已关闭</div><div class="count">2</div></div>
+              <div class="lane-body">
+                <div class="card-item">
+                  <h3>关闭需求保留最少干扰的信息</h3>
+                  <div class="meta">
+                    <span class="pill status">已关闭</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="footer-tip">
+            这是一个独立的静态预览页，不依赖后端环境。重点是沉浸式布局和更高的信息密度表达。
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

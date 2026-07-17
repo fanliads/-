@@ -50,5 +50,5 @@ firewall-cmd --reload 2>/dev/null || true
 echo "=== Initialization completed ==="
 echo "1. Configure GitHub credentials on the server."
 echo "2. Update $ENV_FILE with production secrets."
-echo "3. Run: cd $APP_DIR && bash ../app/deploy/deploy.sh bootstrap"
-echo "4. Deploy with: bash $APP_DIR/deploy/deploy.sh deploy branch main"
+echo "3. Bootstrap the repository into $APP_DIR (or clone it there)."
+echo "4. Deploy with: bash $APP_DIR/2606_1/deploy/deploy.sh deploy branch main"
