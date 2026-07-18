@@ -103,12 +103,12 @@
           <div class="cell title-cell">
             <div class="title-line">
               <div class="title-text">{{ row.title }}</div>
-              <span class="req-no">{{ row.reqNo }}</span>
               <div class="title-flags">
                 <span v-if="isExternalSubmit(row)" class="flat-icon" title="外部提交" aria-label="外部提交">↗</span>
                 <span v-if="!isContentReady(row)" class="meta-text muted">待补充</span>
               </div>
             </div>
+            <span class="req-no">{{ row.reqNo }}</span>
           </div>
 
           <div v-if="showBusinessLine" class="cell" @click.stop>
@@ -859,11 +859,20 @@ const statusVisuals: Record<string, Pick<LnOption, 'color' | 'icon'>> = {
   rejected: { color: '#d05757', icon: '⊘' },
 }
 const priorityVisuals: Record<string, Pick<LnOption, 'color' | 'icon'>> = {
-  P0: { color: '#d05757', icon: '▰' },
-  P1: { color: '#d28b36', icon: '▆' },
-  P2: { color: '#5e6ad2', icon: '▄' },
-  P3: { color: '#6f6f78', icon: '▂' },
+  P0: { color: '#d05757', icon: '●' },
+  P1: { color: '#d28b36', icon: '●' },
+  P2: { color: '#5e6ad2', icon: '●' },
+  P3: { color: '#6f6f78', icon: '●' },
 }
+const fallbackStatusOptions: DictDataVO[] = [
+  { label: '待判定', value: 'pending_judgement' },
+  { label: '待拆分', value: 'pending_split' },
+  { label: '处理中', value: 'in_progress' },
+  { label: '已上线', value: 'online' },
+  { label: '已关闭', value: 'closed' },
+  { label: '已挂起', value: 'suspended' },
+  { label: '已拒绝', value: 'rejected' },
+] as DictDataVO[]
 const toLinearOptions = (items: DictDataVO[]): LnOption[] => items.map((item) => ({ label: item.label, value: item.value }))
 const linearStatusOptions = computed<LnOption[]>(() => dictStatusOptions.value.map((item) => ({
   label: item.label,
@@ -1534,25 +1543,23 @@ async function loadData() {
 }
 
 async function loadDictData() {
-  try {
-    const [statusRes, priorityRes, businessLineRes, pmRes, projRes] = await Promise.all([
+  const results = await Promise.allSettled([
       listDictData('req_status'),
       listDictData('priority_level'),
       listDictData('business_line'),
       listDictData('product_manager'),
       listDictData('project_manager'),
-    ])
-
-    dictStatusOptions.value = ((statusRes as any).data || []).filter((item: DictDataVO) =>
-      ['pending_judgement', 'pending_split', 'in_progress', 'online', 'closed', 'suspended', 'rejected'].includes(item.value),
-    )
-    dictPriorityOptions.value = (priorityRes as any).data || []
-    dictBusinessLineOptions.value = (businessLineRes as any).data || []
-    dictProductManagerOptions.value = (pmRes as any).data || []
-    dictProjectManagerOptions.value = (projRes as any).data || []
-  } catch {
-    // ignore
-  }
+  ])
+  const dataAt = (index: number): DictDataVO[] =>
+    results[index]?.status === 'fulfilled' ? ((results[index].value as any).data || []) : []
+  const statuses = dataAt(0).filter((item) =>
+    ['pending_judgement', 'pending_split', 'in_progress', 'online', 'closed', 'suspended', 'rejected'].includes(item.value),
+  )
+  dictStatusOptions.value = statuses.length ? statuses : fallbackStatusOptions
+  dictPriorityOptions.value = dataAt(1)
+  dictBusinessLineOptions.value = dataAt(2)
+  dictProductManagerOptions.value = dataAt(3)
+  dictProjectManagerOptions.value = dataAt(4)
 }
 
 function handleSearch() {
@@ -2085,6 +2092,7 @@ onUnmounted(() => {
 
 .title-cell {
   min-width: 0;
+  gap: 3px;
 }
 
 .title-line {
@@ -2118,8 +2126,9 @@ onUnmounted(() => {
 }
 
 .req-no {
+  display: block;
   font-size: 11px;
-  line-height: 1;
+  line-height: 14px;
   letter-spacing: 0.015em;
   color: #7b8595;
   font-variant-numeric: tabular-nums;

@@ -68,20 +68,20 @@
           <div class="issue-identity">
             <div class="title-line">
               <div class="title-text" :class="{ striked: isVoided(item.status) }">{{ item.title }}</div>
-              <span class="req-no">{{ item.reqNo }}</span>
               <div class="title-flags">
                 <span v-if="item.isDirect === 1" class="meta-text muted">直接创建</span>
               </div>
             </div>
+            <span class="req-no">{{ item.reqNo }}</span>
           </div>
 
           <div class="issue-tags" @click.stop>
-            <LnPropertyPicker v-if="showTypeTag" :model-value="item.reqType || ''" title="修改需求类型" :options="linearReqTypeOptions" @update:model-value="(val) => handleInlineSave(item.id, 'reqType', val)" />
-            <LnPropertyPicker v-if="showBusinessLineTag" :model-value="String(item.businessLineId || '')" title="修改业务线" :options="linearBusinessLineOptions" @update:model-value="(val) => handleInlineSave(item.id, 'businessLineId', val ? Number(val) : null)" />
-            <LnPropertyPicker v-if="showStatusTag" :model-value="item.status || ''" title="修改状态" :options="linearStatusOptions" @update:model-value="(val) => handleInlineSave(item.id, 'status', val)" />
-            <LnPropertyPicker v-if="showPriorityTag" :model-value="item.priority || ''" title="修改优先级" :options="linearPriorityOptions" @update:model-value="(val) => handleInlineSave(item.id, 'priority', val)" />
-            <LnPropertyPicker v-if="showHandlerTag" :model-value="item.handler || ''" title="修改处理人" :options="linearHandlerOptions" @update:model-value="(val) => handleInlineSave(item.id, 'handler', val)" />
-            <LnPropertyPicker v-if="showSprintTag" :model-value="String(item.sprintId || '')" title="修改迭代" :options="linearSprintOptions" @update:model-value="(val) => handleInlineSave(item.id, 'sprintId', val ? Number(val) : null)" />
+            <div v-if="showTypeTag" class="issue-property type-column"><LnPropertyPicker :model-value="item.reqType || ''" title="修改需求类型" :options="linearReqTypeOptions" @update:model-value="(val) => handleInlineSave(item.id, 'reqType', val)" /></div>
+            <div v-if="showBusinessLineTag" class="issue-property business-column"><LnPropertyPicker :model-value="String(item.businessLineId || '')" title="修改业务线" :options="linearBusinessLineOptions" @update:model-value="(val) => handleInlineSave(item.id, 'businessLineId', val ? Number(val) : null)" /></div>
+            <div v-if="showStatusTag" class="issue-property status-column"><LnPropertyPicker :model-value="item.status || ''" title="修改状态" :options="linearStatusOptions" @update:model-value="(val) => handleInlineSave(item.id, 'status', val)" /></div>
+            <div v-if="showPriorityTag" class="issue-property priority-column"><LnPropertyPicker :model-value="item.priority || ''" title="修改优先级" :options="linearPriorityOptions" @update:model-value="(val) => handleInlineSave(item.id, 'priority', val)" /></div>
+            <div v-if="showHandlerTag" class="issue-property handler-column"><LnPropertyPicker :model-value="item.handler || ''" title="修改处理人" :options="linearHandlerOptions" @update:model-value="(val) => handleInlineSave(item.id, 'handler', val)" /></div>
+            <div v-if="showSprintTag" class="issue-property sprint-column"><LnPropertyPicker :model-value="String(item.sprintId || '')" title="修改迭代" :options="linearSprintOptions" @update:model-value="(val) => handleInlineSave(item.id, 'sprintId', val ? Number(val) : null)" /></div>
             <LnButton
               v-if="showParentTag && item.rawReqId && item.isDirect !== 1"
               class="tag-link"
@@ -581,8 +581,8 @@ const productStatusSelectOptions: LnOption[] = [
 ]
 
 const priorityVisuals: Record<string, Pick<LnOption, 'color' | 'icon'>> = {
-  P0: { color: '#d05757', icon: '▰' }, P1: { color: '#d28b36', icon: '▆' },
-  P2: { color: '#5e6ad2', icon: '▄' }, P3: { color: '#6f6f78', icon: '▂' },
+  P0: { color: '#d05757', icon: '●' }, P1: { color: '#d28b36', icon: '●' },
+  P2: { color: '#5e6ad2', icon: '●' }, P3: { color: '#6f6f78', icon: '●' },
 }
 const linearStatusOptions = productStatusSelectOptions
 const linearPriorityOptions = computed<LnOption[]>(() => dictPriorityOptions.value.map(item => ({ label:item.label,value:item.value,...priorityVisuals[item.value] })))
@@ -1281,8 +1281,16 @@ onUnmounted(() => {
 .stable-empty { min-height: 120px; display: grid; place-content: center; gap: 6px; text-align: center; color: var(--text-tertiary); font-size: 12px; }
 .stable-empty strong { color: var(--text-secondary); font-size: 13px; }
 
-.issue-identity { min-width: 0; }
+.issue-identity { min-width: 0; display: grid; gap: 3px; }
 .issue-tags { display: flex; align-items: center; justify-content: flex-end; gap: 5px; min-width: 0; }
+.issue-property { min-width: 0; display: flex; align-items: center; }
+.issue-property :deep(.property-trigger) { width: 100%; justify-content: flex-start; }
+.type-column { width: 92px; }
+.business-column { width: 104px; }
+.status-column { width: 92px; }
+.priority-column { width: 96px; }
+.handler-column { width: 92px; }
+.sprint-column { width: 104px; }
 .issue-tags :deep(.editable-cell) { width: auto; min-width: 0; border-radius: 6px; background: rgba(17, 24, 39, 0.035); }
 .issue-tags :deep(.editable-cell-display) { min-height: 26px; padding: 3px 7px; white-space: nowrap; }
 .tag-link { max-width: 156px; height: 26px; padding: 0 7px; font-size: 11px; }
@@ -1551,8 +1559,9 @@ onUnmounted(() => {
 }
 
 .req-no {
+  display: block;
   font-size: 11px;
-  line-height: 1;
+  line-height: 14px;
   letter-spacing: 0.015em;
   color: #7b8595;
   font-variant-numeric: tabular-nums;
