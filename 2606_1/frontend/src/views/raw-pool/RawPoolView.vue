@@ -63,7 +63,9 @@
     <section class="workspace-shell wb-shell">
       <div class="list-panel wb-panel" :class="`density-${listDensity}`" :aria-busy="loading">
         <div class="list-header wb-list-header row-grid" :style="{ gridTemplateColumns: rawGridTemplate }">
-          <div class="head-cell urgent-head">急</div>
+          <div class="head-cell urgent-head" title="加急需求" aria-label="加急需求">
+            <LnIcon name="urgent" />
+          </div>
           <div class="head-cell title-head">原始需求</div>
           <div v-if="showBusinessLine" class="head-cell">业务线</div>
           <div v-if="showStatus" class="head-cell">状态</div>
@@ -97,7 +99,9 @@
           @blur="hoverRequirementId = hoverRequirementId === row.id ? null : hoverRequirementId"
         >
           <div class="cell urgent-cell">
-            <span v-if="row.isUrgent === 1" class="urgent-mark">急</span>
+            <span v-if="row.isUrgent === 1" class="urgent-mark" title="加急需求" aria-label="加急需求">
+              <LnIcon name="urgent" />
+            </span>
           </div>
 
           <div class="cell title-cell">
@@ -105,7 +109,6 @@
               <div class="title-text">{{ row.title }}</div>
               <div class="title-flags">
                 <span v-if="isExternalSubmit(row)" class="flat-icon" title="外部提交" aria-label="外部提交">↗</span>
-                <span v-if="!isContentReady(row)" class="meta-text muted">待补充</span>
               </div>
             </div>
             <span class="req-no">{{ row.reqNo }}</span>
@@ -1221,10 +1224,6 @@ function formatListDate(value?: string): string {
   return value.slice(0, 10)
 }
 
-function isContentReady(row: RawRequirementListVO): boolean {
-  return Boolean(row.description?.trim() || row.remark?.trim() || row.productDefinition?.trim() || row.supplements?.length)
-}
-
 function isExternalSubmit(row: RawRequirementListVO): boolean {
   return row.submitOrigin === 'external'
 }
@@ -1853,7 +1852,16 @@ onUnmounted(() => {
 }
 
 .view-tabs {
-  padding: 0 2px 8px;
+  min-height: 38px;
+  padding: 0 2px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+:deep(.view-tabs > .ln-tabs) {
+  width: 100%;
 }
 
 .flat-icon {
@@ -2033,6 +2041,17 @@ onUnmounted(() => {
   text-align: center;
 }
 
+.urgent-head {
+  display: grid;
+  place-items: center;
+  color: #b86a55;
+
+  :deep(.ln-icon) {
+    width: 14px;
+    height: 14px;
+  }
+}
+
 .list-row {
   padding: 11px 16px;
   border-bottom: 1px solid rgba(17, 24, 39, 0.05);
@@ -2074,6 +2093,7 @@ onUnmounted(() => {
 
 .urgent-cell {
   display: flex;
+  align-items: center;
   justify-content: center;
 }
 
@@ -2086,8 +2106,12 @@ onUnmounted(() => {
   border-radius: 999px;
   background: rgba(212, 92, 71, 0.1);
   color: #c46246;
-  font-size: 9px;
-  font-weight: 800;
+
+  :deep(.ln-icon) {
+    width: 10px;
+    height: 10px;
+    stroke-width: 1.6;
+  }
 }
 
 .title-cell {
