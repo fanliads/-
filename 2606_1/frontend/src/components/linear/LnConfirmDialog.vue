@@ -8,7 +8,7 @@
     @update:model-value="handleOpenChange"
   >
     <div class="ln-confirm__message" :class="`is-${request.tone || 'neutral'}`">
-      <span class="ln-confirm__mark" aria-hidden="true">{{ toneMark }}</span>
+      <span class="ln-confirm__mark" aria-hidden="true"><LnIcon :name="toneMark" /></span>
       <p>{{ request.message }}</p>
     </div>
 
@@ -37,11 +37,12 @@ import { useLnConfirm } from './confirm'
 import LnButton from './LnButton.vue'
 import LnDialog from './LnDialog.vue'
 import LnInput from './LnInput.vue'
+import LnIcon from './LnIcon.vue'
 
 const { request, accept, cancel } = useLnConfirm()
 const inputValue = ref('')
 const inputError = ref('')
-const toneMark = computed(() => request.value?.tone === 'danger' ? '×' : request.value?.tone === 'warning' ? '!' : '?')
+const toneMark = computed(() => request.value?.tone === 'danger' || request.value?.tone === 'warning' ? 'warning' : 'question')
 
 watch(() => request.value?.id, () => {
   inputValue.value = request.value?.initialValue || ''
@@ -85,8 +86,7 @@ function submit() {
   border-radius: 50%;
   color: var(--ln-accent);
   background: var(--ln-accent-soft);
-  font-size: 13px;
-  font-weight: 700;
+  svg { width: 15px; height: 15px; }
 }
 
 .is-warning .ln-confirm__mark { color: var(--ln-warning); background: color-mix(in srgb, var(--ln-warning) 13%, transparent); }

@@ -89,7 +89,7 @@
           v-for="row in loading ? [] : tableData"
           :key="row.id"
           class="list-row wb-list-row row-grid"
-          :class="{ selected: activeRequirementId === row.id, hovering: hoverRequirementId === row.id }"
+          :class="{ selected: activeRequirementId === row.id, hovering: hoverRequirementId === row.id, 'is-urgent': row.isUrgent === 1 }"
           :style="{ gridTemplateColumns: rawGridTemplate }"
           tabindex="0"
           @click="openRequirement(row, 'detail')"
@@ -108,7 +108,7 @@
             <div class="title-line">
               <div class="title-text">{{ row.title }}</div>
               <div class="title-flags">
-                <span v-if="isExternalSubmit(row)" class="flat-icon" title="外部提交" aria-label="外部提交">↗</span>
+                <span v-if="isExternalSubmit(row)" class="flat-icon" title="外部提交" aria-label="外部提交"><LnIcon name="external-link"/></span>
               </div>
             </div>
             <span class="req-no">{{ row.reqNo }}</span>
@@ -204,8 +204,9 @@
                 <div class="peek-title-row">
                   <h3 class="peek-title">{{ activeRequirementDetail.title }}</h3>
                   <div class="peek-header-actions">
+                    <LnButton v-if="route.query.from === 'kanban'" size="small" variant="ghost" @click="returnToKanban">← 返回看板</LnButton>
                     <LnButton v-if="previewMode === 'peek'" size="small" variant="primary" @click="previewMode = 'detail'">详情</LnButton>
-                    <LnButton size="small" icon-only variant="ghost" aria-label="关闭" @click="closeRequirement"><template #icon>×</template></LnButton>
+                    <LnButton size="small" icon-only variant="ghost" aria-label="关闭" @click="closeRequirement"><template #icon><LnIcon name="close"/></template></LnButton>
                   </div>
                 </div>
                 <div class="peek-tags">
@@ -636,7 +637,7 @@
           <div class="split-items">
             <div class="split-items-header">
               <span>拆分产品需求</span>
-              <LnButton size="small" variant="ghost" @click="addSplitItem"><template #icon>＋</template>添加一条</LnButton>
+              <LnButton size="small" variant="ghost" @click="addSplitItem"><template #icon><LnIcon name="plus"/></template>添加一条</LnButton>
             </div>
 
             <div v-for="(item, idx) in splitItems" :key="idx" class="split-item-card">
@@ -808,6 +809,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
   pageQueryRawRequirements,
   createRawRequirement,
@@ -842,6 +844,8 @@ import {
 import { useUserStore } from '@/store/user'
 
 const userStore = useUserStore()
+const route = useRoute()
+const router = useRouter()
 const canCreateRaw = computed(() => userStore.hasAnyPermission(['raw-pool:add']))
 const canEditRaw = computed(() => userStore.hasAnyPermission(['raw-pool:edit', 'raw-pool:evaluate', 'raw-pool:approve']))
 const canSplitRaw = computed(() => userStore.hasAnyPermission(['product-pool:add', 'raw-pool:approve']))
@@ -853,19 +857,19 @@ const dictBusinessLineOptions = ref<DictDataVO[]>([])
 const dictProductManagerOptions = ref<DictDataVO[]>([])
 const dictProjectManagerOptions = ref<DictDataVO[]>([])
 const statusVisuals: Record<string, Pick<LnOption, 'color' | 'icon'>> = {
-  pending_judgement: { color: '#9b9ba4', icon: '○' },
-  pending_split: { color: '#d28b36', icon: '◔' },
-  in_progress: { color: '#5e6ad2', icon: '◒' },
-  online: { color: '#2f9e6f', icon: '●' },
-  closed: { color: '#6f6f78', icon: '✓' },
-  suspended: { color: '#d28b36', icon: 'Ⅱ' },
-  rejected: { color: '#d05757', icon: '⊘' },
+  pending_judgement: { color: '#9b9ba4', icon: 'pending' },
+  pending_split: { color: '#d28b36', icon: 'pending' },
+  in_progress: { color: '#5e6ad2', icon: 'progress' },
+  online: { color: '#2f9e6f', icon: 'success' },
+  closed: { color: '#6f6f78', icon: 'check' },
+  suspended: { color: '#d28b36', icon: 'paused' },
+  rejected: { color: '#d05757', icon: 'blocked' },
 }
 const priorityVisuals: Record<string, Pick<LnOption, 'color' | 'icon'>> = {
-  P0: { color: '#d05757', icon: '●' },
-  P1: { color: '#d28b36', icon: '●' },
-  P2: { color: '#5e6ad2', icon: '●' },
-  P3: { color: '#6f6f78', icon: '●' },
+  P0: { color: '#d05757', icon: 'priority' },
+  P1: { color: '#d28b36', icon: 'priority' },
+  P2: { color: '#5e6ad2', icon: 'priority' },
+  P3: { color: '#6f6f78', icon: 'priority' },
 }
 const fallbackStatusOptions: DictDataVO[] = [
   { label: '待判定', value: 'pending_judgement' },
@@ -1275,6 +1279,21 @@ function closeRequirement() {
   activeRequirementDetail.value = null
   requirementLogs.value = []
   previewMode.value = 'peek'
+}
+
+function returnToKanban() {
+  let query: Record<string, string> = {}
+  try {
+    const context = JSON.parse(sessionStorage.getItem('kanban-return-context') || '{}')
+    query = Object.fromEntries(
+      Object.entries(context)
+        .filter(([key, value]) => key !== 'scrollLeft' && value !== '' && value != null)
+        .map(([key, value]) => [key, String(value)]),
+    )
+  } catch {
+    query = {}
+  }
+  void router.push({ path: '/kanban', query })
 }
 
 function clearSpacePreviewState() {
@@ -1752,8 +1771,13 @@ async function handleSubmitCreate() {
   }
 }
 
-onMounted(() => {
-  loadData()
+onMounted(async () => {
+  await loadData()
+  const focusId = Number(route.query.focus)
+  if (focusId) {
+    const focusedRow = tableData.value.find(item => item.id === focusId)
+    if (focusedRow) await openRequirement(focusedRow, 'detail')
+  }
   loadDictData()
   window.addEventListener('keydown', handleGlobalKeydown)
   window.addEventListener('keyup', handleGlobalKeyup)
@@ -1793,7 +1817,7 @@ onUnmounted(() => {
   strong {
     padding: 6px 7px 8px;
     color: var(--ln-text-tertiary);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 650;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -2053,10 +2077,61 @@ onUnmounted(() => {
 }
 
 .list-row {
+  --urgent-burn-rgb: 236, 93, 37;
+  position: relative;
+  isolation: isolate;
   padding: 11px 16px;
   border-bottom: 1px solid rgba(17, 24, 39, 0.05);
   cursor: pointer;
   transition: 0.16s ease;
+
+  &.is-urgent::before,
+  &.is-urgent::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  &.is-urgent::before {
+    z-index: 0;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      rgba(var(--urgent-burn-rgb), 0.09) 0%,
+      rgba(var(--urgent-burn-rgb), 0.065) 48%,
+      transparent 100%
+    );
+    clip-path: inset(0 100% 0 0);
+  }
+
+  &.is-urgent::after {
+    z-index: 0;
+    inset: 0;
+    background: linear-gradient(
+      98deg,
+      transparent 0%,
+      transparent 38%,
+      rgba(var(--urgent-burn-rgb), 0.05) 42%,
+      rgba(var(--urgent-burn-rgb), 0.3) 50%,
+      rgba(var(--urgent-burn-rgb), 0.16) 56%,
+      transparent 62%,
+      transparent 100%
+    );
+    background-position: 100% 0;
+    background-size: 300% 100%;
+    clip-path: inset(0);
+    filter: blur(6px);
+    will-change: background-position;
+  }
+
+  &.is-urgent.hovering::before {
+    animation: urgent-burn-residue 980ms linear both;
+  }
+
+  &.is-urgent.hovering::after {
+    animation: urgent-burn-front 980ms linear both;
+  }
 
   &:hover {
     background: rgba(17, 24, 39, 0.025);
@@ -2085,10 +2160,25 @@ onUnmounted(() => {
 }
 
 .cell {
+  position: relative;
+  z-index: 1;
   min-width: 0;
   font-size: 12px;
   line-height: 1.45;
   color: var(--text-primary);
+}
+
+@keyframes urgent-burn-front {
+  0% { background-position: 100% 0; opacity: 0; }
+  8% { opacity: 1; }
+  92% { opacity: 1; }
+  100% { background-position: 0 0; opacity: 0; }
+}
+
+@keyframes urgent-burn-residue {
+  0% { opacity: 0; clip-path: inset(0 100% 0 0); }
+  52% { opacity: 0.72; clip-path: inset(0 45% 0 0); }
+  100% { opacity: 0; clip-path: inset(0 0 0 0); }
 }
 
 .urgent-cell {
@@ -2104,13 +2194,46 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: rgba(212, 92, 71, 0.1);
-  color: #c46246;
+  background: radial-gradient(circle at 50% 68%, rgba(233, 138, 63, 0.18), rgba(212, 92, 71, 0.08) 68%);
+  color: #cf603f;
 
   :deep(.ln-icon) {
     width: 10px;
     height: 10px;
     stroke-width: 1.6;
+    transform-origin: 50% 88%;
+    animation: urgent-flame-sway 1.18s ease-in-out infinite;
+    filter: drop-shadow(0 1px 1px rgba(207, 96, 63, 0.2));
+    will-change: transform;
+  }
+
+  :deep(.ln-icon__flame-core) {
+    animation: urgent-flame-glow 0.86s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes urgent-flame-sway {
+  0%, 100% { transform: translateY(0) rotate(-2deg) scaleX(0.96); }
+  35% { transform: translateY(-0.6px) rotate(2.5deg) scaleX(1.03); }
+  68% { transform: translateY(-0.2px) rotate(-1deg) scaleX(0.98); }
+}
+
+@keyframes urgent-flame-glow {
+  from { opacity: 0.55; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .list-row.is-urgent.hovering::before,
+  .list-row.is-urgent.hovering::after,
+  .urgent-mark :deep(.ln-icon),
+  .urgent-mark :deep(.ln-icon__flame-core) {
+    animation: none;
+  }
+
+  .list-row.is-urgent.hovering::before {
+    opacity: 0.5;
+    clip-path: inset(0);
   }
 }
 
@@ -2201,7 +2324,7 @@ onUnmounted(() => {
   padding: 0 6px;
   border-radius: 999px;
   background: rgba(17, 24, 39, 0.04);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--text-secondary);
   white-space: nowrap;
@@ -2220,7 +2343,7 @@ onUnmounted(() => {
   border-radius: 999px;
   background: rgba(17, 24, 39, 0.05);
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
 
   &.muted {
@@ -2335,7 +2458,7 @@ onUnmounted(() => {
 .peek-loading { display: grid; gap: 14px; padding: 4px 0; }
 .peek-loading__tags { display: flex; flex-wrap: wrap; gap: 8px; }
 
-.form-divider { position: relative; margin: 22px 0 18px; display: flex; align-items: center; color: var(--ln-text-tertiary); font: 620 10px/1 var(--ln-font); letter-spacing: .09em; text-transform: uppercase; &::after { content: ''; height: 1px; flex: 1; margin-left: 10px; background: var(--ln-border); } span { white-space: nowrap; } }
+.form-divider { position: relative; margin: 22px 0 18px; display: flex; align-items: center; color: var(--ln-text-tertiary); font: 620 11px/1 var(--ln-font); letter-spacing: .09em; text-transform: uppercase; &::after { content: ''; height: 1px; flex: 1; margin-left: 10px; background: var(--ln-border); } span { white-space: nowrap; } }
 
 .peek-empty-state {
   height: 100%;

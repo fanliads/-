@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>看板视图 · 2607_1</title>
+  <style>
+    :root{
+      --bg:#f7f7f8;--panel:#fff;--panel-2:#fafafa;--line:#e8e8ea;--line-strong:#dcdce0;
+      --text:#202124;--muted:#74767c;--soft:#9b9da3;--ink:#2d2e32;--accent:#5e6ad2;
+      --accent-soft:#eef0ff;--shadow:0 14px 40px rgba(28,29,34,.10);
+      --sidebar:220px;--radius:10px;
+      font-family:"Avenir Next","PingFang SC","Microsoft YaHei",sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-size:13px;overflow:hidden}
+    button,input{font:inherit}
+    button{color:inherit}
+    .app{height:100vh;display:grid;grid-template-columns:var(--sidebar) minmax(0,1fr)}
+    .sidebar{background:#f3f3f4;border-right:1px solid var(--line);padding:14px 12px;display:flex;flex-direction:column}
+    .brand{display:flex;align-items:center;gap:10px;padding:4px 8px 18px;font-weight:680;letter-spacing:-.01em}
+    .brand-mark{width:26px;height:26px;border-radius:8px;background:#242529;color:#fff;display:grid;place-items:center;font-size:12px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+    .workspace{font-size:11px;color:var(--soft);font-weight:600;text-transform:uppercase;letter-spacing:.08em;padding:12px 9px 6px}
+    .nav{display:grid;gap:3px}
+    .nav-item{height:34px;border:0;background:transparent;border-radius:7px;display:flex;align-items:center;gap:10px;padding:0 10px;color:#5d5f65;cursor:pointer;text-align:left}
+    .nav-item:hover{background:#ebebed;color:#292a2e}
+    .nav-item.active{background:#e4e4e7;color:#222327;font-weight:620}
+    .nav-icon{width:16px;height:16px;display:grid;place-items:center;color:#777a80}
+    .sidebar-foot{margin-top:auto;border-top:1px solid var(--line);padding-top:12px}
+    .profile{display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px}
+    .avatar{width:28px;height:28px;border-radius:50%;background:#35363b;color:#fff;display:grid;place-items:center;font-size:11px}
+    .profile small{display:block;color:var(--soft);margin-top:2px}
+    .main{min-width:0;display:grid;grid-template-rows:48px minmax(0,1fr)}
+    .topbar{background:rgba(255,255,255,.86);backdrop-filter:blur(18px);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 24px;gap:10px}
+    .crumb{color:var(--muted)}
+    .crumb strong{color:var(--text);font-weight:600}
+    .top-actions{margin-left:auto;display:flex;gap:6px}
+    .icon-btn,.btn{border:1px solid var(--line-strong);background:#fff;border-radius:7px;height:30px;padding:0 10px;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+    .icon-btn{width:30px;padding:0;justify-content:center}
+    .btn:hover,.icon-btn:hover{background:#f6f6f7}
+    .btn.primary{background:#292a2e;color:#fff;border-color:#292a2e}
+    .content{min-height:0;display:grid;grid-template-rows:auto auto minmax(0,1fr)}
+    .hero{padding:22px 26px 14px;display:flex;align-items:flex-end;gap:18px}
+    .hero h1{font-size:22px;line-height:1;margin:0 0 7px;letter-spacing:-.035em}
+    .hero p{margin:0;color:var(--muted)}
+    .count{font-weight:500;color:var(--soft);font-size:13px;margin-left:5px}
+    .segmented{margin-left:auto;border:1px solid var(--line-strong);background:#efeff1;padding:3px;border-radius:8px;display:flex}
+    .segment{height:28px;border:0;background:transparent;border-radius:6px;padding:0 13px;cursor:pointer;color:#686a70}
+    .segment.active{background:#fff;color:#26272b;box-shadow:0 1px 2px rgba(20,20,20,.08);font-weight:620}
+    .toolbar{margin:0 26px 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px;display:flex;gap:7px;align-items:center;box-shadow:0 1px 2px rgba(20,20,20,.02)}
+    .search{height:32px;min-width:220px;display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:7px;padding:0 10px;background:#fbfbfc}
+    .search input{border:0;outline:0;background:transparent;min-width:0;width:100%;color:var(--text)}
+    .filter{height:32px;border:1px solid var(--line);border-radius:7px;background:#fff;padding:0 10px;cursor:pointer;color:#606269}
+    .filter:hover{border-color:var(--line-strong);background:#fafafa}
+    .chip{height:27px;border:1px solid #dfe1ff;background:var(--accent-soft);color:#505ab3;border-radius:14px;padding:0 9px;display:none;align-items:center;gap:6px}
+    .chip.show{display:inline-flex}
+    .clear{border:0;background:transparent;color:var(--muted);cursor:pointer}
+    .result-count{margin-left:auto;color:var(--soft);white-space:nowrap;padding-right:4px}
+    .board-wrap{min-height:0;overflow-x:auto;overflow-y:hidden;padding:0 26px 22px}
+    .board{height:100%;display:flex;gap:10px;min-width:max-content}
+    .column{width:276px;min-width:276px;height:100%;display:grid;grid-template-rows:36px minmax(0,1fr);border-radius:10px}
+    .column-head{display:flex;align-items:center;gap:7px;padding:0 8px;color:#52545a;font-weight:620}
+    .dot{width:7px;height:7px;border-radius:50%;background:var(--col)}
+    .column-count{font-size:11px;color:var(--soft);font-weight:500}
+    .cards{min-height:0;overflow-y:auto;border:1px solid var(--line);background:#f1f1f3;border-radius:10px;padding:7px;display:grid;align-content:start;gap:7px;transition:.16s}
+    .cards.drag-over{background:#eceeff;border-color:#bfc4ff;box-shadow:inset 0 0 0 1px #ccd0ff}
+    .card{background:#fff;border:1px solid #e4e4e7;border-radius:8px;padding:11px;cursor:grab;box-shadow:0 1px 2px rgba(30,31,35,.025);transition:transform .14s,border-color .14s,box-shadow .14s;animation:rise .28s both}
+    .card:hover{transform:translateY(-1px);border-color:#d2d2d7;box-shadow:0 5px 15px rgba(30,31,35,.07)}
+    .card.dragging{opacity:.48;transform:rotate(1deg)}
+    .card-code{font-size:10px;color:var(--soft);letter-spacing:.02em}
+    .card-title{font-size:13px;font-weight:620;line-height:1.45;margin:6px 0 11px}
+    .meta-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+    .tag{font-size:10px;height:20px;display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:5px;padding:0 6px;color:#65676d;background:#fafafa}
+    .tag.p1{color:#b14d4d;background:#fff3f2;border-color:#f2d8d5}
+    .tag.p2{color:#9b6b22;background:#fff8e9;border-color:#efdfba}
+    .tag.sprint{color:#4f5ab5;background:#f0f1ff;border-color:#dfe1ff}
+    .person{margin-left:auto;width:21px;height:21px;border-radius:50%;display:grid;place-items:center;background:#e5e7ea;color:#55585f;font-size:9px;font-weight:700}
+    .empty{min-height:110px;display:grid;place-items:center;color:var(--soft);font-size:12px;border:1px dashed #d6d6da;border-radius:8px}
+    .toast{position:fixed;left:calc(var(--sidebar) + 50%);bottom:28px;transform:translateX(-50%) translateY(20px);background:#292a2e;color:#fff;border-radius:8px;padding:10px 14px;opacity:0;pointer-events:none;transition:.22s;box-shadow:var(--shadow);z-index:20}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    .detail{position:fixed;inset:48px 0 0 var(--sidebar);background:var(--bg);z-index:15;display:none;overflow:auto}
+    .detail.show{display:block;animation:fade .18s}
+    .detail-inner{max-width:920px;margin:0 auto;padding:28px 34px 60px}
+    .detail-back{border:0;background:transparent;color:var(--muted);cursor:pointer;padding:0;margin-bottom:28px}
+    .detail-grid{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:44px}
+    .detail h2{font-size:28px;line-height:1.25;letter-spacing:-.035em;margin:10px 0}
+    .detail-code{color:var(--soft);font-size:12px}
+    .detail-desc{font-size:14px;line-height:1.8;color:#55575d;margin-top:24px}
+    .detail-side{border-left:1px solid var(--line);padding-left:24px}
+    .field{padding:11px 0;border-bottom:1px solid var(--line)}
+    .field small{display:block;color:var(--soft);margin-bottom:5px}
+    .kbd{border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:4px;padding:1px 5px;font-size:10px;background:#fff;color:#777}
+    @keyframes rise{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+    @keyframes fade{from{opacity:0}to{opacity:1}}
+    @media(max-width:1000px){:root{--sidebar:180px}.column{width:250px;min-width:250px}.hero,.board-wrap{padding-left:18px;padding-right:18px}.toolbar{margin-left:18px;margin-right:18px}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">需</span>需求中枢</div>
+      <div class="workspace">个人</div>
+      <nav class="nav">
+        <button class="nav-item"><span class="nav-icon">⌂</span>我的工作</button>
+      </nav>
+      <div class="workspace">需求</div>
+      <nav class="nav">
+        <button class="nav-item"><span class="nav-icon">▤</span>原始需求</button>
+        <button class="nav-item"><span class="nav-icon">◇</span>产品需求</button>
+      </nav>
+      <div class="workspace">视图</div>
+      <nav class="nav">
+        <button class="nav-item active"><span class="nav-icon">▥</span>看板视图</button>
+        <button class="nav-item" onclick="location.href='../../F2_迭代管理优化/Prototypes/iterations.html'"><span class="nav-icon">◴</span>迭代</button>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="profile"><span class="avatar">王</span><div>王晨<small>产品经理</small></div></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <span class="crumb">视图&nbsp; / &nbsp;<strong>看板</strong></span>
+        <div class="top-actions">
+          <button class="icon-btn" title="搜索">⌕</button>
+          <button class="btn primary">＋ 新建需求</button>
+        </div>
+      </header>
+
+      <section class="content">
+        <div class="hero">
+          <div>
+            <h1>看板视图 <span class="count" id="heroCount">8 项</span></h1>
+            <p>按状态查看并推进需求，拖拽卡片即可更新状态。</p>
+          </div>
+          <div class="segmented" aria-label="需求对象">
+            <button class="segment active" data-type="raw">原始需求</button>
+            <button class="segment" data-type="product">产品需求</button>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <label class="search">⌕ <input id="search" placeholder="搜索编号、标题…"></label>
+          <button class="filter" data-filter="priority">优先级⌄</button>
+          <button class="filter" data-filter="line">业务线⌄</button>
+          <button class="filter" data-filter="owner">负责人⌄</button>
+          <button class="filter" id="sprintFilter" data-filter="sprint" style="display:none">所属迭代⌄</button>
+          <span class="chip" id="filterChip"><span id="chipText"></span><button class="clear" id="chipClose">×</button></span>
+          <button class="clear" id="clearAll">清除</button>
+          <span class="result-count" id="resultCount">显示 8 项</span>
+        </div>
+
+        <div class="board-wrap">
+          <div class="board" id="board"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <section class="detail" id="detail">
+    <div class="detail-inner">
+      <button class="detail-back" id="detailBack">← 返回看板 <span class="kbd">Esc</span></button>
+      <div class="detail-grid">
+        <article>
+          <div class="detail-code" id="detailCode"></div>
+          <h2 id="detailTitle"></h2>
+          <div class="meta-row" id="detailTags"></div>
+          <p class="detail-desc">这是独立的需求详情页面演示。看板保持全宽，不在右侧展开常驻详情栏；返回后会保留当前对象、筛选条件和滚动位置。</p>
+        </article>
+        <aside class="detail-side">
+          <div class="field"><small>当前状态</small><strong id="detailStatus"></strong></div>
+          <div class="field"><small>负责人</small><strong id="detailOwner"></strong></div>
+          <div class="field"><small>业务线</small><strong id="detailLine"></strong></div>
+          <div class="field"><small id="detailExtraLabel">来源</small><strong id="detailExtra"></strong></div>
+        </aside>
+      </div>
+    </div>
+  </section>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const datasets = {
+      raw: {
+        statuses:[['待评估','#88909b'],['评估中','#d99635'],['已采纳','#5e6ad2'],['已拒绝','#d75a5a'],['已挂起','#8d75bd']],
+        cards:[
+          {id:'RAW-260720-018',title:'支持临时迭代的非整周周期',status:'待评估',priority:'P1',line:'产品平台',owner:'王晨',extra:'用户反馈'},
+          {id:'RAW-260720-017',title:'看板卡片状态拖拽后即时反馈',status:'评估中',priority:'P1',line:'产品平台',owner:'陈露',extra:'内部提报'},
+          {id:'RAW-260718-014',title:'销售线索批量导入与去重',status:'评估中',priority:'P2',line:'商业增长',owner:'李哲',extra:'业务提报'},
+          {id:'RAW-260717-009',title:'需求详情支持关联客户',status:'已采纳',priority:'P2',line:'客户成功',owner:'陈露',extra:'客户反馈'},
+          {id:'RAW-260716-006',title:'旧版附件预览兼容',status:'已拒绝',priority:'P3',line:'基础体验',owner:'周洋',extra:'客服转交'},
+          {id:'RAW-260715-004',title:'移动端轻量查看需求详情',status:'已挂起',priority:'P3',line:'基础体验',owner:'王晨',extra:'用户反馈'},
+          {id:'RAW-260714-003',title:'业务线字典支持颜色标识',status:'已采纳',priority:'P2',line:'产品平台',owner:'李哲',extra:'内部提报'},
+          {id:'RAW-260712-001',title:'统一需求编号搜索规则',status:'待评估',priority:'P2',line:'产品平台',owner:'周洋',extra:'内部提报'}
+        ]
+      },
+      product: {
+        statuses:[['待设计','#88909b'],['设计中','#d99635'],['待开发','#5e6ad2'],['开发中','#2f9b72'],['已上线','#7b63b8']],
+        cards:[
+          {id:'PRD-2607-021',title:'迭代周期支持任意起止日期',status:'待设计',priority:'P1',line:'产品平台',owner:'王晨',extra:'2607_1'},
+          {id:'PRD-2607-020',title:'全宽双对象需求看板',status:'设计中',priority:'P1',line:'产品平台',owner:'陈露',extra:'2607_1'},
+          {id:'PRD-2606-016',title:'产品需求池字段快捷编辑',status:'待开发',priority:'P2',line:'产品平台',owner:'李哲',extra:'2606_4'},
+          {id:'PRD-2606-013',title:'需求拆分工作区交互升级',status:'开发中',priority:'P1',line:'基础体验',owner:'周洋',extra:'2606_4'},
+          {id:'PRD-2606-010',title:'原始需求评估权限校验',status:'已上线',priority:'P2',line:'产品平台',owner:'陈露',extra:'2606_3'},
+          {id:'PRD-2606-008',title:'需求池紧凑列表视图',status:'已上线',priority:'P2',line:'基础体验',owner:'王晨',extra:'2606_4'}
+        ]
+      }
+    };
+    let currentType='raw', activeFilter=null, draggedId=null;
+    const board=document.getElementById('board'), search=document.getElementById('search');
+    const toast=document.getElementById('toast'), detail=document.getElementById('detail');
+
+    function render(){
+      const data=datasets[currentType];
+      const q=search.value.trim().toLowerCase();
+      const visible=data.cards.filter(c=>(!q||`${c.id}${c.title}`.toLowerCase().includes(q))&&(!activeFilter||c.priority===activeFilter));
+      board.innerHTML='';
+      data.statuses.forEach(([status,color])=>{
+        const col=document.createElement('section');col.className='column';col.style.setProperty('--col',color);
+        const cards=visible.filter(c=>c.status===status);
+        col.innerHTML=`<header class="column-head"><span class="dot"></span>${status}<span class="column-count">${cards.length}</span></header><div class="cards" data-status="${status}"></div>`;
+        const list=col.querySelector('.cards');
+        cards.forEach((card,i)=>list.appendChild(cardNode(card,i)));
+        if(!cards.length)list.innerHTML='<div class="empty">暂无需求</div>';
+        list.addEventListener('dragover',e=>{e.preventDefault();list.classList.add('drag-over')});
+        list.addEventListener('dragleave',()=>list.classList.remove('drag-over'));
+        list.addEventListener('drop',e=>{e.preventDefault();list.classList.remove('drag-over');moveCard(draggedId,status)});
+        board.appendChild(col);
+      });
+      document.getElementById('heroCount').textContent=`${visible.length} 项`;
+      document.getElementById('resultCount').textContent=`显示 ${visible.length} 项`;
+    }
+    function cardNode(card,i){
+      const el=document.createElement('article');el.className='card';el.draggable=true;el.dataset.id=card.id;el.style.animationDelay=`${i*35}ms`;
+      const extraClass=card.priority==='P1'?'p1':card.priority==='P2'?'p2':'';
+      el.innerHTML=`<div class="card-code">${card.id}</div><div class="card-title">${card.title}</div><div class="meta-row"><span class="tag ${extraClass}">${card.priority}</span><span class="tag">${card.line}</span><span class="tag ${currentType==='product'?'sprint':''}">${currentType==='raw'?card.extra:card.extra}</span><span class="person">${card.owner.slice(-1)}</span></div>`;
+      el.addEventListener('dragstart',e=>{draggedId=card.id;el.classList.add('dragging');e.dataTransfer.effectAllowed='move'});
+      el.addEventListener('dragend',()=>el.classList.remove('dragging'));
+      el.addEventListener('click',()=>openDetail(card));
+      return el;
+    }
+    function moveCard(id,status){
+      const card=datasets[currentType].cards.find(c=>c.id===id);if(!card||card.status===status)return;
+      card.status=status;render();showToast(`已将 ${id} 移至「${status}」`);
+    }
+    function showToast(msg){toast.textContent=msg;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800)}
+    function openDetail(card){
+      document.getElementById('detailCode').textContent=card.id;
+      document.getElementById('detailTitle').textContent=card.title;
+      document.getElementById('detailStatus').textContent=card.status;
+      document.getElementById('detailOwner').textContent=card.owner;
+      document.getElementById('detailLine').textContent=card.line;
+      document.getElementById('detailExtraLabel').textContent=currentType==='raw'?'来源':'所属迭代';
+      document.getElementById('detailExtra').textContent=card.extra;
+      document.getElementById('detailTags').innerHTML=`<span class="tag ${card.priority==='P1'?'p1':'p2'}">${card.priority}</span><span class="tag">${currentType==='raw'?'原始需求':'产品需求'}</span>`;
+      detail.classList.add('show');
+    }
+    function closeDetail(){detail.classList.remove('show')}
+    document.querySelectorAll('.segment').forEach(btn=>btn.onclick=()=>{
+      currentType=btn.dataset.type;activeFilter=null;search.value='';
+      document.querySelectorAll('.segment').forEach(x=>x.classList.toggle('active',x===btn));
+      document.getElementById('sprintFilter').style.display=currentType==='product'?'inline-flex':'none';
+      document.getElementById('filterChip').classList.remove('show');render();
+    });
+    document.querySelectorAll('.filter').forEach(btn=>btn.onclick=()=>{
+      if(btn.dataset.filter==='priority'){activeFilter=activeFilter?'':'P1';document.getElementById('chipText').textContent='优先级：P1';document.getElementById('filterChip').classList.toggle('show',!!activeFilter);render()}
+      else showToast(`${btn.textContent.replace('⌄','')}筛选菜单 · 原型演示`);
+    });
+    search.addEventListener('input',render);
+    document.getElementById('clearAll').onclick=()=>{activeFilter=null;search.value='';document.getElementById('filterChip').classList.remove('show');render()};
+    document.getElementById('chipClose').onclick=document.getElementById('clearAll').onclick;
+    document.getElementById('detailBack').onclick=closeDetail;
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDetail()});
+    render();
+  </script>
+</body>
+</html>

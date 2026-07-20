@@ -22,7 +22,7 @@
         <div class="form-group">
           <label class="form-label">密码</label>
           <LnFormItem prop="password">
-            <LnPasswordInput v-model="loginForm.password" placeholder="请输入密码" @keydown.enter="handleLogin"><template #prefix>◇</template></LnPasswordInput>
+            <LnPasswordInput v-model="loginForm.password" placeholder="请输入密码" @keydown.enter="handleLogin"><template #prefix><LnIcon name="user"/></template></LnPasswordInput>
           </LnFormItem>
         </div>
         <LnButton class="login-action" variant="primary" :loading="loading" @click="handleLogin">
@@ -48,7 +48,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { getDingTalkConfigApi, type DingTalkAuthConfig } from '@/api/auth'
-import { lnToast, LnButton, LnForm, LnFormItem, LnInput, LnPasswordInput, type LnFormInstance, type LnFormRules } from '@/components/linear'
+import { lnToast, LnButton, LnForm, LnFormItem, LnIcon, LnInput, LnPasswordInput, type LnFormInstance, type LnFormRules } from '@/components/linear'
 
 const router = useRouter()
 const route = useRoute()

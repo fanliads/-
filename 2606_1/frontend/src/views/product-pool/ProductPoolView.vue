@@ -116,7 +116,7 @@
                   <span v-else class="empty-cell">—</span>
                 </div>
                 <div v-if="showPrdTag" class="issue-document" @click.stop>
-                  <LnButton v-if="item.prdUrl" class="tag-link prd-link" size="small" variant="ghost" :href="item.prdUrl" target="_blank" rel="noopener noreferrer" title="打开 PRD" @click.stop>PRD ↗</LnButton>
+                  <LnButton v-if="item.prdUrl" class="tag-link prd-link" size="small" variant="ghost" :href="item.prdUrl" target="_blank" rel="noopener noreferrer" title="打开 PRD" @click.stop><template #icon><LnIcon name="external-link"/></template>PRD</LnButton>
                   <span v-else class="empty-cell">—</span>
                 </div>
               </div>
@@ -151,7 +151,8 @@
                 <div class="peek-title-row">
                   <h3 class="peek-title">{{ activeRequirementDetail.title }}</h3>
                   <div class="peek-header-actions">
-                    <LnButton v-if="previewMode === 'peek'" size="small" variant="primary" @click="previewMode = 'detail'">详情</LnButton><LnButton size="small" icon-only variant="ghost" aria-label="关闭" @click="closeRequirement"><template #icon>×</template></LnButton>
+                    <LnButton v-if="route.query.from === 'kanban'" size="small" variant="ghost" @click="returnToKanban">← 返回看板</LnButton>
+                    <LnButton v-if="previewMode === 'peek'" size="small" variant="primary" @click="previewMode = 'detail'">详情</LnButton><LnButton size="small" icon-only variant="ghost" aria-label="关闭" @click="closeRequirement"><template #icon><LnIcon name="close"/></template></LnButton>
                   </div>
                 </div>
                 <div class="peek-tags">
@@ -483,6 +484,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
   pageQueryProductRequirements,
   createProductRequirement,
@@ -511,6 +513,8 @@ import { sanitizeRichText } from '@/utils/rich-text'
 import { useUserStore } from '@/store/user'
 
 const userStore = useUserStore()
+const route = useRoute()
+const router = useRouter()
 const canCreateProduct = computed(() => userStore.hasAnyPermission(['product-pool:add']))
 const canEditProduct = computed(() => userStore.hasAnyPermission(['product-pool:edit', 'product-pool:filter', 'product-pool:judge']))
 
@@ -617,36 +621,36 @@ const createRules: LnFormRules = {
 }
 
 const productStatusSelectOptions: LnOption[] = [
-  { value: 'backlog', label: '待规划', color: '#9b9ba4', icon: '○' },
-  { value: 'researching', label: '调研中', color: '#d28b36', icon: '◔' },
-  { value: 'pending_design', label: '待设计', color: '#d28b36', icon: '◔' },
-  { value: 'designing', label: '设计中', color: '#5e6ad2', icon: '◒' },
-  { value: 'developing', label: '开发中', color: '#5e6ad2', icon: '◒' },
-  { value: 'testing', label: '测试中', color: '#5e6ad2', icon: '◒' },
-  { value: 'online', label: '已上线', color: '#2f9e6f', icon: '●' },
-  { value: 'accepted', label: '已验收', color: '#2f9e6f', icon: '✓' },
-  { value: 'rejected', label: '验收不通过', color: '#d05757', icon: '⊘' },
-  { value: 'suspended', label: '已暂停', color: '#d28b36', icon: 'Ⅱ' },
-  { value: 'closed', label: '已关闭', color: '#6f6f78', icon: '×' },
+  { value: 'backlog', label: '待规划', color: '#9b9ba4', icon: 'pending' },
+  { value: 'researching', label: '调研中', color: '#d28b36', icon: 'pending' },
+  { value: 'pending_design', label: '待设计', color: '#d28b36', icon: 'pending' },
+  { value: 'designing', label: '设计中', color: '#5e6ad2', icon: 'progress' },
+  { value: 'developing', label: '开发中', color: '#5e6ad2', icon: 'progress' },
+  { value: 'testing', label: '测试中', color: '#5e6ad2', icon: 'progress' },
+  { value: 'online', label: '已上线', color: '#2f9e6f', icon: 'success' },
+  { value: 'accepted', label: '已验收', color: '#2f9e6f', icon: 'check' },
+  { value: 'rejected', label: '验收不通过', color: '#d05757', icon: 'blocked' },
+  { value: 'suspended', label: '已暂停', color: '#d28b36', icon: 'paused' },
+  { value: 'closed', label: '已关闭', color: '#6f6f78', icon: 'closed' },
 ]
 
 const priorityVisuals: Record<string, Pick<LnOption, 'color' | 'icon'>> = {
-  P0: { color: '#d05757', icon: '●' }, P1: { color: '#d28b36', icon: '●' },
-  P2: { color: '#5e6ad2', icon: '●' }, P3: { color: '#6f6f78', icon: '●' },
+  P0: { color: '#d05757', icon: 'priority' }, P1: { color: '#d28b36', icon: 'priority' },
+  P2: { color: '#5e6ad2', icon: 'priority' }, P3: { color: '#6f6f78', icon: 'priority' },
 }
 const linearStatusOptions = productStatusSelectOptions
 const linearPriorityOptions = computed<LnOption[]>(() => dictPriorityOptions.value.map(item => ({ label:item.label,value:item.value,...priorityVisuals[item.value] })))
 const linearBusinessLineOptions = computed<LnOption[]>(() => [
-  { label:'未设置',value:'',icon:'—' }, ...dictBusinessLineOptions.value.map(item => ({ label:item.label,value:String(item.id),icon:'◇' })),
+  { label:'未设置',value:'',icon: 'none' }, ...dictBusinessLineOptions.value.map(item => ({ label:item.label,value:String(item.id),icon: 'business' })),
 ])
 const linearReqTypeOptions = computed<LnOption[]>(() => [
-  { label:'未设置',value:'',icon:'—' }, ...dictReqTypeOptions.value.map(item => ({ label:item.label,value:item.value,icon:'▤' })),
+  { label:'未设置',value:'',icon: 'none' }, ...dictReqTypeOptions.value.map(item => ({ label:item.label,value:item.value,icon: 'type' })),
 ])
 const linearSprintOptions = computed<LnOption[]>(() => [
-  { label:'未关联',value:'',icon:'—' }, ...dictSprintOptions.value.map(item => ({ label:item.name,value:String(item.id),icon:'◆' })),
+  { label:'未关联',value:'',icon: 'none' }, ...dictSprintOptions.value.map(item => ({ label:item.name,value:String(item.id),icon: 'sprint' })),
 ])
 const linearHandlerOptions = computed<LnOption[]>(() => [
-  { label:'未分配',value:'',icon:'—' }, ...dictHandlerOptions.value.map(item => ({ label:item.label,value:item.value,icon:'◉' })),
+  { label:'未分配',value:'',icon: 'none' }, ...dictHandlerOptions.value.map(item => ({ label:item.label,value:item.value,icon: 'user' })),
 ])
 const queryBusinessLineId = computed({ get:()=>queryForm.businessLineId ? String(queryForm.businessLineId) : '', set:(value:string)=>{ queryForm.businessLineId=normalizeOptionalNumber(value) } })
 const querySprintId = computed({ get:()=>queryForm.sprintId ? String(queryForm.sprintId) : '', set:(value:string)=>{ queryForm.sprintId=normalizeOptionalNumber(value) } })
@@ -903,6 +907,21 @@ function closeRequirement() {
   activeRequirementId.value = null
   activeRequirementDetail.value = null
   previewMode.value = 'peek'
+}
+
+function returnToKanban() {
+  let query: Record<string, string> = {}
+  try {
+    const context = JSON.parse(sessionStorage.getItem('kanban-return-context') || '{}')
+    query = Object.fromEntries(
+      Object.entries(context)
+        .filter(([key, value]) => key !== 'scrollLeft' && value !== '' && value != null)
+        .map(([key, value]) => [key, String(value)]),
+    )
+  } catch {
+    query = {}
+  }
+  void router.push({ path: '/kanban', query })
 }
 
 function clearSpacePreviewState() {
@@ -1230,8 +1249,13 @@ function handleGlobalKeyup(event: KeyboardEvent) {
   reopenRequirementById(candidateId)
 }
 
-onMounted(() => {
-  loadData()
+onMounted(async () => {
+  await loadData()
+  const focusId = Number(route.query.focus)
+  if (focusId) {
+    const focusedRow = tableData.value.find(item => item.id === focusId)
+    if (focusedRow) await openRequirement(focusedRow, 'detail')
+  }
   loadStats()
   loadDictData()
   window.addEventListener('keydown', handleGlobalKeydown)
@@ -1263,7 +1287,7 @@ onUnmounted(() => {
 
 .linear-display-menu {
   width: 220px; padding: 4px; display: grid; gap: 3px; font-family: var(--ln-font);
-  strong { padding: 6px 7px 8px; color: var(--ln-text-tertiary); font-size: 10px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; }
+  strong { padding: 6px 7px 8px; color: var(--ln-text-tertiary); font-size: 11px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; }
   label { min-height: 34px; padding: 0 7px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 5px; color: var(--ln-text-secondary); font-size: 12px; &:hover { background: var(--ln-surface-hover); } }
 }
 .linear-display-field { padding: 5px 7px 8px; display: grid; gap: 5px; color: var(--ln-text-secondary); font-size: 11px; }
@@ -1308,7 +1332,7 @@ onUnmounted(() => {
   border-bottom: 1px solid rgba(31, 35, 40, 0.08);
   background: rgba(252, 252, 251, 0.98);
   color: var(--text-tertiary);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 620;
   letter-spacing: 0.025em;
   backdrop-filter: blur(10px);
@@ -1681,7 +1705,7 @@ onUnmounted(() => {
   padding: 0 6px;
   border-radius: 999px;
   background: rgba(17, 24, 39, 0.04);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--text-secondary);
   white-space: nowrap;
@@ -1700,7 +1724,7 @@ onUnmounted(() => {
   border-radius: 999px;
   background: rgba(17, 24, 39, 0.05);
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
 
   &.muted {

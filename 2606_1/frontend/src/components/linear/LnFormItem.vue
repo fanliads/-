@@ -133,7 +133,7 @@ function handleFocusOut(event: FocusEvent) {
 .ln-form-item__label { padding-top:8px; color:var(--ln-text-secondary); font-size:12px; font-weight:540; line-height:1.35; }
 .is-top-label .ln-form-item__label { padding-top:0; }
 .ln-form-item__content { min-width:0; }
-.ln-form-item__error { grid-column:1/-1; color:var(--ln-danger); font-size:10px; line-height:1.35; }
+.ln-form-item__error { grid-column:1/-1; color:var(--ln-danger); font-size:11px; line-height:1.35; }
 .has-label .ln-form-item__error { grid-column:2; }
 .has-label.is-top-label .ln-form-item__error { grid-column:1; }
 .ln-form-error-enter-active,.ln-form-error-leave-active{transition:opacity var(--ln-fast),transform var(--ln-fast)}.ln-form-error-enter-from,.ln-form-error-leave-to{opacity:0;transform:translateY(-2px)}

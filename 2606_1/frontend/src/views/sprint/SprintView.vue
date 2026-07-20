@@ -9,35 +9,15 @@
         </div>
         <div class="page-subtitle wb-page-subtitle">把 sprint 作为承载排期与需求范围的统一工作区。</div>
       </div>
-      <LnButton v-if="canManageSprint" variant="primary" @click="openCreateDialog"><template #icon>＋</template>新建迭代</LnButton>
+      <LnButton v-if="canManageSprint" variant="primary" @click="openCreateDialog"><template #icon><LnIcon name="plus"/></template>新建迭代</LnButton>
     </div>
-
-    <section class="summary-strip wb-summary-strip" v-if="activeSprint">
-      <div class="summary-pill wb-summary-pill active">
-        <span class="summary-label wb-summary-label">当前迭代</span>
-        <span class="summary-value wb-summary-value small">{{ activeSprint.name }}</span>
-      </div>
-      <div class="summary-pill wb-summary-pill">
-        <span class="summary-label wb-summary-label">状态</span>
-        <span class="summary-value wb-summary-value small">{{ getStatusLabel(activeSprint.status) }}</span>
-      </div>
-      <div class="summary-pill wb-summary-pill progress-summary"><span class="summary-label wb-summary-label">完成度</span><LnProgress :value="activeSprintProgress" /></div>
-      <div class="summary-pill wb-summary-pill">
-        <span class="summary-label wb-summary-label">需求数量</span>
-        <span class="summary-value wb-summary-value">{{ activeSprint.requirements.length }}</span>
-      </div>
-      <div class="summary-pill wb-summary-pill">
-        <span class="summary-label wb-summary-label">节奏</span>
-        <span class="summary-value wb-summary-value small">{{ activeSprint.cadenceType === 'weekly' ? '周迭代' : '双周迭代' }}</span>
-      </div>
-    </section>
 
     <section class="sprint-layout wb-shell">
       <div class="sprint-sidebar wb-panel">
         <div class="sidebar-header">
           <div class="sidebar-title">迭代列表</div>
           <div class="sidebar-copy">左侧做导航，右侧承接当前 sprint 的目标、范围和排期动作。</div>
-          <LnInput v-model="sprintKeyword" placeholder="搜索迭代或业务线" clearable><template #prefix>⌕</template></LnInput>
+          <LnInput v-model="sprintKeyword" placeholder="搜索迭代或业务线" clearable><template #prefix><LnIcon name="search"/></template></LnInput>
         </div>
         <div class="sidebar-scroll">
         <LnSprintRow
@@ -45,7 +25,7 @@
           :key="item.id"
           :name="item.name" :team="item.teamName" :start-date="item.startDate" :end-date="item.endDate"
           :status-label="getStatusLabel(item.status)" :status-tone="getStatusTone(item.status)"
-          :cadence-label="item.cadenceType === 'weekly' ? '周迭代' : '双周迭代'"
+          :cadence-label="getCadenceLabel(item)"
           :requirement-count="sprintDetailMap[item.id]?.requirements.length || 0"
           :progress="getSprintProgress(sprintDetailMap[item.id])" :selected="selectedSprintId === item.id"
           @click="selectSprint(item.id)"
@@ -64,7 +44,7 @@
               <div class="detail-meta-line">
                 <span class="detail-meta-item">状态 {{ getStatusLabel(activeSprint.status) }}</span>
                 <span class="detail-meta-sep">·</span>
-                <span class="detail-meta-item">节奏 {{ activeSprint.cadenceType === 'weekly' ? '周迭代' : '双周迭代' }}</span>
+                <span class="detail-meta-item">周期 {{ getCadenceLabel(activeSprint) }}</span>
                 <span class="detail-meta-sep">·</span>
                 <span class="detail-meta-item">需求 {{ activeSprint.requirements.length }} 条</span>
               </div>
@@ -78,7 +58,7 @@
             </div>
             <div class="detail-fact wb-detail-fact">
               <span>迭代周期</span>
-              <strong>{{ activeSprint.cadenceType === 'weekly' ? '周迭代' : '双周迭代' }}</strong>
+              <strong>{{ activeSprint.startDate }} ~ {{ activeSprint.endDate }} · {{ getDurationDays(activeSprint.startDate, activeSprint.endDate) }} 天</strong>
             </div>
             <div class="detail-fact wb-detail-fact">
               <span>迭代状态</span>
@@ -157,22 +137,25 @@
         <LnFormItem label="迭代名称" prop="name">
           <LnInput v-model="formData.name" placeholder="系统自动生成，支持修改" />
         </LnFormItem>
-        <div class="form-row">
-          <LnFormItem label="周期类型" prop="cadenceType">
-            <LnSelect v-model="formData.cadenceType" :options="cadenceOptions" @change="syncDerivedFields" />
-          </LnFormItem>
-          <LnFormItem label="迭代状态" prop="status">
-            <LnSelect v-model="formData.status" :options="sprintStatusOptions" />
-          </LnFormItem>
-        </div>
+        <LnFormItem label="迭代状态" prop="status">
+          <LnSelect v-model="formData.status" :options="sprintStatusOptions" />
+        </LnFormItem>
+        <LnFormItem label="周期预设">
+          <div class="cadence-presets">
+            <LnButton size="small" :variant="formData.cadenceType === 'weekly' ? 'primary' : 'secondary'" @click="applyCadencePreset('weekly')">单周</LnButton>
+            <LnButton size="small" :variant="formData.cadenceType === 'biweekly' ? 'primary' : 'secondary'" @click="applyCadencePreset('biweekly')">双周</LnButton>
+            <span class="duration-badge">{{ periodLabel }}</span>
+          </div>
+        </LnFormItem>
         <div class="form-row">
           <LnFormItem label="开始日期" prop="startDate">
-            <LnDateInput v-model="formData.startDate" @change="syncDerivedFields" />
+            <LnDateInput v-model="formData.startDate" @change="handleStartDateChange" />
           </LnFormItem>
           <LnFormItem label="结束日期" prop="endDate">
-            <LnDateInput v-model="formData.endDate" />
+            <LnDateInput v-model="formData.endDate" @change="handleManualDateChange" />
           </LnFormItem>
         </div>
+        <div v-if="dateRangeError" class="date-range-error">{{ dateRangeError }}</div>
         <LnFormItem label="迭代目标" prop="goal">
           <LnTextarea v-model="formData.goal" placeholder="输入本次迭代目标" />
         </LnFormItem>
@@ -195,12 +178,13 @@ import {
   removeSprintRequirement,
   type SprintDetail,
   type SprintItem,
+  type SprintCadenceType,
   type SprintPayload,
 } from '@/api/sprint'
 import { pageQueryProductRequirements } from '@/api/product-requirement'
 import { listDictData } from '@/api/dict'
 import { useUserStore } from '@/store/user'
-import { lnToast, LnButton, LnDateInput, LnDialog, LnEmptyState, LnForm, LnFormItem, LnInput, LnProgress, LnSelect, LnSkeleton, LnSprintRow, LnTextarea, type LnFormInstance, type LnFormRules, type LnOption } from '@/components/linear'
+import { lnToast, LnButton, LnDateInput, LnDialog, LnEmptyState, LnForm, LnFormItem, LnIcon, LnInput, LnSelect, LnSkeleton, LnSprintRow, LnTextarea, type LnFormInstance, type LnFormRules, type LnOption } from '@/components/linear'
 
 const userStore = useUserStore()
 const sprints = ref<SprintItem[]>([])
@@ -218,7 +202,7 @@ const sprintKeyword = ref('')
 const formData = reactive<SprintPayload>({
   name: '',
   teamName: '',
-  cadenceType: 'weekly',
+  cadenceType: 'custom',
   startDate: '',
   endDate: '',
   status: 'planning',
@@ -228,7 +212,6 @@ const formData = reactive<SprintPayload>({
 const rules: LnFormRules = {
   name: [{ required: true, message: '请输入迭代名称', trigger: 'blur' }],
   teamName: [{ required: true, message: '请输入团队名称', trigger: 'blur' }],
-  cadenceType: [{ required: true, message: '请选择周期类型', trigger: 'change' }],
   startDate: [{ required: true, message: '请选择开始日期', trigger: 'change' }],
   endDate: [{ required: true, message: '请选择结束日期', trigger: 'change' }],
 }
@@ -246,16 +229,24 @@ const filteredSprints = computed(() => {
 const unscheduledRequirementOptions = computed<LnOption[]>(() => unscheduledRequirements.value.map(item => ({
   label: `${item.reqNo} ${item.title}`,
   value: String(item.id),
-  icon: '◇',
+  icon: 'business',
 })))
 const selectedRequirementValue = computed({
   get: () => selectedRequirementId.value ? String(selectedRequirementId.value) : '',
   set: (value: string) => { selectedRequirementId.value = value ? Number(value) : null },
 })
-const activeSprintProgress = computed(() => getSprintProgress(activeSprint.value))
 const businessLineSelectOptions = computed<LnOption[]>(() => businessLineOptions.value.map(item => ({ label: item.label, value: item.label })))
-const cadenceOptions: LnOption[] = [{ label: '周迭代', value: 'weekly' }, { label: '双周迭代', value: 'biweekly' }]
 const sprintStatusOptions: LnOption[] = [{ label: '规划中', value: 'planning' }, { label: '进行中', value: 'in_progress' }, { label: '已发布', value: 'released' }]
+const periodDays = computed(() => getDurationDays(formData.startDate, formData.endDate))
+const periodLabel = computed(() => {
+  if (!periodDays.value) return '请选择起止日期'
+  const prefix = formData.cadenceType === 'weekly' || formData.cadenceType === 'biweekly' ? '预设' : '自定义'
+  return `${prefix} · ${periodDays.value} 天`
+})
+const dateRangeError = computed(() => {
+  if (!formData.startDate || !formData.endDate) return ''
+  return periodDays.value > 0 ? '' : '结束日期不得早于开始日期'
+})
 
 function getSprintProgress(sprint?: SprintDetail | null): number {
   if (!sprint?.requirements.length) return 0
@@ -280,15 +271,53 @@ function getStatusLabel(status: string) {
   return map[status] || status
 }
 
-function syncEndDate() {
-  if (!formData.startDate) return
-  const base = new Date(formData.startDate)
-  const days = formData.cadenceType === 'weekly' ? 6 : 13
+function getDurationDays(startDate?: string, endDate?: string) {
+  if (!startDate || !endDate) return 0
+  const start = new Date(`${startDate}T00:00:00`)
+  const end = new Date(`${endDate}T00:00:00`)
+  return Math.floor((end.getTime() - start.getTime()) / 86400000) + 1
+}
+
+function getCadenceLabel(sprint: Pick<SprintItem, 'cadenceType' | 'startDate' | 'endDate'>) {
+  const days = getDurationDays(sprint.startDate, sprint.endDate)
+  if (sprint.cadenceType === 'weekly' && days === 7) return '单周 · 7 天'
+  if (sprint.cadenceType === 'biweekly' && days === 14) return '双周 · 14 天'
+  return `自定义 · ${days} 天`
+}
+
+function formatLocalDate(date: Date) {
+  const year = date.getFullYear()
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getDate()}`.padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function applyCadencePreset(cadenceType: Exclude<SprintCadenceType, 'custom'>) {
+  formData.cadenceType = cadenceType
+  if (!formData.startDate) {
+    lnToast.info('请先选择开始日期')
+    return
+  }
+  const base = new Date(`${formData.startDate}T00:00:00`)
+  const days = cadenceType === 'weekly' ? 6 : 13
   base.setDate(base.getDate() + days)
-  const year = base.getFullYear()
-  const month = `${base.getMonth() + 1}`.padStart(2, '0')
-  const day = `${base.getDate()}`.padStart(2, '0')
-  formData.endDate = `${year}-${month}-${day}`
+  formData.endDate = formatLocalDate(base)
+}
+
+function handleStartDateChange() {
+  if (formData.cadenceType === 'weekly' || formData.cadenceType === 'biweekly') {
+    applyCadencePreset(formData.cadenceType)
+  } else {
+    handleManualDateChange()
+  }
+  syncSprintName()
+}
+
+function handleManualDateChange() {
+  const days = getDurationDays(formData.startDate, formData.endDate)
+  if (days === 7) formData.cadenceType = 'weekly'
+  else if (days === 14) formData.cadenceType = 'biweekly'
+  else formData.cadenceType = 'custom'
 }
 
 function getBusinessLineCode(name: string) {
@@ -320,16 +349,11 @@ function syncSprintName() {
   formData.name = buildSprintName(formData.teamName, formData.startDate)
 }
 
-function syncDerivedFields() {
-  syncEndDate()
-  syncSprintName()
-}
-
 function openCreateDialog() {
   Object.assign(formData, {
     name: '',
     teamName: '',
-    cadenceType: 'weekly',
+    cadenceType: 'custom',
     startDate: '',
     endDate: '',
     status: 'planning',
@@ -389,6 +413,10 @@ async function submitSprint() {
   if (!form) return
   const valid = await form.validate().catch(() => false)
   if (!valid) return
+  if (dateRangeError.value || periodDays.value < 1) {
+    lnToast.error(dateRangeError.value || '请选择合法的迭代日期')
+    return
+  }
   submitting.value = true
   try {
     await createSprint(formData)
@@ -439,11 +467,6 @@ onMounted(async () => {
   gap: 16px;
 }
 
-.progress-summary {
-  min-width: 190px;
-  :deep(.ln-progress) { width: 118px; }
-}
-
 .sidebar-header :deep(.ln-input-wrap) { width: 100%; margin-top: 10px; }
 .sidebar-scroll :deep(.ln-sprint-row + .ln-sprint-row) { margin-top: 3px; }
 
@@ -488,33 +511,37 @@ onMounted(async () => {
   margin-top: 6px;
 }
 
-.summary-pill.active {
-  border-color: rgba(0, 113, 227, 0.18);
-  background: linear-gradient(180deg, rgba(0, 113, 227, 0.06) 0%, rgba(255, 255, 255, 0.96) 100%);
-}
-
-.summary-label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.summary-value {
-  font-size: 24px;
-  line-height: 1;
-  font-weight: 700;
-  color: var(--text-primary);
-
-  &.small {
-    font-size: 18px;
-  }
-}
-
 .sprint-layout {
   flex: 1;
   grid-template-columns: 320px 1fr;
   min-height: 0;
+}
+
+.cadence-presets {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.duration-badge {
+  margin-left: auto;
+  min-height: 26px;
+  padding: 0 9px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--ln-border);
+  border-radius: 999px;
+  background: var(--ln-accent-soft);
+  color: var(--ln-accent);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.date-range-error {
+  margin: -6px 0 2px 100px;
+  color: var(--ln-danger);
+  font-size: 11px;
 }
 
 .sprint-sidebar {
@@ -604,7 +631,7 @@ onMounted(async () => {
   border: 1px solid rgba(17, 24, 39, 0.08);
   background: rgba(255, 255, 255, 0.88);
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -750,7 +777,7 @@ onMounted(async () => {
   padding: 0 6px;
   border-radius: 999px;
   background: rgba(17, 24, 39, 0.04);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--text-secondary);
   white-space: nowrap;

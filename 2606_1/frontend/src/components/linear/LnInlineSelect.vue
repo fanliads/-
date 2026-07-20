@@ -61,7 +61,7 @@
           >
             <span class="ln-inline-select__marker" :class="toneClass(option)" :style="option.color ? { color: option.color } : undefined" aria-hidden="true"><i/></span>
             <span class="ln-inline-select__copy"><strong>{{ option.label }}</strong><small v-if="option.description">{{ option.description }}</small></span>
-            <span v-if="isSelected(option.value)" class="ln-inline-select__check" aria-hidden="true">✓</span>
+            <LnIcon v-if="isSelected(option.value)" class="ln-inline-select__check" name="check" aria-hidden="true" />
           </button>
           <div v-if="!filteredOptions.length" class="ln-inline-select__empty">没有匹配选项</div>
         </div>
@@ -73,6 +73,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import LnPopover from './LnPopover.vue'
+import LnIcon from './LnIcon.vue'
 import type { LnInlineOption } from './types'
 
 const props = withDefaults(defineProps<{
@@ -223,6 +224,6 @@ function toneClass(option: LnInlineOption) {
 .ln-inline-select__options{max-height:248px;overflow-y:auto;overscroll-behavior:contain;display:grid;gap:1px}
 .ln-inline-select__option{width:100%;min-height:34px;padding:5px 8px;display:grid;grid-template-columns:16px minmax(0,1fr) 16px;align-items:center;gap:8px;border:0;border-radius:var(--ln-radius-sm);background:transparent;color:var(--ln-text);font:13px var(--ln-font);text-align:left;cursor:pointer;&:hover,&.is-active{background:var(--ln-surface-hover)}&.is-selected{font-weight:550}&:disabled{opacity:.42;cursor:not-allowed}}
 .ln-inline-select__marker{width:14px;height:14px;display:grid;place-items:center;border:1.5px solid currentColor;border-radius:50%;i{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:0}.is-selected & i{opacity:1}&.is-pending{color:var(--ln-warning)}&.is-progress{color:var(--ln-accent)}&.is-success{color:var(--ln-success)}&.is-danger{color:var(--ln-danger)}&.is-muted,&.is-neutral{color:var(--ln-text-tertiary)}}
-.ln-inline-select__copy{min-width:0;display:grid;gap:2px;strong,small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}strong{font-size:12px;font-weight:540}small{color:var(--ln-text-tertiary);font-size:10px;font-weight:400}}
-.ln-inline-select__check{color:var(--ln-accent);text-align:center}.ln-inline-select__empty{padding:18px 8px;color:var(--ln-text-tertiary);font-size:11px;text-align:center}
+.ln-inline-select__copy{min-width:0;display:grid;gap:2px;strong,small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}strong{font-size:12px;font-weight:540}small{color:var(--ln-text-tertiary);font-size:11px;font-weight:400}}
+.ln-inline-select__check{width:14px;height:14px;color:var(--ln-accent)}.ln-inline-select__empty{padding:18px 8px;color:var(--ln-text-tertiary);font-size:12px;text-align:center}
 </style>

@@ -13,7 +13,7 @@
         >
           <header v-if="$slots.header || showClose" class="ln-drawer__header">
             <div class="ln-drawer__heading"><slot name="header" /></div>
-            <button v-if="showClose" class="ln-drawer__close ln-focus-ring" type="button" aria-label="关闭抽屉" @click="requestClose">×</button>
+            <button v-if="showClose" class="ln-drawer__close ln-focus-ring" type="button" aria-label="关闭抽屉" @click="requestClose"><LnIcon name="close" /></button>
           </header>
           <div class="ln-drawer__body"><slot /></div>
           <footer v-if="$slots.footer" class="ln-drawer__footer"><slot name="footer" /></footer>
@@ -25,6 +25,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import LnIcon from './LnIcon.vue'
 
 const props = withDefaults(defineProps<{
   modelValue: boolean
@@ -121,7 +122,7 @@ onBeforeUnmount(release)
 .ln-drawer { width: 640px; max-width: min(92vw, 760px); height: 100%; display: flex; flex-direction: column; overflow: hidden; outline: 0; border-left: 1px solid rgba(255,255,255,.62); background: var(--ln-surface-raised); color: var(--ln-text); box-shadow: var(--ln-shadow-peek); }
 .ln-drawer__header { min-height: 68px; padding: 16px 20px; display: flex; align-items: flex-start; gap: 14px; border-bottom: 1px solid var(--ln-border); }
 .ln-drawer__heading { min-width: 0; flex: 1; }
-.ln-drawer__close { width: 28px; height: 28px; flex: none; border: 0; border-radius: var(--ln-radius-sm); background: transparent; color: var(--ln-text-tertiary); font-size: 19px; cursor: pointer; &:hover { background: var(--ln-surface-hover); color: var(--ln-text); } }
+.ln-drawer__close { width: 28px; height: 28px; display:grid;place-items:center; flex: none; border: 0; border-radius: var(--ln-radius-sm); background: transparent; color: var(--ln-icon); cursor: pointer; &:hover { background: var(--ln-surface-hover); color: var(--ln-text); } svg{width:16px;height:16px} }
 .ln-drawer__body { min-height: 0; flex: 1; overflow: auto; overscroll-behavior: contain; }
 .ln-drawer__footer { padding: 12px 20px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--ln-border); }
 .ln-drawer-enter-active,.ln-drawer-leave-active { transition: opacity var(--ln-normal); }.ln-drawer-enter-active .ln-drawer,.ln-drawer-leave-active .ln-drawer { transition: transform var(--ln-normal); }.ln-drawer-enter-from,.ln-drawer-leave-to { opacity: 0; }.ln-drawer-enter-from .ln-drawer,.ln-drawer-leave-to .ln-drawer { transform: translateX(24px); }

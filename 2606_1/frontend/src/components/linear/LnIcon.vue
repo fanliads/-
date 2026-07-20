@@ -16,14 +16,29 @@
     <template v-else-if="name === 'plus'">
       <path d="M8 3.25v9.5M3.25 8h9.5" />
     </template>
+    <template v-else-if="name === 'close'"><path d="m4.25 4.25 7.5 7.5m0-7.5-7.5 7.5" /></template>
+    <template v-else-if="name === 'check'"><path d="m3.25 8.1 3.05 3.05 6.45-6.5" /></template>
+    <template v-else-if="name === 'external-link'"><path d="M9 3.25h3.75V7M12.5 3.5 7.25 8.75" /><path d="M7 4.25H4.5c-.7 0-1.25.55-1.25 1.25v6c0 .7.55 1.25 1.25 1.25h6c.7 0 1.25-.55 1.25-1.25V9" /></template>
+    <template v-else-if="name === 'copy'"><rect x="5.25" y="5.25" width="7.5" height="7.5" rx="1.25"/><path d="M10.75 5.25V4.5c0-.7-.55-1.25-1.25-1.25h-5c-.7 0-1.25.55-1.25 1.25v5c0 .7.55 1.25 1.25 1.25h.75"/></template>
+    <template v-else-if="name === 'archive'"><rect x="3" y="4.75" width="10" height="8" rx="1.25"/><path d="M2.5 3.25h11v2.25M6.25 8h3.5"/></template>
+    <template v-else-if="name === 'calendar'"><rect x="2.75" y="3.75" width="10.5" height="9.5" rx="1.5"/><path d="M5.25 2.5v2.25M10.75 2.5v2.25M2.75 6.5h10.5"/></template>
+    <template v-else-if="name === 'user'"><circle cx="8" cy="5.5" r="2.25"/><path d="M3.75 13c.4-2.35 1.8-3.5 4.25-3.5s3.85 1.15 4.25 3.5"/></template>
+    <template v-else-if="name === 'tag'"><path d="M2.75 7.35V3.5c0-.42.33-.75.75-.75h3.85l5.9 5.9-4.6 4.6-5.9-5.9Z"/><circle cx="5.25" cy="5.25" r=".8"/></template>
+    <template v-else-if="name === 'sprint'"><path d="M8 2.75a5.25 5.25 0 1 1-4.8 3.12"/><path d="M2.75 2.75v3.5h3.5M8 5.25V8l2 1.25"/></template>
+    <template v-else-if="name === 'more'"><circle class="ln-icon__fill" cx="3.5" cy="8" r="1"/><circle class="ln-icon__fill" cx="8" cy="8" r="1"/><circle class="ln-icon__fill" cx="12.5" cy="8" r="1"/></template>
+    <template v-else-if="name === 'info'"><circle cx="8" cy="8" r="5.25"/><path d="M8 7.25v3.25"/><circle class="ln-icon__fill" cx="8" cy="5.25" r=".7"/></template>
+    <template v-else-if="name === 'warning'"><path d="M7.02 3.05 2.5 11.1c-.45.8.12 1.8 1.04 1.8h8.92c.92 0 1.49-1 1.04-1.8L8.98 3.05a1.13 1.13 0 0 0-1.96 0Z"/><path d="M8 6v3.25"/><circle class="ln-icon__fill" cx="8" cy="11" r=".65"/></template>
+    <template v-else-if="name === 'question'"><circle cx="8" cy="8" r="5.25"/><path d="M6.35 6.3A1.75 1.75 0 0 1 8.1 4.75c1.05 0 1.85.65 1.85 1.55 0 1.7-1.95 1.65-1.95 3"/><circle class="ln-icon__fill" cx="8" cy="11.25" r=".65"/></template>
     <template v-else-if="name === 'urgent'">
-      <path d="M8.35 1.75c.18 1.92-.72 3.08-1.66 4.16-.92 1.05-1.88 2.15-1.88 3.88a3.19 3.19 0 0 0 6.38 0c0-1.48-.62-2.73-1.72-3.72.06 1.18-.42 2.05-1.31 2.7.1-2.02-.85-3.47.19-7.02Z" />
+      <path d="M8.6 1.75c.12 1.75-.66 2.82-1.52 3.86-.86 1.04-1.75 2.11-1.75 3.72a2.67 2.67 0 0 0 5.34 0c0-1.32-.52-2.43-1.52-3.35.03 1.05-.37 1.83-1.18 2.42.07-1.65-.66-2.87.63-6.65Z" />
+      <path class="ln-icon__fill ln-icon__flame-core" d="M8.05 8.1c.8.72 1.12 1.27 1.12 1.87 0 .7-.52 1.28-1.17 1.28s-1.17-.58-1.17-1.28c0-.65.34-1.16 1.22-1.87Z" />
     </template>
   </svg>
 </template>
 
 <script setup lang="ts">
-defineProps<{ name: 'search' | 'chevron-down' | 'chevron-left' | 'chevron-right' | 'plus' | 'urgent' }>()
+type LnIconName = 'search' | 'chevron-down' | 'chevron-left' | 'chevron-right' | 'plus' | 'close' | 'check' | 'external-link' | 'copy' | 'archive' | 'calendar' | 'user' | 'tag' | 'sprint' | 'more' | 'info' | 'warning' | 'question' | 'urgent'
+defineProps<{ name: LnIconName }>()
 </script>
 
 <style scoped>
@@ -37,4 +52,5 @@ defineProps<{ name: 'search' | 'chevron-down' | 'chevron-left' | 'chevron-right'
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+.ln-icon__fill { fill: currentColor; stroke: none; }
 </style>

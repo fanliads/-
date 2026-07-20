@@ -11,8 +11,8 @@
       </div>
 
       <div class="header-actions wb-actions-row">
-        <LnInput v-model="searchKeyword" class="line-search" placeholder="搜索需求标题或编号" clearable><template #prefix>⌕</template></LnInput>
-        <LnButton variant="primary" @click="router.push('/submit')"><template #icon>＋</template>新建需求</LnButton>
+        <LnInput v-model="searchKeyword" class="line-search" placeholder="搜索需求标题或编号" clearable><template #prefix><LnIcon name="search"/></template></LnInput>
+        <LnButton variant="primary" @click="router.push('/submit')"><template #icon><LnIcon name="plus"/></template>新建需求</LnButton>
       </div>
     </section>
 
@@ -146,7 +146,7 @@ import dayjs from 'dayjs'
 import { pageQueryRawRequirements } from '@/api/raw-requirement'
 import type { RawRequirementListVO } from '@/types/requirement'
 import { getRawRequirementStatusLabel } from '@/types/requirement'
-import { LnBadge, LnButton, LnEmptyState, LnInput, LnMetric, LnPressable, LnSkeleton } from '@/components/linear'
+import { LnBadge, LnButton, LnEmptyState, LnIcon, LnInput, LnMetric, LnPressable, LnSkeleton } from '@/components/linear'
 
 interface ReqItem extends RawRequirementListVO {
   workload?: string

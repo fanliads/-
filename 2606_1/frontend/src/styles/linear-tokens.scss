@@ -1,13 +1,19 @@
 :root {
-  --ln-font: "SF Pro Text", "PingFang SC", "Hiragino Sans GB", sans-serif;
+  --ln-font: "SF Pro Text", "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
   --ln-canvas: #f7f7f8;
   --ln-surface: #ffffff;
   --ln-surface-raised: #ffffff;
   --ln-surface-hover: #f4f4f5;
   --ln-surface-active: #ededee;
-  --ln-text: #252529;
-  --ln-text-secondary: #6f6f78;
-  --ln-text-tertiary: #9b9ba4;
+  --ln-text: #202024;
+  --ln-text-secondary: #595961;
+  --ln-text-tertiary: #777780;
+  --ln-icon: #73737c;
+  --ln-icon-muted: #96969e;
+  --ln-font-xs: 11px;
+  --ln-font-sm: 12px;
+  --ln-font-md: 13px;
+  --ln-font-body: 14px;
   --ln-border: rgba(35, 35, 40, 0.09);
   --ln-border-strong: rgba(35, 35, 40, 0.16);
   --ln-accent: #5e6ad2;

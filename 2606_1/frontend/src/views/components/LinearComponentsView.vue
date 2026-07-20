@@ -1,22 +1,44 @@
 <template>
   <main class="showcase">
     <header class="showcase__hero">
-      <div><span class="showcase__kicker">REQ UI / 2606_4 · 48 COMPONENTS</span><h1>Linear components</h1><p>紧凑、清晰、键盘友好的需求管理组件系统。</p></div>
-      <div class="row"><LnTooltip text="全局命令" shortcut="⌘ K"><LnButton @click="commandOpen = true">⌘K 命令</LnButton></LnTooltip><LnButton variant="primary" @click="peekOpen = true"><template #icon>＋</template>打开 Peek</LnButton></div>
+      <div><span class="showcase__kicker">REQ UI / 2606_4 · 48 COMPONENTS · 30 ICONS</span><h1>Linear components</h1><p>紧凑、清晰、键盘友好的需求管理组件系统。</p></div>
+      <div class="row"><LnTooltip text="全局命令" shortcut="⌘ K"><LnButton @click="commandOpen = true">⌘K 命令</LnButton></LnTooltip><LnButton variant="primary" @click="peekOpen = true"><template #icon><LnIcon name="plus"/></template>打开 Peek</LnButton></div>
     </header>
 
     <section class="showcase__grid">
-      <article class="panel"><header><span>01</span><div><h2>Actions</h2><p>四种语义，两种密度，完整禁用与加载状态。</p></div></header><div class="demo row"><LnButton variant="primary">创建需求</LnButton><LnButton>筛选</LnButton><LnButton variant="ghost">取消</LnButton><LnButton variant="danger">删除</LnButton><LnButton loading>保存中</LnButton><LnButton icon-only variant="ghost" aria-label="更多">•••</LnButton></div></article>
+      <article class="panel panel--wide icon-board">
+        <header><span>00</span><div><h2>Iconography</h2><p>通用操作图标与需求状态语义图标，统一使用 16px 画布和 1.35px 描边。</p></div></header>
+        <div class="icon-board__section">
+          <div class="icon-board__label"><strong>Interface icons</strong><span>{{ iconNames.length }} icons</span></div>
+          <div class="icon-grid">
+            <div v-for="icon in iconNames" :key="icon" class="icon-tile" role="img" :aria-label="`${icon} 图标`">
+              <span class="icon-tile__preview"><LnIcon :name="icon"/></span>
+              <code>{{ icon }}</code>
+            </div>
+          </div>
+        </div>
+        <div class="icon-board__section">
+          <div class="icon-board__label"><strong>Status & priority</strong><span>{{ optionIconExamples.length }} semantic icons</span></div>
+          <div class="icon-grid icon-grid--semantic">
+            <div v-for="item in optionIconExamples" :key="item.value" class="icon-tile icon-tile--semantic" role="img" :aria-label="`${item.label}图标`">
+              <span class="icon-tile__preview" :style="{ color: item.color }"><LnOptionIcon :value="item.value" :label="item.label" :icon="item.icon" :color="item.color"/></span>
+              <span class="icon-tile__copy"><strong>{{ item.label }}</strong><code>{{ item.value }}</code></span>
+            </div>
+          </div>
+        </div>
+      </article>
 
-      <article class="panel"><header><span>02</span><div><h2>Inputs & inline edit</h2><p>一致的焦点、校验与快速编辑行为。</p></div></header><div class="demo fields"><LnInput v-model="search" label="搜索需求" placeholder="标题、编号或负责人…" clearable><template #prefix>⌕</template></LnInput><LnInput model-value="错误值" label="校验状态" error="请输入有效的需求编号" /><div class="inline-demo"><small>标题</small><LnInlineEdit v-model="editableTitle" /></div></div></article>
+      <article class="panel"><header><span>01</span><div><h2>Actions</h2><p>四种语义，两种密度，完整禁用与加载状态。</p></div></header><div class="demo row"><LnButton variant="primary">创建需求</LnButton><LnButton>筛选</LnButton><LnButton variant="ghost">取消</LnButton><LnButton variant="danger">删除</LnButton><LnButton loading>保存中</LnButton><LnButton icon-only variant="ghost" aria-label="更多"><template #icon><LnIcon name="more"/></template></LnButton></div></article>
 
-      <article class="panel"><header><span>03</span><div><h2>Badges & popover</h2><p>用低饱和色表达状态，浮层承载临时操作。</p></div></header><div class="demo row"><LnBadge dot>待处理</LnBadge><LnBadge tone="accent" dot>进行中</LnBadge><LnBadge tone="success" dot>已完成</LnBadge><LnBadge tone="warning">高优先级</LnBadge><LnBadge tone="danger">阻塞</LnBadge><LnPopover align="end"><template #trigger><LnButton size="small">显示设置⌄</LnButton></template><template #default="{ close }"><div class="menu"><b>显示属性</b><LnCheckbox v-model="showPriority" label="优先级"/><LnCheckbox v-model="showAssignee" label="负责人"/><LnCheckbox v-model="showCreatedAt" label="创建时间"/><LnButton size="small" variant="ghost" @click="close">完成</LnButton></div></template></LnPopover></div></article>
+      <article class="panel"><header><span>02</span><div><h2>Inputs & inline edit</h2><p>一致的焦点、校验与快速编辑行为。</p></div></header><div class="demo fields"><LnInput v-model="search" label="搜索需求" placeholder="标题、编号或负责人…" clearable><template #prefix><LnIcon name="search"/></template></LnInput><LnInput model-value="错误值" label="校验状态" error="请输入有效的需求编号" /><div class="inline-demo"><small>标题</small><LnInlineEdit v-model="editableTitle" /></div></div></article>
+
+      <article class="panel"><header><span>03</span><div><h2>Badges & popover</h2><p>用低饱和色表达状态，浮层承载临时操作。</p></div></header><div class="demo row"><LnBadge dot>待处理</LnBadge><LnBadge tone="accent" dot>进行中</LnBadge><LnBadge tone="success" dot>已完成</LnBadge><LnBadge tone="warning">高优先级</LnBadge><LnBadge tone="danger">阻塞</LnBadge><LnPopover align="end"><template #trigger><LnButton size="small"><template #icon><LnIcon name="chevron-down"/></template>显示设置</LnButton></template><template #default="{ close }"><div class="menu"><b>显示属性</b><LnCheckbox v-model="showPriority" label="优先级"/><LnCheckbox v-model="showAssignee" label="负责人"/><LnCheckbox v-model="showCreatedAt" label="创建时间"/><LnButton size="small" variant="ghost" @click="close">完成</LnButton></div></template></LnPopover></div></article>
 
       <article class="panel panel--wide"><header><span>04</span><div><h2>Issue rows</h2><p>40px 行高保留信息密度，悬停、选中与响应式状态齐全。</p></div></header><div class="issue-list"><div class="issue-list__header"><span>待处理</span><small>3 个需求</small></div><LnIssueRow v-for="issue in issues" :key="issue.key" :issue-key="issue.key" :title="issue.title" :priority="issue.priority" :assignee="issue.assignee" :status-color="issue.color" :selected="selected === issue.key" @select="selectIssue(issue)"><template #meta><LnBadge v-if="issue.line">{{ issue.line }}</LnBadge></template></LnIssueRow></div></article>
 
       <article class="panel"><header><span>05</span><div><h2>Select & property picker</h2><p>支持搜索的标准选择器，以及状态与优先级快速选择。</p></div></header><div class="demo fields"><LnSelect v-model="team" label="业务线" :options="teamOptions" searchable/><div class="picker-demo"><small>需求属性</small><div class="row"><LnPropertyPicker v-model="status" title="修改状态" :options="statusOptions"/><LnPropertyPicker v-model="priority" title="修改优先级" :options="priorityOptions"/></div></div></div></article>
 
-      <article class="panel"><header><span>06</span><div><h2>Menu & feedback</h2><p>统一菜单层级、快捷键提示和操作反馈。</p></div></header><div class="demo row"><LnPopover><template #trigger><LnButton>更多操作⌄</LnButton></template><template #default="{close}"><LnMenu :items="menuItems" @select="close()"/></template></LnPopover><LnButton @click="showToast('success')">成功提示</LnButton><LnButton @click="showToast('danger')">错误提示</LnButton></div></article>
+      <article class="panel"><header><span>06</span><div><h2>Menu & feedback</h2><p>统一菜单层级、快捷键提示和操作反馈。</p></div></header><div class="demo row"><LnPopover><template #trigger><LnButton><template #icon><LnIcon name="chevron-down"/></template>更多操作</LnButton></template><template #default="{close}"><LnMenu :items="menuItems" @select="close()"/></template></LnPopover><LnButton @click="showToast('success')">成功提示</LnButton><LnButton @click="showToast('danger')">错误提示</LnButton></div></article>
 
       <article class="panel panel--wide"><header><span>07</span><div><h2>Filter builder & loading</h2><p>组合筛选条件与列表骨架屏。</p></div></header><div class="split-demo"><div class="demo"><LnFilterBuilder v-model="filters" :fields="filterFields"/></div><div class="demo skeleton-demo"><div v-for="n in 3" :key="n" class="skeleton-row"><LnSkeleton circle width="22px"/><LnSkeleton width="58px"/><LnSkeleton :width="`${42+n*8}%`"/><LnSkeleton width="72px"/></div></div></div></article>
 
@@ -42,7 +64,7 @@
 
       <article class="panel"><header><span>18</span><div><h2>Dialog</h2><p>焦点管理、键盘关闭和移动端适配。</p></div></header><div class="demo row"><LnButton variant="primary" @click="dialogOpen = true">打开对话框</LnButton></div></article>
 
-      <article class="panel"><header><span>19</span><div><h2>Password</h2><p>密码显隐、自动填充和键盘提交。</p></div></header><div class="demo"><LnPasswordInput v-model="demoPassword" label="密码" placeholder="输入密码" hint="至少 8 位字符"><template #prefix>◇</template></LnPasswordInput></div></article>
+      <article class="panel"><header><span>19</span><div><h2>Password</h2><p>密码显隐、自动填充和键盘提交。</p></div></header><div class="demo"><LnPasswordInput v-model="demoPassword" label="密码" placeholder="输入密码" hint="至少 8 位字符"><template #prefix><LnIcon name="user"/></template></LnPasswordInput></div></article>
 
       <article class="panel"><header><span>20</span><div><h2>Drawer</h2><p>侧滑详情、焦点圈定、Esc 关闭与滚动锁定。</p></div></header><div class="demo row"><LnButton variant="primary" @click="drawerOpen = true">打开详情抽屉</LnButton></div></article>
 
@@ -75,7 +97,21 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
-import { LnAvatar, LnBadge, LnBoardColumn, LnBreadcrumbs, LnButton, LnCalendarDay, LnCallout, LnCheckbox, LnColorPicker, LnCommandMenu, LnDateInput, LnDateRange, LnDialog, LnDrawer, LnEmptyState, LnFilterBuilder, LnForm, LnFormItem, LnFormSection, LnInlineEdit, LnInlineSelect, LnInput, LnIssueCard, LnIssueRow, LnLoadingOverlay, LnMenu, LnMetric, LnPagination, LnPasswordInput, LnPeek, LnPopover, LnPressable, LnProgress, LnPropertyPicker, LnRichTextEditor, LnSelect, LnSkeleton, LnSprintRow, LnSwitch, LnTabs, LnTaskRow, LnTextarea, LnTooltip, LnUserButton, lnConfirm, lnPrompt, lnToast, type LnBreadcrumbItem, type LnCalendarEvent, type LnFilterRule, type LnFormInstance, type LnFormRules, type LnInlineOption, type LnTabOption } from '@/components/linear'
+import { LnAvatar, LnBadge, LnBoardColumn, LnBreadcrumbs, LnButton, LnCalendarDay, LnCallout, LnCheckbox, LnColorPicker, LnCommandMenu, LnDateInput, LnDateRange, LnDialog, LnDrawer, LnEmptyState, LnFilterBuilder, LnForm, LnFormItem, LnFormSection, LnIcon, LnInlineEdit, LnInlineSelect, LnInput, LnIssueCard, LnIssueRow, LnLoadingOverlay, LnMenu, LnMetric, LnOptionIcon, LnPagination, LnPasswordInput, LnPeek, LnPopover, LnPressable, LnProgress, LnPropertyPicker, LnRichTextEditor, LnSelect, LnSkeleton, LnSprintRow, LnSwitch, LnTabs, LnTaskRow, LnTextarea, LnTooltip, LnUserButton, lnConfirm, lnPrompt, lnToast, type LnBreadcrumbItem, type LnCalendarEvent, type LnFilterRule, type LnFormInstance, type LnFormRules, type LnInlineOption, type LnTabOption } from '@/components/linear'
+const iconNames = ['search','chevron-down','chevron-left','chevron-right','plus','close','check','external-link','copy','archive','calendar','user','tag','sprint','more','info','warning','question','urgent'] as const
+const optionIconExamples = [
+  { label:'待处理',value:'pending',icon:'pending',color:'#9b9ba4' },
+  { label:'进行中',value:'active',icon:'progress',color:'#5e6ad2' },
+  { label:'已完成',value:'done',icon:'success',color:'#2f9e6f' },
+  { label:'已验收',value:'accepted',icon:'check',color:'#2f9e6f' },
+  { label:'已阻塞',value:'blocked',icon:'blocked',color:'#d05757' },
+  { label:'已暂停',value:'suspended',icon:'paused',color:'#d28b36' },
+  { label:'已关闭',value:'closed',icon:'closed',color:'#6f6f78' },
+  { label:'P0 紧急',value:'P0',icon:'priority',color:'#d05757' },
+  { label:'P1 高',value:'P1',icon:'priority',color:'#d28b36' },
+  { label:'P2 中',value:'P2',icon:'priority',color:'#5e6ad2' },
+  { label:'P3 低',value:'P3',icon:'priority',color:'#6f6f78' },
+]
 const search = ref(''); const editableTitle = ref('优化原始需求池筛选体验'); const peekOpen = ref(false); const commandOpen = ref(false); const dialogOpen=ref(false); const selected = ref('RAW-128'); const team=ref('core');const status=ref('active');const priority=ref('high')
 const singleDate=ref('2026-07-25');const dateRange=ref(['2026-07-14','2026-07-25']);const description=ref('作为产品经理，我希望在需求列表中快速修改状态和负责人。');const demoPage=ref(3)
 const demoPassword=ref('linear-demo')
@@ -97,10 +133,10 @@ const issues = [
 const activeIssue = computed(() => issues.find(item => item.key === selected.value) || issues[0])
 function selectIssue(issue: typeof issues[number]) { selected.value = issue.key; peekOpen.value = true }
 const teamOptions=[{label:'基础产品',value:'core',description:'核心平台与通用能力'},{label:'增长业务',value:'growth',description:'用户增长与运营'},{label:'商业化',value:'business',description:'收入与客户交付'}]
-const statusOptions=[{label:'待处理',value:'todo',color:'#9b9ba4',icon:'○'},{label:'进行中',value:'active',color:'#5e6ad2',icon:'◒'},{label:'已完成',value:'done',color:'#2f9e6f',icon:'●'},{label:'已阻塞',value:'blocked',color:'#d05757',icon:'⊘'}]
-const priorityOptions=[{label:'无优先级',value:'none',icon:'—'},{label:'低',value:'low',color:'#6f6f78',icon:'▂'},{label:'中',value:'medium',color:'#d28b36',icon:'▄'},{label:'高',value:'high',color:'#d05757',icon:'▆'}]
-const menuItems=[{label:'复制需求链接',value:'copy',icon:'⧉',shortcut:'⌘L'},{label:'转为产品需求',value:'convert',icon:'↗'},{label:'归档需求',value:'archive',icon:'□',separatorBefore:true},{label:'删除需求',value:'delete',icon:'×',danger:true}]
-const commandItems=[{label:'新建原始需求',value:'new',icon:'＋',shortcut:'C'},{label:'打开原始需求池',value:'raw',icon:'◫'},{label:'打开产品需求池',value:'product',icon:'▤'},{label:'切换深色模式',value:'theme',icon:'◐'}]
+const statusOptions=[{label:'待处理',value:'todo',color:'#9b9ba4',icon: 'pending'},{label:'进行中',value:'active',color:'#5e6ad2',icon: 'progress'},{label:'已完成',value:'done',color:'#2f9e6f',icon: 'success'},{label:'已阻塞',value:'blocked',color:'#d05757',icon: 'blocked'}]
+const priorityOptions=[{label:'无优先级',value:'none',icon:'none'},{label:'低',value:'low',color:'#6f6f78',icon:'priority'},{label:'中',value:'medium',color:'#d28b36',icon:'priority'},{label:'高',value:'high',color:'#d05757',icon:'priority'}]
+const menuItems=[{label:'复制需求链接',value:'copy',icon: 'copy',shortcut:'⌘L'},{label:'转为产品需求',value:'convert',icon: 'external-link'},{label:'归档需求',value:'archive',icon: 'archive',separatorBefore:true},{label:'删除需求',value:'delete',icon: 'closed',danger:true}]
+const commandItems=[{label:'新建原始需求',value:'new',icon: 'plus',shortcut:'C'},{label:'打开原始需求池',value:'raw',icon: 'archive'},{label:'打开产品需求池',value:'product',icon: 'type'},{label:'切换深色模式',value:'theme',icon: 'info'}]
 const filterFields=[{label:'状态',value:'status'},{label:'优先级',value:'priority'},{label:'负责人',value:'assignee'},{label:'业务线',value:'businessLine'}]
 const filters=ref<LnFilterRule[]>([{id:'filter-1',field:'status',operator:'eq',value:'进行中'}])
 function showToast(tone:'success'|'danger'){const options={title:tone==='success'?'操作已完成':'保存失败',description:tone==='success'?'变更已同步到需求池':'请检查网络后重试'};tone==='success'?lnToast.success(options):lnToast.error(options)}
@@ -111,8 +147,18 @@ async function validateDemoForm(){try{await demoFormRef.value?.validate();lnToas
 
 <style scoped lang="scss">
 .showcase { height: 100%; overflow: auto; padding: 54px clamp(24px, 5vw, 74px) 80px; background: var(--ln-canvas); color: var(--ln-text); font-family: var(--ln-font); }
-.showcase__hero { max-width: 1180px; margin: 0 auto 34px; display:flex; align-items:flex-end; justify-content:space-between; gap:24px; h1 { margin:8px 0 6px; font-size:clamp(30px,4vw,48px); font-weight:620; letter-spacing:-.045em; } p { color:var(--ln-text-secondary); font-size:14px; } }.showcase__kicker { color:var(--ln-accent); font-size:10px; font-weight:700; letter-spacing:.16em; }
-.showcase__grid { max-width:1180px; margin:auto; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }.panel { min-width:0; padding:18px; border:1px solid var(--ln-border); border-radius:12px; background:rgba(255,255,255,.78); box-shadow:0 1px 2px rgba(20,20,24,.025); > header { display:flex; gap:12px; margin-bottom:20px; > span { color:var(--ln-text-tertiary); font-size:10px; padding-top:3px; } h2 { margin:0 0 3px; font-size:14px; font-weight:620; } p { color:var(--ln-text-tertiary); font-size:11px; } } }.panel--wide { grid-column:1/-1; }.demo { min-height:94px; padding:18px; border:1px dashed var(--ln-border-strong); border-radius:9px; background:var(--ln-surface); }.row { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }.fields { display:grid; grid-template-columns:1fr 1fr; gap:14px; }.inline-demo,.picker-demo { grid-column:1/-1; display:grid; gap:5px; color:var(--ln-text); font-size:13px; small { color:var(--ln-text-tertiary); font-size:11px; } }.menu { min-width:210px; display:grid; gap:2px; b { padding:7px 8px; font-size:11px; } label { padding:7px 8px; display:flex; gap:8px; align-items:center; border-radius:5px; font-size:12px; &:hover { background:var(--ln-surface-hover); } } }.issue-list { overflow:hidden; border:1px solid var(--ln-border); border-radius:9px; }.issue-list__header { height:36px; padding:0 12px; display:flex; align-items:center; gap:8px; border-bottom:1px solid var(--ln-border); background:#fafafa; font-size:12px; font-weight:570; small { color:var(--ln-text-tertiary); font-weight:400; } }.split-demo{display:grid;grid-template-columns:1fr 1fr;gap:12px}.skeleton-demo{display:grid;gap:14px}.skeleton-row{display:grid;grid-template-columns:22px 58px 1fr 72px;align-items:center;gap:10px}.peek-content { display:grid; gap:26px; section { display:grid; gap:9px; } label { color:var(--ln-text-tertiary); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; } p { color:var(--ln-text-secondary); font-size:13px; line-height:1.65; } }.person { display:flex; align-items:baseline; gap:8px; font-size:13px; small { color:var(--ln-text-tertiary); } }.activity { display:flex; gap:10px; i { width:8px; height:8px; margin-top:7px; border-radius:50%; background:var(--ln-accent); box-shadow:0 0 0 4px var(--ln-accent-soft); } small { color:var(--ln-text-tertiary); } }
+.showcase__hero { max-width: 1180px; margin: 0 auto 34px; display:flex; align-items:flex-end; justify-content:space-between; gap:24px; h1 { margin:8px 0 6px; font-size:clamp(30px,4vw,48px); font-weight:620; letter-spacing:-.045em; } p { color:var(--ln-text-secondary); font-size:14px; } }.showcase__kicker { color:var(--ln-accent); font-size: 11px; font-weight:700; letter-spacing:.16em; }
+.showcase__grid { max-width:1180px; margin:auto; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }.panel { min-width:0; padding:18px; border:1px solid var(--ln-border); border-radius:12px; background:rgba(255,255,255,.78); box-shadow:0 1px 2px rgba(20,20,24,.025); > header { display:flex; gap:12px; margin-bottom:20px; > span { color:var(--ln-text-tertiary); font-size: 11px; padding-top:3px; } h2 { margin:0 0 3px; font-size:14px; font-weight:620; } p { color:var(--ln-text-tertiary); font-size:11px; } } }.panel--wide { grid-column:1/-1; }.demo { min-height:94px; padding:18px; border:1px dashed var(--ln-border-strong); border-radius:9px; background:var(--ln-surface); }.row { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }.fields { display:grid; grid-template-columns:1fr 1fr; gap:14px; }.inline-demo,.picker-demo { grid-column:1/-1; display:grid; gap:5px; color:var(--ln-text); font-size:13px; small { color:var(--ln-text-tertiary); font-size:11px; } }.menu { min-width:210px; display:grid; gap:2px; b { padding:7px 8px; font-size:11px; } label { padding:7px 8px; display:flex; gap:8px; align-items:center; border-radius:5px; font-size:12px; &:hover { background:var(--ln-surface-hover); } } }.issue-list { overflow:hidden; border:1px solid var(--ln-border); border-radius:9px; }.issue-list__header { height:36px; padding:0 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--ln-border);background:#fafafa;font-size:12px;font-weight:570;small{color:var(--ln-text-tertiary);font-size:11px;font-weight:400}}.split-demo{display:grid;grid-template-columns:1fr 1fr;gap:12px}.skeleton-demo{display:grid;gap:14px}.skeleton-row{display:grid;grid-template-columns:22px 58px 1fr 72px;align-items:center;gap:10px}.peek-content { display:grid; gap:26px; section { display:grid; gap:9px; } label { color:var(--ln-text-tertiary); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; } p { color:var(--ln-text-secondary); font-size:13px; line-height:1.65; } }.person { display:flex; align-items:baseline; gap:8px; font-size:13px; small { color:var(--ln-text-tertiary); } }.activity { display:flex; gap:10px; i { width:8px; height:8px; margin-top:7px; border-radius:50%; background:var(--ln-accent); box-shadow:0 0 0 4px var(--ln-accent-soft); } small { color:var(--ln-text-tertiary); } }
+.icon-board { overflow:hidden; background:linear-gradient(145deg,rgba(255,255,255,.94),rgba(247,247,245,.8)); }
+.icon-board__section + .icon-board__section { margin-top:20px; padding-top:20px; border-top:1px solid var(--ln-border); }
+.icon-board__label { margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; gap:16px; color:var(--ln-text-secondary); strong{font-size:11px;font-weight:650;letter-spacing:.02em}span{color:var(--ln-text-tertiary);font:10px ui-monospace,SFMono-Regular,Menlo,monospace} }
+.icon-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(112px,1fr)); gap:7px; }
+.icon-grid--semantic { grid-template-columns:repeat(auto-fill,minmax(142px,1fr)); }
+.icon-tile { min-width:0; min-height:68px; padding:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; border:1px solid var(--ln-border); border-radius:8px; background:var(--ln-surface); transition:border-color .14s ease,background .14s ease,transform .14s ease; &:hover{border-color:var(--ln-border-strong);background:var(--ln-surface-hover);transform:translateY(-1px)} code{max-width:100%;overflow:hidden;text-overflow:ellipsis;color:var(--ln-text-tertiary);font:9px ui-monospace,SFMono-Regular,Menlo,monospace;white-space:nowrap} }
+.icon-tile__preview { width:30px; height:30px; display:grid; place-items:center; border-radius:7px; background:var(--ln-canvas); color:var(--ln-text); font-size:18px; box-shadow:inset 0 0 0 1px var(--ln-border); }
+.icon-tile--semantic { min-height:58px; flex-direction:row; justify-content:flex-start; text-align:left; }
+.icon-tile--semantic .icon-tile__preview { flex:0 0 30px; font-size:16px; }
+.icon-tile__copy { min-width:0; display:grid; gap:3px; strong{overflow:hidden;text-overflow:ellipsis;font-size:11px;font-weight:600;white-space:nowrap}code{font-size:9px} }
 .form-demo{display:grid;grid-template-columns:1fr 1fr;gap:14px}.form-demo>*:last-child{grid-column:1/-1}.pagination-demo{padding:0;overflow:hidden}.sprint-demo{display:grid;gap:18px}.board-demo{display:flex;gap:14px;overflow:auto;padding:12px;border:1px dashed var(--ln-border-strong);border-radius:9px;background:var(--ln-canvas)}.task-demo{overflow:auto;border:1px solid var(--ln-border);border-radius:9px}.task-demo :deep(.ln-task-row){min-width:940px}
 .preference-demo{overflow:hidden;border:1px solid var(--ln-border);border-radius:9px;background:var(--ln-surface)}.preference-demo>:first-child{padding:0 16px}.preference-list{padding:18px;display:grid;gap:18px}.preference-list>*+*{padding-top:18px;border-top:1px solid var(--ln-border)}
 .calendar-demo{display:grid;grid-template-columns:repeat(7,minmax(100px,1fr));gap:1px;overflow:auto;border:1px solid var(--ln-border);border-radius:9px;background:var(--ln-border)}
@@ -123,6 +169,6 @@ async function validateDemoForm(){try{await demoFormRef.value?.validate();lnToas
 .pressable-demo{display:grid;gap:8px}.pressable-demo :deep(.ln-pressable){display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:10px}.pressable-demo strong{font:600 11px ui-monospace,monospace;color:var(--ln-text-secondary)}.pressable-demo span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .loading-demo{position:relative;min-height:150px;overflow:hidden}.loading-demo__rows{display:grid;gap:18px;padding:12px}
 .form-validation-demo{max-width:620px}.form-validation-demo__action{padding-left:94px}
-.drawer-demo__header{display:grid;gap:3px;small{color:var(--ln-text-tertiary);font:10px ui-monospace,monospace}strong{font-size:14px;font-weight:620}}.drawer-demo{padding:20px;display:grid;gap:20px;section{display:grid;gap:7px;padding:14px;border:1px solid var(--ln-border);border-radius:var(--ln-radius-lg)}section small{color:var(--ln-text-tertiary);font-size:10px;text-transform:uppercase;letter-spacing:.08em}section p{font-size:13px;line-height:1.6}}
+.drawer-demo__header{display:grid;gap:3px;small{color:var(--ln-text-tertiary);font: 11px ui-monospace,monospace}strong{font-size:14px;font-weight:620}}.drawer-demo{padding:20px;display:grid;gap:20px;section{display:grid;gap:7px;padding:14px;border:1px solid var(--ln-border);border-radius:var(--ln-radius-lg)}section small{color:var(--ln-text-tertiary);font-size: 11px;text-transform:uppercase;letter-spacing:.08em}section p{font-size:13px;line-height:1.6}}
 @media(max-width:800px){.showcase__grid{grid-template-columns:1fr}.panel--wide{grid-column:auto}.showcase__hero{align-items:flex-start;flex-direction:column}.fields,.split-demo{grid-template-columns:1fr}.inline-demo,.picker-demo{grid-column:auto}}
 </style>

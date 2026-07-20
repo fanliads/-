@@ -316,7 +316,7 @@ function createDefaultAssessmentContext(): PriorityAssessmentContextDTO {
 
 // 字典数据
 const dictBusinessLineOptions = ref<DictDataVO[]>([])
-const linearBusinessLineOptions = computed<LnOption[]>(() => dictBusinessLineOptions.value.map(item => ({ label:item.label,value:item.value,icon:'◇' })))
+const linearBusinessLineOptions = computed<LnOption[]>(() => dictBusinessLineOptions.value.map(item => ({ label:item.label,value:item.value,icon: 'business' })))
 const formData = reactive<RawRequirementCreateDTO>({
   title: '',
   description: '',

@@ -3,8 +3,7 @@
     <template #trigger>
       <button class="property-trigger ln-focus-ring" type="button">
         <span class="property-icon" :style="{ color: getOptionColor(selected) }">
-          <span v-if="isPriorityOption(selected)" class="priority-dot" :style="{ backgroundColor: getOptionColor(selected) }"></span>
-          <template v-else>{{ selected?.icon || '○' }}</template>
+          <LnOptionIcon :value="selected?.value" :label="selected?.label" :icon="selected?.icon" :color="getOptionColor(selected)" />
         </span>
         <span class="property-label">{{ selected?.label || placeholder }}</span>
         <span class="property-caret" aria-hidden="true"></span>
@@ -23,12 +22,11 @@
           @click="choose(option, close)"
         >
           <span class="property-option-icon" :style="{ color: getOptionColor(option) }">
-            <span v-if="isPriorityOption(option)" class="priority-dot" :style="{ backgroundColor: getOptionColor(option) }"></span>
-            <template v-else>{{ option.icon || '●' }}</template>
+            <LnOptionIcon :value="option.value" :label="option.label" :icon="option.icon" :color="getOptionColor(option)" />
           </span>
           <span class="property-option-label">{{ option.label }}</span>
           <small v-if="option.description">{{ option.description }}</small>
-          <b v-if="modelValue === option.value">✓</b>
+          <span v-if="modelValue === option.value" class="property-option-check" aria-label="已选择"></span>
         </button>
       </div>
     </template>
@@ -38,6 +36,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import LnPopover from './LnPopover.vue'
+import LnOptionIcon from './LnOptionIcon.vue'
 import type { LnOption } from './types'
 
 const props = withDefaults(defineProps<{
@@ -65,10 +64,6 @@ function normalizePriority(option?: LnOption): string {
   if (priorityColors[value]) return value
   const labelMatch = String(option?.label || '').toUpperCase().match(/\bP[0-3]\b/)
   return labelMatch?.[0] || ''
-}
-
-function isPriorityOption(option?: LnOption): boolean {
-  return Boolean(normalizePriority(option))
 }
 
 function getOptionColor(option?: LnOption): string | undefined {
@@ -107,19 +102,10 @@ function choose(option: LnOption, close: () => void) {
 .property-icon,
 .property-option-icon {
   width: 14px;
-  height: 18px;
+  height: 14px;
   display: grid;
   place-items: center;
-  font-size: 13px;
-  line-height: 1;
-}
-
-.priority-dot {
-  width: 8px;
-  height: 8px;
-  display: block;
-  border-radius: 50%;
-  box-shadow: 0 0 0 1px rgba(17, 24, 39, 0.08);
+  line-height: 0;
 }
 
 .property-label {
@@ -150,7 +136,7 @@ function choose(option: LnOption, close: () => void) {
 .property-title {
   padding: 6px 8px;
   color: var(--ln-text-tertiary);
-  font-size: 10px;
+  font-size:11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -178,18 +164,20 @@ function choose(option: LnOption, close: () => void) {
   small {
     grid-column: 2 / 4;
     color: var(--ln-text-tertiary);
-    font-size: 10px;
+    font-size:11px;
     line-height: 14px;
   }
 
-  b {
+  .property-option-check {
     grid-column: 3;
     grid-row: 1;
     align-self: center;
     justify-self: center;
-    color: var(--ln-accent);
-    font-size: 11px;
-    line-height: 1;
+    width: 8px;
+    height: 5px;
+    border-left: 1.5px solid var(--ln-accent);
+    border-bottom: 1.5px solid var(--ln-accent);
+    transform: translateY(-1px) rotate(-45deg);
   }
 }
 

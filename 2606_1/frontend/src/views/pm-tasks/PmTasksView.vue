@@ -19,7 +19,7 @@
       <div class="list-panel wb-panel">
         <div class="list-toolbar wb-panel-toolbar">
           <LnTabs v-model="filterPriority" :options="priorityTabs" variant="segmented" aria-label="优先级筛选" />
-          <LnInput v-model="searchKeyword" class="line-search" placeholder="筛选演示数据" clearable><template #prefix>⌕</template></LnInput>
+          <LnInput v-model="searchKeyword" class="line-search" placeholder="筛选演示数据" clearable><template #prefix><LnIcon name="search"/></template></LnInput>
         </div>
 
         <div class="list-header wb-list-header row-grid">
@@ -120,7 +120,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { LnAvatar, LnBadge, LnCallout, LnEmptyState, LnInput, LnPressable, LnTabs, type LnTabOption } from '@/components/linear'
+import { LnAvatar, LnBadge, LnCallout, LnEmptyState, LnIcon, LnInput, LnPressable, LnTabs, type LnTabOption } from '@/components/linear'
 
 interface Requirement {
   id: number

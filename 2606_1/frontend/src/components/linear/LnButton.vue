@@ -53,7 +53,7 @@ function handleClick(event: MouseEvent) {
   &.is-ghost { color: var(--ln-text-secondary); &:hover:not(:disabled) { color: var(--ln-text); background: var(--ln-surface-hover); } }
   &.is-danger { color: #fff; background: var(--ln-danger); &:hover:not(:disabled) { filter: brightness(.94); } }
 }
-.ln-button__icon { width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 16px; font-size: 15px; line-height: 0; }
+.ln-button__icon { width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 16px; color: currentColor; font-size: 14px; line-height: 0; :deep(svg) { width: 16px; height: 16px; } }
 .ln-button__spinner { width: 13px; height: 13px; border: 1.5px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>

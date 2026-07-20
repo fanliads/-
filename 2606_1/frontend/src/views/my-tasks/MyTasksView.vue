@@ -36,7 +36,7 @@
       <div class="list-panel wb-panel" :aria-busy="currentLoading">
         <div class="list-toolbar wb-panel-toolbar">
           <LnTabs class="view-switch" :model-value="currentView" :options="currentViewOptions" variant="segmented" aria-label="任务处理状态" @update:model-value="switchViewValue" />
-          <div class="toolbar-note">{{ currentViewNote }}</div><LnInput v-model="taskKeyword" class="task-search" placeholder="搜索编号、标题或动作" clearable><template #prefix>⌕</template></LnInput>
+          <div class="toolbar-note">{{ currentViewNote }}</div><LnInput v-model="taskKeyword" class="task-search" placeholder="搜索编号、标题或动作" clearable><template #prefix><LnIcon name="search"/></template></LnInput>
         </div>
 
         <div class="list-header wb-list-header row-grid">
@@ -157,7 +157,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import dayjs from 'dayjs'
 import ActionButtons from '@/components/workflow/ActionButtons.vue'
 import { getPendingTasks, getDoneTasks, getMyTaskStats, type MyTaskVO, type MyTaskStats } from '@/api/my-tasks'
-import { LnButton, LnEmptyState, LnInput, LnPagination, LnSkeleton, LnTabs, LnTaskRow, type LnTabOption } from '@/components/linear'
+import { LnButton, LnEmptyState, LnIcon, LnInput, LnPagination, LnSkeleton, LnTabs, LnTaskRow, type LnTabOption } from '@/components/linear'
 
 const pendingLoading = ref(false)
 const doneLoading = ref(false)
@@ -538,7 +538,7 @@ onMounted(() => {
   padding: 0 6px;
   border-radius: 999px;
   background: rgba(17, 24, 39, 0.04);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--text-secondary);
   white-space: nowrap;

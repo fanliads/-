@@ -35,7 +35,7 @@
             </div>
           </LnPressable>
         </template>
-        <LnEmptyState v-else title="暂无通知" description="新的需求动态和协作提醒会出现在这里。" compact><template #icon>✓</template></LnEmptyState>
+        <LnEmptyState v-else title="暂无通知" description="新的需求动态和协作提醒会出现在这里。" compact><template #icon><LnIcon name="check"/></template></LnEmptyState>
       </div>
     </div>
     </template>
@@ -45,7 +45,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { LnButton, LnEmptyState, LnPopover, LnPressable, LnSkeleton } from '@/components/linear'
+import { LnButton, LnEmptyState, LnIcon, LnPopover, LnPressable, LnSkeleton } from '@/components/linear'
 import {
   getNotifications,
   getUnreadCount,
@@ -150,7 +150,7 @@ onUnmounted(() => {
 }
 
 .bell-icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.45; }
-.notification-count { position: absolute; top: -4px; right: -5px; min-width: 17px; height: 17px; padding: 0 4px; display: grid; place-items: center; border: 2px solid var(--ln-surface, #fff); border-radius: 9px; background: var(--ln-danger, #d05757); color: #fff; font: 650 9px/1 var(--ln-font); letter-spacing: -.02em; }
+.notification-count { position: absolute; top: -5px; right: -6px; min-width: 19px; height: 19px; padding: 0 4px; display: grid; place-items: center; border: 2px solid var(--ln-surface, #fff); border-radius: 10px; background: var(--ln-danger, #d05757); color: #fff; font: 650 11px/1 var(--ln-font); letter-spacing: -.02em; }
 
 .notification-panel {
   width: 348px;
@@ -168,7 +168,7 @@ onUnmounted(() => {
       font-weight: 620;
       color: var(--text-primary);
     }
-    small { color: var(--text-tertiary); font-size: 10px; }
+    small { color: var(--text-tertiary); font-size: 11px; }
   }
 
   .notification-list {

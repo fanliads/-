@@ -259,8 +259,8 @@ public class SprintServiceImpl extends ServiceImpl<SprintMapper, Sprint> impleme
     }
 
     private void validateCadenceType(String cadenceType) {
-        if (!"weekly".equals(cadenceType) && !"biweekly".equals(cadenceType)) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "仅支持周迭代或双周迭代");
+        if (!"weekly".equals(cadenceType) && !"biweekly".equals(cadenceType) && !"custom".equals(cadenceType)) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "迭代周期类型不合法");
         }
     }
 
@@ -350,6 +350,9 @@ public class SprintServiceImpl extends ServiceImpl<SprintMapper, Sprint> impleme
     }
 
     private void ensureTeamConfig(String teamName, String cadenceType) {
+        if ("custom".equals(cadenceType)) {
+            return;
+        }
         String normalizedTeamName = StrUtil.blankToDefault(teamName, "默认团队");
         SprintTeamConfig config = sprintTeamConfigMapper.selectOne(new LambdaQueryWrapper<SprintTeamConfig>()
                 .eq(SprintTeamConfig::getTeamName, normalizedTeamName)
