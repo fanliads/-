@@ -41,61 +41,88 @@
 
     <section class="workspace-shell wb-shell">
       <div class="list-panel wb-panel grouped-list" :class="`density-${listDensity}`" :aria-busy="loading">
-        <template v-if="loading"><section v-for="groupIndex in 2" :key="`group-skeleton-${groupIndex}`" class="requirement-group linear-group-skeleton"><header class="group-header"><div class="group-title"><LnSkeleton circle width="9px"/><LnSkeleton width="72px"/></div></header><div v-for="rowIndex in 3" :key="rowIndex" class="issue-row"><div class="skeleton-identity"><LnSkeleton :width="`${48 + rowIndex * 8}%`"/><LnSkeleton width="58px" height="10px"/></div><div class="skeleton-tags"><LnSkeleton v-for="tag in 5" :key="tag" width="62px" height="24px"/></div></div></section></template>
-        <section v-for="group in loading ? [] : displayedRequirementGroups" :key="group.key" class="requirement-group">
-          <header class="group-header">
-            <div class="group-title">
-              <span class="group-caret"><LnIcon name="chevron-down" /></span>
-              <span class="status-dot" :class="group.tone"></span>
-              <strong>{{ group.label }}</strong>
-              <span class="group-count">{{ group.items.length }}</span>
-            </div>
-            <LnButton v-if="canCreateProduct" size="small" icon-only variant="ghost" aria-label="在此分组新建" @click="handleCreate(group.createStatus)"><template #icon><LnIcon name="plus" /></template></LnButton>
-          </header>
+        <template v-if="loading"><section v-for="groupIndex in 2" :key="`group-skeleton-${groupIndex}`" class="requirement-group linear-group-skeleton"><header class="group-header"><div class="group-title"><LnSkeleton circle width="9px"/><LnSkeleton width="72px"/></div></header><div v-for="rowIndex in 3" :key="rowIndex" class="issue-row issue-grid skeleton-row"><div class="skeleton-identity"><LnSkeleton :width="`${48 + rowIndex * 8}%`"/><LnSkeleton width="58px" height="10px"/></div><div class="skeleton-tags"><LnSkeleton v-for="tag in 5" :key="tag" width="62px" height="24px"/></div></div></section></template>
+        <div v-else class="list-table" :style="{ minWidth: issueGridMinWidth }">
+          <div v-if="tableData.length" class="issue-columns issue-grid" :style="{ gridTemplateColumns: issueGridTemplate }" aria-hidden="true">
+            <span>产品需求</span>
+            <span v-if="showTypeTag">需求类型</span>
+            <span v-if="showBusinessLineTag">业务线</span>
+            <span v-if="showStatusTag">状态</span>
+            <span v-if="showPriorityTag">优先级</span>
+            <span v-if="showHandlerTag">处理人</span>
+            <span v-if="showSprintTag">迭代</span>
+            <span v-if="showParentTag">原始需求</span>
+            <span v-if="showPrdTag">文档</span>
+          </div>
 
-          <div
-            v-for="item in group.items"
-            :key="item.id"
-            class="issue-row"
-            :class="{ selected: activeRequirementId === item.id, voided: isVoided(item.status), hovering: hoverRequirementId === item.id }"
-            tabindex="0"
-            @click="openRequirement(item, 'detail')"
-            @mouseenter="hoverRequirementId = item.id"
-            @focus="hoverRequirementId = item.id"
-            @mouseleave="hoverRequirementId = hoverRequirementId === item.id ? null : hoverRequirementId"
-            @blur="hoverRequirementId = hoverRequirementId === item.id ? null : hoverRequirementId"
-          >
-          <div class="issue-identity">
-            <div class="title-line">
-              <div class="title-text" :class="{ striked: isVoided(item.status) }">{{ item.title }}</div>
-              <div class="title-flags">
-                <span v-if="item.isDirect === 1" class="meta-text muted">直接创建</span>
+          <section v-for="group in displayedRequirementGroups" :key="group.key" class="requirement-group" :class="{ 'is-collapsed': isGroupCollapsed(group.key) }">
+            <header class="group-header">
+              <button
+                class="group-toggle"
+                type="button"
+                :aria-expanded="!isGroupCollapsed(group.key)"
+                :aria-controls="`product-group-${group.key}`"
+                @click="toggleGroup(group.key)"
+              >
+                <span class="group-caret" :class="{ 'is-collapsed': isGroupCollapsed(group.key) }"><LnIcon name="chevron-down" /></span>
+                <span class="status-dot" :class="group.tone"></span>
+                <strong>{{ group.label }}</strong>
+                <span class="group-count">{{ group.items.length }}</span>
+              </button>
+              <LnButton v-if="canCreateProduct" size="small" icon-only variant="ghost" aria-label="在此分组新建" @click.stop="handleCreate(group.createStatus)"><template #icon><LnIcon name="plus" /></template></LnButton>
+            </header>
+
+            <div v-show="!isGroupCollapsed(group.key)" :id="`product-group-${group.key}`" class="group-rows">
+              <div
+                v-for="item in group.items"
+                :key="item.id"
+                class="issue-row issue-grid"
+                :class="{ selected: activeRequirementId === item.id, voided: isVoided(item.status), hovering: hoverRequirementId === item.id }"
+                :style="{ gridTemplateColumns: issueGridTemplate }"
+                tabindex="0"
+                @click="openRequirement(item, 'detail')"
+                @mouseenter="hoverRequirementId = item.id"
+                @focus="hoverRequirementId = item.id"
+                @mouseleave="hoverRequirementId = hoverRequirementId === item.id ? null : hoverRequirementId"
+                @blur="hoverRequirementId = hoverRequirementId === item.id ? null : hoverRequirementId"
+              >
+                <div class="issue-identity">
+                  <div class="title-line">
+                    <div class="title-text" :class="{ striked: isVoided(item.status) }">{{ item.title }}</div>
+                    <div class="title-flags">
+                      <span v-if="item.isDirect === 1" class="meta-text muted">直接创建</span>
+                    </div>
+                  </div>
+                  <span class="req-no">{{ item.reqNo }}</span>
+                </div>
+
+                <div v-if="showTypeTag" class="issue-property" @click.stop><LnPropertyPicker :model-value="item.reqType || ''" title="修改需求类型" :options="linearReqTypeOptions" @update:model-value="(val) => handleInlineSave(item.id, 'reqType', val)" /></div>
+                <div v-if="showBusinessLineTag" class="issue-property" @click.stop><LnPropertyPicker :model-value="String(item.businessLineId || '')" title="修改业务线" :options="linearBusinessLineOptions" @update:model-value="(val) => handleInlineSave(item.id, 'businessLineId', val ? Number(val) : null)" /></div>
+                <div v-if="showStatusTag" class="issue-property" @click.stop><LnPropertyPicker :model-value="item.status || ''" title="修改状态" :options="linearStatusOptions" @update:model-value="(val) => handleInlineSave(item.id, 'status', val)" /></div>
+                <div v-if="showPriorityTag" class="issue-property" @click.stop><LnPropertyPicker :model-value="item.priority || ''" title="修改优先级" :options="linearPriorityOptions" @update:model-value="(val) => handleInlineSave(item.id, 'priority', val)" /></div>
+                <div v-if="showHandlerTag" class="issue-property" @click.stop><LnPropertyPicker :model-value="item.handler || ''" title="修改处理人" :options="linearHandlerOptions" @update:model-value="(val) => handleInlineSave(item.id, 'handler', val)" /></div>
+                <div v-if="showSprintTag" class="issue-property" @click.stop><LnPropertyPicker :model-value="String(item.sprintId || '')" title="修改迭代" :options="linearSprintOptions" @update:model-value="(val) => handleInlineSave(item.id, 'sprintId', val ? Number(val) : null)" /></div>
+                <div v-if="showParentTag" class="issue-reference" @click.stop>
+                  <LnButton
+                    v-if="item.rawReqId && item.isDirect !== 1"
+                    class="tag-link"
+                    size="small"
+                    variant="ghost"
+                    :title="`预览原始需求：${item.rawReqTitle || `RAW-${item.rawReqId}`}`"
+                    @click.stop="openRawPreview(item.rawReqId)"
+                  >
+                    {{ item.rawReqTitle || `RAW-${item.rawReqId}` }}
+                  </LnButton>
+                  <span v-else class="empty-cell">—</span>
+                </div>
+                <div v-if="showPrdTag" class="issue-document" @click.stop>
+                  <LnButton v-if="item.prdUrl" class="tag-link prd-link" size="small" variant="ghost" :href="item.prdUrl" target="_blank" rel="noopener noreferrer" title="打开 PRD" @click.stop>PRD ↗</LnButton>
+                  <span v-else class="empty-cell">—</span>
+                </div>
               </div>
             </div>
-            <span class="req-no">{{ item.reqNo }}</span>
-          </div>
-
-          <div class="issue-tags" @click.stop>
-            <div v-if="showTypeTag" class="issue-property type-column"><LnPropertyPicker :model-value="item.reqType || ''" title="修改需求类型" :options="linearReqTypeOptions" @update:model-value="(val) => handleInlineSave(item.id, 'reqType', val)" /></div>
-            <div v-if="showBusinessLineTag" class="issue-property business-column"><LnPropertyPicker :model-value="String(item.businessLineId || '')" title="修改业务线" :options="linearBusinessLineOptions" @update:model-value="(val) => handleInlineSave(item.id, 'businessLineId', val ? Number(val) : null)" /></div>
-            <div v-if="showStatusTag" class="issue-property status-column"><LnPropertyPicker :model-value="item.status || ''" title="修改状态" :options="linearStatusOptions" @update:model-value="(val) => handleInlineSave(item.id, 'status', val)" /></div>
-            <div v-if="showPriorityTag" class="issue-property priority-column"><LnPropertyPicker :model-value="item.priority || ''" title="修改优先级" :options="linearPriorityOptions" @update:model-value="(val) => handleInlineSave(item.id, 'priority', val)" /></div>
-            <div v-if="showHandlerTag" class="issue-property handler-column"><LnPropertyPicker :model-value="item.handler || ''" title="修改处理人" :options="linearHandlerOptions" @update:model-value="(val) => handleInlineSave(item.id, 'handler', val)" /></div>
-            <div v-if="showSprintTag" class="issue-property sprint-column"><LnPropertyPicker :model-value="String(item.sprintId || '')" title="修改迭代" :options="linearSprintOptions" @update:model-value="(val) => handleInlineSave(item.id, 'sprintId', val ? Number(val) : null)" /></div>
-            <LnButton
-              v-if="showParentTag && item.rawReqId && item.isDirect !== 1"
-              class="tag-link"
-              size="small"
-              variant="ghost"
-              :title="`预览原始需求：${item.rawReqTitle || `RAW-${item.rawReqId}`}`"
-              @click.stop="openRawPreview(item.rawReqId)"
-            >
-              {{ item.rawReqTitle || `RAW-${item.rawReqId}` }}
-            </LnButton>
-            <LnButton v-if="showPrdTag && item.prdUrl" class="tag-link" size="small" variant="ghost" :href="item.prdUrl" target="_blank" rel="noopener noreferrer" title="打开 PRD" @click.stop>PRD ↗</LnButton>
-          </div>
-          </div>
-        </section>
+          </section>
+        </div>
 
         <LnEmptyState v-if="tableData.length === 0 && !loading" title="没有匹配的产品需求" description="筛选、搜索或视图切换后没有匹配结果，列表分组结构会保持不变。"><LnButton v-if="hasActiveFilters" size="small" variant="ghost" @click="clearFilters">清空筛选</LnButton></LnEmptyState>
 
@@ -516,6 +543,29 @@ const showHandlerTag = ref(true)
 const showSprintTag = ref(true)
 const showParentTag = ref(true)
 const showPrdTag = ref(true)
+const collapsedGroupKeys = ref<Set<string>>(new Set())
+
+const issueColumns = computed(() => [
+  { visible: true, width: 320 },
+  { visible: showTypeTag.value, width: 104 },
+  { visible: showBusinessLineTag.value, width: 112 },
+  { visible: showStatusTag.value, width: 104 },
+  { visible: showPriorityTag.value, width: 104 },
+  { visible: showHandlerTag.value, width: 104 },
+  { visible: showSprintTag.value, width: 116 },
+  { visible: showParentTag.value, width: 168 },
+  { visible: showPrdTag.value, width: 64 },
+].filter((column) => column.visible))
+
+const issueGridTemplate = computed(() =>
+  issueColumns.value.map((column, index) => index === 0 ? 'minmax(280px, 1fr)' : `${column.width}px`).join(' '),
+)
+
+const issueGridMinWidth = computed(() => {
+  const contentWidth = issueColumns.value.reduce((sum, column) => sum + column.width, 0)
+  const gapsWidth = Math.max(0, issueColumns.value.length - 1) * 12
+  return `${Math.max(760, contentWidth + gapsWidth + 24)}px`
+})
 
 const activeRequirementId = ref<number | null>(null)
 const previewMode = ref<'peek' | 'detail'>('peek')
@@ -670,6 +720,18 @@ function selectProductView(key: string) {
 
 function selectGroupingMode(value: string) {
   groupingMode.value = value as 'status' | 'parent'
+  collapsedGroupKeys.value = new Set()
+}
+
+function isGroupCollapsed(key: string): boolean {
+  return collapsedGroupKeys.value.has(key)
+}
+
+function toggleGroup(key: string) {
+  const nextKeys = new Set(collapsedGroupKeys.value)
+  if (nextKeys.has(key)) nextKeys.delete(key)
+  else nextKeys.add(key)
+  collapsedGroupKeys.value = nextKeys
 }
 
 const hasActiveFilters = computed(() => {
@@ -1211,6 +1273,9 @@ onUnmounted(() => {
 :deep(.linear-display-field .ln-select__trigger) { width: 100%; min-width: 0; }
 
 .linear-group-skeleton { pointer-events: none; }
+.linear-group-skeleton .group-header { top: 0; }
+.linear-group-skeleton .group-title { min-width: 0; height: 28px; display: flex; align-items: center; gap: 6px; }
+.skeleton-row { grid-template-columns: minmax(280px, 1fr) minmax(420px, auto); }
 .skeleton-identity { display: flex; align-items: center; gap: 10px; }
 .skeleton-tags { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
 
@@ -1230,12 +1295,29 @@ onUnmounted(() => {
   padding-bottom: 8px;
 }
 
+.list-table { width: 100%; }
 .requirement-group + .requirement-group { border-top: 1px solid var(--border-light); }
+
+.issue-columns {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  min-height: 32px;
+  padding: 0 12px;
+  align-items: center;
+  border-bottom: 1px solid rgba(31, 35, 40, 0.08);
+  background: rgba(252, 252, 251, 0.98);
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 620;
+  letter-spacing: 0.025em;
+  backdrop-filter: blur(10px);
+}
 
 .group-header {
   position: sticky;
-  top: 0;
-  z-index: 2;
+  top: 32px;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1246,9 +1328,36 @@ onUnmounted(() => {
   border-bottom: 1px solid rgba(31, 35, 40, 0.06);
 }
 
-.group-title { min-width: 0; height: 28px; display: flex; align-items: center; gap: 6px; color: var(--text-primary); font-size: 12px; line-height: 1; }
-.group-title strong { line-height: 16px; }
-.group-caret { width: 14px; height: 14px; display: grid; place-items: center; flex: 0 0 14px; color: var(--text-tertiary); font-size: 13px; }
+.group-toggle {
+  min-width: 0;
+  height: 28px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+.group-toggle:hover { background: rgba(17, 24, 39, 0.05); }
+.group-toggle:focus-visible { outline: 2px solid var(--ln-accent); outline-offset: 1px; }
+.group-toggle strong { line-height: 16px; }
+.group-caret {
+  width: 14px;
+  height: 14px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 14px;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  transition: transform 0.16s ease;
+}
+.group-caret.is-collapsed { transform: rotate(-90deg); }
 .group-count { min-width: 12px; line-height: 16px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; text-align: left; }
 .group-add { width: 26px; height: 26px; border: 0; border-radius: 6px; background: transparent; color: var(--text-tertiary); cursor: pointer; font-size: 17px; }
 .group-add:hover { background: rgba(17, 24, 39, 0.06); color: var(--text-primary); }
@@ -1260,11 +1369,13 @@ onUnmounted(() => {
 .status-dot.blocked { border-color: #b5796d; background: #f4e4df; }
 .status-dot.closed { border-color: #a6a6a6; background: #ececec; }
 
-.issue-row {
+.issue-grid {
   display: grid;
-  grid-template-columns: minmax(280px, 1fr) minmax(420px, auto);
+  column-gap: 12px;
+}
+
+.issue-row {
   align-items: center;
-  gap: 18px;
   min-height: 54px;
   padding: 7px 12px;
   border-bottom: 1px solid rgba(31, 35, 40, 0.055);
@@ -1282,18 +1393,13 @@ onUnmounted(() => {
 .stable-empty strong { color: var(--text-secondary); font-size: 13px; }
 
 .issue-identity { min-width: 0; display: grid; gap: 3px; }
-.issue-tags { display: flex; align-items: center; justify-content: flex-end; gap: 5px; min-width: 0; }
 .issue-property { min-width: 0; display: flex; align-items: center; }
 .issue-property :deep(.property-trigger) { width: 100%; justify-content: flex-start; }
-.type-column { width: 92px; }
-.business-column { width: 104px; }
-.status-column { width: 92px; }
-.priority-column { width: 96px; }
-.handler-column { width: 92px; }
-.sprint-column { width: 104px; }
-.issue-tags :deep(.editable-cell) { width: auto; min-width: 0; border-radius: 6px; background: rgba(17, 24, 39, 0.035); }
-.issue-tags :deep(.editable-cell-display) { min-height: 26px; padding: 3px 7px; white-space: nowrap; }
-.tag-link { max-width: 156px; height: 26px; padding: 0 7px; font-size: 11px; }
+.issue-reference,
+.issue-document { min-width: 0; display: flex; align-items: center; }
+.empty-cell { color: var(--text-tertiary); font-size: 11px; }
+.tag-link { width: 100%; max-width: 100%; height: 26px; padding: 0 5px; justify-content: flex-start; font-size: 11px; }
+.prd-link { width: auto; padding-inline: 2px; }
 :deep(.tag-link .ln-button__label) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 .story-stack {
