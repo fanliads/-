@@ -30,7 +30,8 @@
     <template v-else-if="name === 'warning'"><path d="M7.02 3.05 2.5 11.1c-.45.8.12 1.8 1.04 1.8h8.92c.92 0 1.49-1 1.04-1.8L8.98 3.05a1.13 1.13 0 0 0-1.96 0Z"/><path d="M8 6v3.25"/><circle class="ln-icon__fill" cx="8" cy="11" r=".65"/></template>
     <template v-else-if="name === 'question'"><circle cx="8" cy="8" r="5.25"/><path d="M6.35 6.3A1.75 1.75 0 0 1 8.1 4.75c1.05 0 1.85.65 1.85 1.55 0 1.7-1.95 1.65-1.95 3"/><circle class="ln-icon__fill" cx="8" cy="11.25" r=".65"/></template>
     <template v-else-if="name === 'urgent'">
-      <path class="ln-icon__urgent-bolt" d="M9.15 1.75 3.75 8.8h3.9l-.8 5.45 5.4-7.05h-3.9Z" />
+      <path class="ln-icon__urgent-fire" d="M8.75 1.5c.35 2.1-.55 3.2-1.5 4.3-.9 1.05-1.85 2.15-1.85 3.8a2.85 2.85 0 0 0 5.7 0c0-1.65-.7-3.02-2.05-4.1.08 1.15-.35 2.05-1.25 2.72.13-1.8-.55-3.15.95-6.72Z" />
+      <path class="ln-icon__urgent-core" d="M8.05 7.25c1.05.95 1.48 1.72 1.48 2.55 0 .95-.68 1.7-1.53 1.7s-1.53-.75-1.53-1.7c0-.88.45-1.62 1.58-2.55Z" />
     </template>
   </svg>
 </template>
@@ -52,4 +53,6 @@ defineProps<{ name: LnIconName }>()
   stroke-linejoin: round;
 }
 .ln-icon__fill { fill: currentColor; stroke: none; }
+.ln-icon__urgent-fire { fill: #ff672f; stroke: none; }
+.ln-icon__urgent-core { fill: #fff3cf; stroke: none; }
 </style>
