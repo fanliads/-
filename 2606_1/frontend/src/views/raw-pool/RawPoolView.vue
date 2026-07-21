@@ -826,6 +826,7 @@ import EditableCell from '@/components/EditableCell.vue'
 import EditableField from '@/components/EditableField.vue'
 import SupplementDialog from '@/components/requirement/SupplementDialog.vue'
 import { lnToast, LnButton, LnCheckbox, LnDateInput, LnDateRange, LnDialog, LnEmptyState, LnForm, LnFormItem, LnIcon, LnInput, LnPagination, LnPopover, LnPropertyPicker, LnSelect, LnSkeleton, LnTabs, LnTextarea, isLnConfirmCancelled, lnConfirm, lnPrompt, type LnFormInstance, type LnFormRules, type LnOption, type LnTabOption } from '@/components/linear'
+import { getBusinessLineVisual, priorityVisuals } from '@/components/linear/optionVisuals'
 import type {
   RawRequirementListVO,
   RawRequirementCreateDTO,
@@ -865,12 +866,6 @@ const statusVisuals: Record<string, Pick<LnOption, 'color' | 'icon'>> = {
   suspended: { color: '#d28b36', icon: 'paused' },
   rejected: { color: '#d05757', icon: 'blocked' },
 }
-const priorityVisuals: Record<string, Pick<LnOption, 'color' | 'icon'>> = {
-  P0: { color: '#d05757', icon: 'priority' },
-  P1: { color: '#d28b36', icon: 'priority' },
-  P2: { color: '#5e6ad2', icon: 'priority' },
-  P3: { color: '#6f6f78', icon: 'priority' },
-}
 const fallbackStatusOptions: DictDataVO[] = [
   { label: '待判定', value: 'pending_judgement' },
   { label: '待拆分', value: 'pending_split' },
@@ -891,7 +886,11 @@ const linearPriorityOptions = computed<LnOption[]>(() => dictPriorityOptions.val
   value: item.value,
   ...priorityVisuals[item.value],
 })))
-const linearBusinessLineOptions = computed(() => toLinearOptions(dictBusinessLineOptions.value))
+const linearBusinessLineOptions = computed<LnOption[]>(() => dictBusinessLineOptions.value.map((item) => ({
+  label: item.label,
+  value: item.value,
+  ...getBusinessLineVisual(item.label, item.value),
+})))
 const linearProductManagerOptions = computed(() => toLinearOptions(dictProductManagerOptions.value))
 const linearProjectManagerOptions = computed(() => toLinearOptions(dictProjectManagerOptions.value))
 const yesNoOptions = [
@@ -2079,11 +2078,18 @@ onUnmounted(() => {
 .list-row {
   --urgent-burn-rgb: 236, 93, 37;
   position: relative;
+  z-index: 0;
   isolation: isolate;
   padding: 11px 16px;
   border-bottom: 1px solid rgba(17, 24, 39, 0.05);
   cursor: pointer;
   transition: 0.16s ease;
+
+  // Inline menus live inside the row's isolated stacking context. Elevate the
+  // active row so later rows cannot paint over an open status/property menu.
+  &:focus-within {
+    z-index: 4;
+  }
 
   &.is-urgent::before,
   &.is-urgent::after {
@@ -2201,33 +2207,22 @@ onUnmounted(() => {
     width: 10px;
     height: 10px;
     stroke-width: 1.6;
-    transform-origin: 50% 88%;
-    animation: urgent-flame-sway 1.18s ease-in-out infinite;
+    transform-origin: 50% 50%;
+    animation: urgent-icon-pulse 1.18s ease-in-out infinite;
     filter: drop-shadow(0 1px 1px rgba(207, 96, 63, 0.2));
     will-change: transform;
   }
-
-  :deep(.ln-icon__flame-core) {
-    animation: urgent-flame-glow 0.86s ease-in-out infinite alternate;
-  }
 }
 
-@keyframes urgent-flame-sway {
-  0%, 100% { transform: translateY(0) rotate(-2deg) scaleX(0.96); }
-  35% { transform: translateY(-0.6px) rotate(2.5deg) scaleX(1.03); }
-  68% { transform: translateY(-0.2px) rotate(-1deg) scaleX(0.98); }
-}
-
-@keyframes urgent-flame-glow {
-  from { opacity: 0.55; }
-  to { opacity: 1; }
+@keyframes urgent-icon-pulse {
+  0%, 100% { transform: translateY(0) scale(0.96); opacity: 0.82; }
+  50% { transform: translateY(-0.4px) scale(1.06); opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .list-row.is-urgent.hovering::before,
   .list-row.is-urgent.hovering::after,
-  .urgent-mark :deep(.ln-icon),
-  .urgent-mark :deep(.ln-icon__flame-core) {
+  .urgent-mark :deep(.ln-icon) {
     animation: none;
   }
 

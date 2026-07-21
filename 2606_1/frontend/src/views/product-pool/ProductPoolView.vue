@@ -499,6 +499,7 @@ import { listSprintOptions } from '@/api/sprint'
 import EditableField from '@/components/EditableField.vue'
 import SupplementDialog from '@/components/requirement/SupplementDialog.vue'
 import { lnToast, LnButton, LnCheckbox, LnDateInput, LnDialog, LnDrawer, LnEmptyState, LnForm, LnFormItem, LnIcon, LnInput, LnPagination, LnPopover, LnPropertyPicker, LnRichTextEditor, LnSelect, LnSkeleton, LnTabs, type LnFormInstance, type LnFormRules, type LnOption, type LnTabOption } from '@/components/linear'
+import { getBusinessLineVisual, getRequirementTypeVisual, priorityVisuals } from '@/components/linear/optionVisuals'
 import type {
   ProductRequirementListVO,
   ProductRequirementCreateDTO,
@@ -634,17 +635,13 @@ const productStatusSelectOptions: LnOption[] = [
   { value: 'closed', label: '已关闭', color: '#6f6f78', icon: 'closed' },
 ]
 
-const priorityVisuals: Record<string, Pick<LnOption, 'color' | 'icon'>> = {
-  P0: { color: '#d05757', icon: 'priority' }, P1: { color: '#d28b36', icon: 'priority' },
-  P2: { color: '#5e6ad2', icon: 'priority' }, P3: { color: '#6f6f78', icon: 'priority' },
-}
 const linearStatusOptions = productStatusSelectOptions
 const linearPriorityOptions = computed<LnOption[]>(() => dictPriorityOptions.value.map(item => ({ label:item.label,value:item.value,...priorityVisuals[item.value] })))
 const linearBusinessLineOptions = computed<LnOption[]>(() => [
-  { label:'未设置',value:'',icon: 'none' }, ...dictBusinessLineOptions.value.map(item => ({ label:item.label,value:String(item.id),icon: 'business' })),
+  { label:'未设置',value:'',icon: 'none' }, ...dictBusinessLineOptions.value.map(item => ({ label:item.label,value:String(item.id),...getBusinessLineVisual(item.label, String(item.id)) })),
 ])
 const linearReqTypeOptions = computed<LnOption[]>(() => [
-  { label:'未设置',value:'',icon: 'none' }, ...dictReqTypeOptions.value.map(item => ({ label:item.label,value:item.value,icon: 'type' })),
+  { label:'未设置',value:'',icon: 'none' }, ...dictReqTypeOptions.value.map(item => ({ label:item.label,value:item.value,...getRequirementTypeVisual(item.label, item.value) })),
 ])
 const linearSprintOptions = computed<LnOption[]>(() => [
   { label:'未关联',value:'',icon: 'none' }, ...dictSprintOptions.value.map(item => ({ label:item.name,value:String(item.id),icon: 'sprint' })),

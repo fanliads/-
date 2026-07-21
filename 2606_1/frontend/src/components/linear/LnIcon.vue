@@ -30,8 +30,7 @@
     <template v-else-if="name === 'warning'"><path d="M7.02 3.05 2.5 11.1c-.45.8.12 1.8 1.04 1.8h8.92c.92 0 1.49-1 1.04-1.8L8.98 3.05a1.13 1.13 0 0 0-1.96 0Z"/><path d="M8 6v3.25"/><circle class="ln-icon__fill" cx="8" cy="11" r=".65"/></template>
     <template v-else-if="name === 'question'"><circle cx="8" cy="8" r="5.25"/><path d="M6.35 6.3A1.75 1.75 0 0 1 8.1 4.75c1.05 0 1.85.65 1.85 1.55 0 1.7-1.95 1.65-1.95 3"/><circle class="ln-icon__fill" cx="8" cy="11.25" r=".65"/></template>
     <template v-else-if="name === 'urgent'">
-      <path d="M8.6 1.75c.12 1.75-.66 2.82-1.52 3.86-.86 1.04-1.75 2.11-1.75 3.72a2.67 2.67 0 0 0 5.34 0c0-1.32-.52-2.43-1.52-3.35.03 1.05-.37 1.83-1.18 2.42.07-1.65-.66-2.87.63-6.65Z" />
-      <path class="ln-icon__fill ln-icon__flame-core" d="M8.05 8.1c.8.72 1.12 1.27 1.12 1.87 0 .7-.52 1.28-1.17 1.28s-1.17-.58-1.17-1.28c0-.65.34-1.16 1.22-1.87Z" />
+      <path class="ln-icon__urgent-bolt" d="M9.15 1.75 3.75 8.8h3.9l-.8 5.45 5.4-7.05h-3.9Z" />
     </template>
   </svg>
 </template>

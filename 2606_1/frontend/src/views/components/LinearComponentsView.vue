@@ -1,7 +1,7 @@
 <template>
   <main class="showcase">
     <header class="showcase__hero">
-      <div><span class="showcase__kicker">REQ UI / 2606_4 · 48 COMPONENTS · 30 ICONS</span><h1>Linear components</h1><p>紧凑、清晰、键盘友好的需求管理组件系统。</p></div>
+      <div><span class="showcase__kicker">REQ UI / 2607_1 · 48 COMPONENTS · 38 ICONS</span><h1>Linear components</h1><p>紧凑、清晰、键盘友好的需求管理组件系统。</p></div>
       <div class="row"><LnTooltip text="全局命令" shortcut="⌘ K"><LnButton @click="commandOpen = true">⌘K 命令</LnButton></LnTooltip><LnButton variant="primary" @click="peekOpen = true"><template #icon><LnIcon name="plus"/></template>打开 Peek</LnButton></div>
     </header>
 
@@ -17,10 +17,10 @@
             </div>
           </div>
         </div>
-        <div class="icon-board__section">
-          <div class="icon-board__label"><strong>Status & priority</strong><span>{{ optionIconExamples.length }} semantic icons</span></div>
+        <div v-for="group in semanticIconGroups" :key="group.title" class="icon-board__section">
+          <div class="icon-board__label"><strong>{{ group.title }}</strong><span>{{ group.items.length }} semantic icons</span></div>
           <div class="icon-grid icon-grid--semantic">
-            <div v-for="item in optionIconExamples" :key="item.value" class="icon-tile icon-tile--semantic" role="img" :aria-label="`${item.label}图标`">
+            <div v-for="item in group.items" :key="`${group.title}-${item.value}`" class="icon-tile icon-tile--semantic" role="img" :aria-label="`${item.label}图标`">
               <span class="icon-tile__preview" :style="{ color: item.color }"><LnOptionIcon :value="item.value" :label="item.label" :icon="item.icon" :color="item.color"/></span>
               <span class="icon-tile__copy"><strong>{{ item.label }}</strong><code>{{ item.value }}</code></span>
             </div>
@@ -98,8 +98,9 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import { LnAvatar, LnBadge, LnBoardColumn, LnBreadcrumbs, LnButton, LnCalendarDay, LnCallout, LnCheckbox, LnColorPicker, LnCommandMenu, LnDateInput, LnDateRange, LnDialog, LnDrawer, LnEmptyState, LnFilterBuilder, LnForm, LnFormItem, LnFormSection, LnIcon, LnInlineEdit, LnInlineSelect, LnInput, LnIssueCard, LnIssueRow, LnLoadingOverlay, LnMenu, LnMetric, LnOptionIcon, LnPagination, LnPasswordInput, LnPeek, LnPopover, LnPressable, LnProgress, LnPropertyPicker, LnRichTextEditor, LnSelect, LnSkeleton, LnSprintRow, LnSwitch, LnTabs, LnTaskRow, LnTextarea, LnTooltip, LnUserButton, lnConfirm, lnPrompt, lnToast, type LnBreadcrumbItem, type LnCalendarEvent, type LnFilterRule, type LnFormInstance, type LnFormRules, type LnInlineOption, type LnTabOption } from '@/components/linear'
+import { getBusinessLineVisual, getRequirementTypeVisual, priorityVisuals } from '@/components/linear/optionVisuals'
 const iconNames = ['search','chevron-down','chevron-left','chevron-right','plus','close','check','external-link','copy','archive','calendar','user','tag','sprint','more','info','warning','question','urgent'] as const
-const optionIconExamples = [
+const statusIconExamples = [
   { label:'待处理',value:'pending',icon:'pending',color:'#9b9ba4' },
   { label:'进行中',value:'active',icon:'progress',color:'#5e6ad2' },
   { label:'已完成',value:'done',icon:'success',color:'#2f9e6f' },
@@ -107,10 +108,20 @@ const optionIconExamples = [
   { label:'已阻塞',value:'blocked',icon:'blocked',color:'#d05757' },
   { label:'已暂停',value:'suspended',icon:'paused',color:'#d28b36' },
   { label:'已关闭',value:'closed',icon:'closed',color:'#6f6f78' },
-  { label:'P0 紧急',value:'P0',icon:'priority',color:'#d05757' },
-  { label:'P1 高',value:'P1',icon:'priority',color:'#d28b36' },
-  { label:'P2 中',value:'P2',icon:'priority',color:'#5e6ad2' },
-  { label:'P3 低',value:'P3',icon:'priority',color:'#6f6f78' },
+]
+const priorityIconExamples = [
+  { label:'P0 紧急',value:'P0',...priorityVisuals.P0 },
+  { label:'P1 高',value:'P1',...priorityVisuals.P1 },
+  { label:'P2 中',value:'P2',...priorityVisuals.P2 },
+  { label:'P3 低',value:'P3',...priorityVisuals.P3 },
+]
+const requirementTypeIconExamples = ['优化迭代','问题转需求','设计缺陷','规划功能'].map((label) => ({ label, value:label, ...getRequirementTypeVisual(label) }))
+const businessLineIconExamples = ['校园G端','市监G端','B端团餐','技术支撑（硬件等）'].map((label) => ({ label, value:label, ...getBusinessLineVisual(label) }))
+const semanticIconGroups = [
+  { title:'Status', items:statusIconExamples },
+  { title:'Priority', items:priorityIconExamples },
+  { title:'Requirement type', items:requirementTypeIconExamples },
+  { title:'Business line', items:businessLineIconExamples },
 ]
 const search = ref(''); const editableTitle = ref('优化原始需求池筛选体验'); const peekOpen = ref(false); const commandOpen = ref(false); const dialogOpen=ref(false); const selected = ref('RAW-128'); const team=ref('core');const status=ref('active');const priority=ref('high')
 const singleDate=ref('2026-07-25');const dateRange=ref(['2026-07-14','2026-07-25']);const description=ref('作为产品经理，我希望在需求列表中快速修改状态和负责人。');const demoPage=ref(3)
