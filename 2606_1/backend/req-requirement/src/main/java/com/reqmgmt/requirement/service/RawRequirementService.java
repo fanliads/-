@@ -20,7 +20,7 @@ public interface RawRequirementService extends IService<RawRequirement> {
     /**
      * 外部提报创建原始需求
      */
-    Long createExternalRawRequirement(RawRequirementCreateDTO dto);
+    ExternalSubmissionReceiptVO createExternalRawRequirement(ExternalSubmissionDTO dto);
 
     /**
      * 获取详情

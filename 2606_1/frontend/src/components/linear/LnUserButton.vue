@@ -11,13 +11,14 @@
       <strong>{{ name }}</strong>
       <small v-if="description">{{ description }}</small>
     </span>
-    <span v-if="showChevron && !compact" class="ln-user-button__chevron" aria-hidden="true">⌄</span>
+    <span v-if="showChevron && !compact" class="ln-user-button__chevron" aria-hidden="true"><LnIcon name="chevron-down" /></span>
   </button>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import LnAvatar from './LnAvatar.vue'
+import LnIcon from './LnIcon.vue'
 
 const props = withDefaults(defineProps<{
   name: string
@@ -82,7 +83,7 @@ const ariaLabel = computed(() => `打开 ${props.name} 的用户菜单`)
   }
 
   strong { font-size: 12px; font-weight: 620; }
-  small { color: var(--ln-text-tertiary); font-size: 10px; }
+  small { color: var(--ln-text-tertiary); font-size:11px; }
 }
 
 .ln-user-button__chevron {

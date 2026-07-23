@@ -1,13 +1,15 @@
 package com.reqmgmt.requirement.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.reqmgmt.common.exception.BusinessException;
+import com.reqmgmt.common.exception.ErrorCode;
+import com.reqmgmt.common.utils.SecurityUtils;
 import com.reqmgmt.requirement.constant.RequirementStatus;
 import com.reqmgmt.requirement.dto.KanbanMoveDTO;
 import com.reqmgmt.requirement.dto.KanbanQueryDTO;
 import com.reqmgmt.requirement.entity.ProductRequirement;
 import com.reqmgmt.requirement.entity.RawRequirement;
 import com.reqmgmt.requirement.entity.RequirementLog;
-import com.reqmgmt.requirement.entity.StatusFlowConfig;
 import com.reqmgmt.requirement.mapper.ProductRequirementMapper;
 import com.reqmgmt.requirement.mapper.RawRequirementMapper;
 import com.reqmgmt.requirement.mapper.RequirementLogMapper;
@@ -154,23 +156,29 @@ public class KanbanServiceImpl implements KanbanService {
     @Transactional(rollbackFor = Exception.class)
     public void moveRequirement(KanbanMoveDTO moveDTO) {
         String reqType = moveDTO.getReqType();
-
-        // 1. 校验状态流转合法性
-        List<StatusFlowConfig> flowConfigs = statusFlowConfigMapper.selectByReqTypeAndFromStatus(
-                reqType, moveDTO.getFromStatus());
-
-        boolean isValidFlow = flowConfigs.stream()
-                .anyMatch(config -> config.getToStatus().equals(moveDTO.getToStatus()));
-
-        if (!isValidFlow) {
-            throw new RuntimeException("不允许的状态流转: " + moveDTO.getFromStatus() + " -> " + moveDTO.getToStatus());
+        Map<String, String> statusMap = "raw".equals(reqType)
+                ? RequirementStatus.RAW_STATUS_MAP
+                : "product".equals(reqType) ? RequirementStatus.PRODUCT_STATUS_MAP : null;
+        if (statusMap == null) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "未知需求类型: " + reqType);
+        }
+        List<String> configuredStatuses = statusFlowConfigMapper.selectAllStatuses(reqType);
+        boolean validTarget = configuredStatuses == null || configuredStatuses.isEmpty()
+                ? statusMap.containsKey(moveDTO.getToStatus())
+                : configuredStatuses.contains(moveDTO.getToStatus());
+        if (!validTarget) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "目标状态不存在: " + moveDTO.getToStatus());
         }
 
-        // 2. 更新状态
+        // 看板允许在任意有效状态之间直接互转；仍校验记录存在和客户端原状态，避免覆盖并发更新。
         if ("raw".equals(reqType)) {
             RawRequirement raw = rawRequirementMapper.selectById(moveDTO.getReqId());
             if (raw == null) {
-                throw new RuntimeException("原始需求不存在: " + moveDTO.getReqId());
+                throw new BusinessException(ErrorCode.NOT_FOUND, "原始需求不存在: " + moveDTO.getReqId());
+            }
+            String currentStatus = normalizeStatus("raw", raw.getStatus());
+            if (!Objects.equals(currentStatus, moveDTO.getFromStatus())) {
+                throw new BusinessException(ErrorCode.BAD_REQUEST, "需求状态已变化，请刷新看板后重试");
             }
             raw.setStatus(moveDTO.getToStatus());
             raw.setUpdateTime(LocalDateTime.now());
@@ -178,19 +186,23 @@ public class KanbanServiceImpl implements KanbanService {
         } else if ("product".equals(reqType)) {
             ProductRequirement product = productRequirementMapper.selectById(moveDTO.getReqId());
             if (product == null) {
-                throw new RuntimeException("产品需求不存在: " + moveDTO.getReqId());
+                throw new BusinessException(ErrorCode.NOT_FOUND, "产品需求不存在: " + moveDTO.getReqId());
+            }
+            String currentStatus = normalizeStatus("product", product.getStatus());
+            if (!Objects.equals(currentStatus, moveDTO.getFromStatus())) {
+                throw new BusinessException(ErrorCode.BAD_REQUEST, "需求状态已变化，请刷新看板后重试");
             }
             product.setStatus(moveDTO.getToStatus());
             product.setUpdateTime(LocalDateTime.now());
             productRequirementMapper.updateById(product);
-        } else {
-            throw new RuntimeException("未知需求类型: " + reqType);
         }
 
-        // 3. 记录日志
+        // 记录日志
         RequirementLog requirementLog = new RequirementLog();
         requirementLog.setReqId(moveDTO.getReqId());
         requirementLog.setReqType(reqType);
+        requirementLog.setOperatorId(SecurityUtils.getCurrentUserId());
+        requirementLog.setOperatorName(SecurityUtils.getCurrentUsername());
         requirementLog.setAction("status_change");
         requirementLog.setOldValue(moveDTO.getFromStatus());
         requirementLog.setNewValue(moveDTO.getToStatus());

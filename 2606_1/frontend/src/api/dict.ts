@@ -11,6 +11,11 @@ export function listDictData(dictCode: string) {
   return get<ApiResponse<DictDataVO[]>>(`/dict/data/list`, { params: { dictCode } })
 }
 
+/** 外部提报页匿名可用的业务线选项 */
+export function listPublicBusinessLines() {
+  return get<ApiResponse<DictDataVO[]>>('/dict/public/business-lines')
+}
+
 /** 新增字典数据 */
 export function createDictData(data: DictDataCreateDTO) {
   return post<ApiResponse<number>>('/dict/data', data)

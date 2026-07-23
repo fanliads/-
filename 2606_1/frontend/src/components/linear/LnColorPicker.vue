@@ -19,7 +19,7 @@
         @keydown.up.prevent="move(index, -1)"
         @keydown.right.prevent="move(index, 1)"
         @keydown.down.prevent="move(index, 1)"
-      ><span aria-hidden="true">✓</span></button>
+      ><LnIcon aria-hidden="true" name="check"/></button>
     </div>
     <output v-if="showValue" class="ln-color-picker__value"><i :style="{ background: modelValue }" />{{ modelValue || '未选择' }}</output>
   </div>
@@ -27,6 +27,7 @@
 
 <script setup lang="ts">
 import { nextTick, ref } from 'vue'
+import LnIcon from './LnIcon.vue'
 
 const props = withDefaults(defineProps<{
   modelValue?: string
@@ -65,6 +66,6 @@ function move(index: number, delta: number) {
 .ln-color-picker { display: grid; gap: 8px; color: var(--ln-text); font-family: var(--ln-font); &.is-disabled { opacity: .5; } }
 .ln-color-picker__label { font-size: 12px; font-weight: 540; }
 .ln-color-picker__row { display: flex; flex-wrap: wrap; gap: 8px; }
-.ln-color-picker__swatch { --swatch: #8a8a92; position: relative; width: 28px; height: 28px; padding: 0; display: grid; place-items: center; border: 2px solid var(--ln-surface); border-radius: 50%; background: var(--swatch); color: #fff; box-shadow: 0 0 0 1px var(--ln-border-strong), inset 0 0 0 1px rgba(0,0,0,.06); cursor: pointer; transition: transform var(--ln-fast), box-shadow var(--ln-fast); span { opacity: 0; font-size: 12px; font-weight: 750; text-shadow: 0 1px 2px rgba(0,0,0,.3); } &:hover:not(:disabled) { transform: translateY(-1px) scale(1.06); } &.is-selected { box-shadow: 0 0 0 2px var(--ln-surface), 0 0 0 4px var(--swatch); span { opacity: 1; } } &:disabled { cursor: not-allowed; } }
+.ln-color-picker__swatch { --swatch: #8a8a92; position: relative; width: 28px; height: 28px; padding: 0; display: grid; place-items: center; border: 2px solid var(--ln-surface); border-radius: 50%; background: var(--swatch); color: #fff; box-shadow: 0 0 0 1px var(--ln-border-strong), inset 0 0 0 1px rgba(0,0,0,.06); cursor: pointer; transition: transform var(--ln-fast), box-shadow var(--ln-fast); svg { width: 14px; height: 14px; opacity: 0; filter: drop-shadow(0 1px 1px rgba(0,0,0,.22)); } &:hover:not(:disabled) { transform: translateY(-1px) scale(1.06); } &.is-selected { box-shadow: 0 0 0 2px var(--ln-surface), 0 0 0 4px var(--swatch); svg { opacity: 1; } } &:disabled { cursor: not-allowed; } }
 .ln-color-picker__value { display: inline-flex; align-items: center; gap: 6px; color: var(--ln-text-tertiary); font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; i { width: 8px; height: 8px; border-radius: 50%; } }
 </style>

@@ -23,6 +23,18 @@ public class RawRequirementDetailVO {
 
     private String submitOrigin;
 
+    private String externalChannel;
+
+    private String externalIdentityProvider;
+
+    private String externalIdentityName;
+
+    private String externalExpectedResult;
+
+    private String externalCompany;
+
+    private LocalDateTime externalSubmittedAt;
+
     private String proposer;
 
     private String proposerContact;

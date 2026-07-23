@@ -4,8 +4,10 @@ export interface SprintOption {
   id: number
   name: string
   teamName?: string
-  cadenceType?: 'weekly' | 'biweekly'
+  cadenceType?: SprintCadenceType
 }
+
+export type SprintCadenceType = 'weekly' | 'biweekly' | 'custom'
 
 export interface SprintTeamConfig {
   id: number
@@ -30,7 +32,7 @@ export interface SprintItem {
   id: number
   name: string
   teamName: string
-  cadenceType: 'weekly' | 'biweekly'
+  cadenceType: SprintCadenceType
   startDate: string
   endDate: string
   status: string
@@ -44,7 +46,7 @@ export interface SprintDetail extends SprintItem {
 export interface SprintPayload {
   name: string
   teamName: string
-  cadenceType: 'weekly' | 'biweekly'
+  cadenceType: SprintCadenceType
   startDate: string
   endDate: string
   status?: string

@@ -47,6 +47,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'action-done'): void
+  (e: 'action-error', error: { message: string; traceId?: string }): void
 }>()
 
 const actions = ref<ActionVO[]>([])
@@ -97,8 +98,11 @@ async function doExecute(action: ActionVO, remarkText: string) {
     lnToast.success(`操作「${action.actionName}」执行成功`)
     emit('action-done')
     loadActions()
-  } catch {
-    // error handled by interceptor
+  } catch (error: any) {
+    emit('action-error', {
+      message: error?.message || '操作失败，请稍后重试',
+      traceId: error?.traceId,
+    })
   } finally {
     executing.value = false
   }

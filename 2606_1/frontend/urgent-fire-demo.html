@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Urgent Wildfire Hover Demo</title>
+  <style>
+    :root {
+      --canvas: #f4f4f2;
+      --surface: #ffffff;
+      --surface-soft: #fafaf9;
+      --line: #e8e8e5;
+      --line-strong: #dcdcd8;
+      --text: #20211f;
+      --muted: #72746f;
+      --quiet: #999b96;
+      --accent: #5e6ad2;
+      --fire-red: #d9482c;
+      --fire-orange: #f47b20;
+      --fire-gold: #ffbd2e;
+      --fire-cream: #fff0a6;
+      --burn-rgb: 236, 93, 37;
+      --shadow: 0 24px 70px rgba(31, 33, 29, 0.12);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 40px 24px;
+      overflow-x: hidden;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 50% -10%, rgba(255, 255, 255, 0.96), transparent 48%),
+        linear-gradient(145deg, #f7f7f5 0%, var(--canvas) 64%, #eeeeeb 100%);
+    }
+
+    button { font: inherit; }
+
+    .demo-shell {
+      width: min(1120px, 100%);
+      display: grid;
+      gap: 22px;
+    }
+
+    .demo-intro {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 0 3px;
+    }
+
+    .eyebrow {
+      margin: 0 0 7px;
+      color: var(--fire-red);
+      font-size: 11px;
+      font-weight: 720;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(24px, 4vw, 38px);
+      line-height: 1.12;
+      font-weight: 660;
+      letter-spacing: -0.035em;
+    }
+
+    .demo-intro p:last-child {
+      max-width: 530px;
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .replay-button {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 34px;
+      padding: 0 13px;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      color: #484a46;
+      background: rgba(255, 255, 255, 0.74);
+      box-shadow: 0 1px 2px rgba(31, 33, 29, 0.04);
+      cursor: pointer;
+      transition: 150ms ease;
+    }
+
+    .replay-button:hover {
+      border-color: #cacac5;
+      color: var(--text);
+      background: #fff;
+      transform: translateY(-1px);
+    }
+
+    .replay-button svg { width: 14px; height: 14px; }
+
+    .workspace {
+      overflow: hidden;
+      border: 1px solid var(--line-strong);
+      border-radius: 13px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .toolbar {
+      min-height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.94);
+    }
+
+    .title-stack { display: grid; gap: 2px; }
+    .title-stack strong { font-size: 14px; font-weight: 650; }
+    .title-stack span { color: var(--quiet); font-size: 11px; }
+
+    .toolbar-spacer { flex: 1; }
+
+    .toolbar-pill {
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      color: var(--muted);
+      background: var(--surface-soft);
+      font-size: 11px;
+    }
+
+    .list-head,
+    .requirement-row {
+      display: grid;
+      grid-template-columns: 44px minmax(280px, 2fr) 120px 112px 90px 128px;
+      align-items: center;
+    }
+
+    .list-head {
+      min-height: 38px;
+      padding: 0 14px;
+      border-bottom: 1px solid var(--line);
+      color: var(--quiet);
+      background: #fafaf9;
+      font-size: 10.5px;
+      font-weight: 680;
+    }
+
+    .head-urgent { display: grid; place-items: center; }
+
+    .requirement-row {
+      position: relative;
+      isolation: isolate;
+      overflow: hidden;
+      min-height: 58px;
+      padding: 0 14px;
+      border-bottom: 1px solid var(--line);
+      outline: none;
+      cursor: default;
+      transition: background-color 160ms ease;
+    }
+
+    .requirement-row:last-child { border-bottom: 0; }
+
+    .requirement-row:hover,
+    .requirement-row:focus-visible { background: #fafaf9; }
+
+    .cell {
+      position: relative;
+      z-index: 3;
+      min-width: 0;
+      padding-right: 14px;
+      color: #555852;
+      font-size: 12px;
+    }
+
+    .urgent-cell {
+      height: 100%;
+      display: grid;
+      place-items: center;
+      padding-right: 0;
+    }
+
+    .title-cell { display: grid; gap: 4px; }
+
+    .requirement-title {
+      overflow: hidden;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 570;
+      line-height: 1.25;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .req-no { color: var(--quiet); font-size: 10.5px; }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      display: inline-block;
+      margin-right: 6px;
+      border: 1px solid #758179;
+      border-radius: 50%;
+      vertical-align: -1px;
+    }
+
+    .priority { color: #bb6328; font-weight: 650; }
+
+    .avatar {
+      width: 20px;
+      height: 20px;
+      display: inline-grid;
+      place-items: center;
+      margin-right: 6px;
+      border-radius: 50%;
+      color: #575a55;
+      background: #ecece9;
+      font-size: 9px;
+      font-weight: 700;
+      vertical-align: middle;
+    }
+
+    .urgent-trigger {
+      position: relative;
+      z-index: 8;
+      width: 26px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: var(--fire-red);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .urgent-trigger::after {
+      content: "";
+      position: absolute;
+      inset: 5px 3px 3px;
+      z-index: -1;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(244, 123, 32, 0.2), transparent 68%);
+      opacity: 0.7;
+      transition: 180ms ease;
+    }
+
+    .urgent-trigger:hover::after { opacity: 1; transform: scale(1.18); }
+
+    .flame-icon {
+      width: 17px;
+      height: 20px;
+      overflow: visible;
+      transform-origin: 50% 90%;
+      filter: drop-shadow(0 1px 1px rgba(217, 72, 44, 0.2));
+    }
+
+    .flame-outer { fill: url(#iconFireGradient); }
+    .flame-core { fill: var(--fire-cream); }
+
+    .urgent-trigger:hover .flame-icon,
+    .requirement-row.is-burning .flame-icon {
+      animation: icon-kindle 640ms ease-out both;
+    }
+
+    .burn-field {
+      position: absolute;
+      z-index: 2;
+      inset: -14px 0;
+      pointer-events: none;
+      opacity: 1;
+    }
+
+    .burn-field::before {
+      content: "";
+      position: absolute;
+      top: -18%;
+      bottom: -18%;
+      left: -38%;
+      width: 48%;
+      background:
+        linear-gradient(
+          98deg,
+          transparent 0%,
+          rgba(var(--burn-rgb), 0.05) 22%,
+          rgba(var(--burn-rgb), 0.3) 52%,
+          rgba(var(--burn-rgb), 0.16) 72%,
+          transparent 100%
+        );
+      filter: blur(8px);
+      opacity: 0;
+      transform: translateX(0) skewX(-7deg);
+      will-change: transform;
+    }
+
+    .heat-wash {
+      position: absolute;
+      z-index: 1;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(
+          90deg,
+          rgba(var(--burn-rgb), 0.09) 0%,
+          rgba(var(--burn-rgb), 0.065) 48%,
+          transparent 100%
+        );
+      clip-path: inset(0 100% 0 0);
+    }
+
+    .requirement-row.is-burning {
+      animation: row-singe 980ms linear both;
+    }
+
+    .requirement-row.is-burning .burn-field::before {
+      animation: burn-front 980ms linear both;
+    }
+
+    .requirement-row.is-burning .heat-wash {
+      animation: burn-residue 980ms linear both;
+    }
+
+    @keyframes icon-kindle {
+      0% { transform: scale(1) rotate(0); filter: drop-shadow(0 1px 1px rgba(217,72,44,.2)); }
+      48% { transform: translateY(-1px) scale(1.1, 1.16); filter: drop-shadow(0 2px 4px rgba(244,123,32,.38)); }
+      100% { transform: scale(1) rotate(0); filter: drop-shadow(0 1px 1px rgba(217,72,44,.2)); }
+    }
+
+    @keyframes burn-front {
+      0% { transform: translateX(0) skewX(-7deg); opacity: 0; }
+      8% { opacity: 1; }
+      92% { opacity: 1; }
+      100% { transform: translateX(332%) skewX(-7deg); opacity: 0; }
+    }
+
+    @keyframes burn-residue {
+      0% { opacity: 0; clip-path: inset(0 100% 0 0); }
+      52% { opacity: .72; clip-path: inset(0 45% 0 0); }
+      100% { opacity: 0; clip-path: inset(0 0 0 0); }
+    }
+
+    @keyframes row-singe {
+      0%, 100% { box-shadow: none; border-color: var(--line); }
+      50% { box-shadow: inset 2px 0 rgba(var(--burn-rgb), .48), inset 0 0 16px rgba(var(--burn-rgb), .055); }
+    }
+
+    .demo-note {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .demo-note::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: var(--fire-orange);
+      box-shadow: 0 0 0 4px rgba(244, 123, 32, 0.1);
+    }
+
+    @media (max-width: 860px) {
+      .demo-intro { align-items: start; flex-direction: column; }
+      .list-head, .requirement-row { grid-template-columns: 42px minmax(260px, 1fr) 104px 92px; }
+      .hide-small { display: none; }
+    }
+
+    @media (max-width: 590px) {
+      body { padding: 24px 12px; }
+      .list-head, .requirement-row { grid-template-columns: 38px minmax(0, 1fr) 86px; }
+      .hide-mobile { display: none; }
+      .workspace { border-radius: 10px; }
+      .toolbar-pill { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .requirement-row.is-burning,
+      .requirement-row.is-burning .burn-field::before,
+      .requirement-row.is-burning .heat-wash,
+      .urgent-trigger:hover .flame-icon,
+      .requirement-row.is-burning .flame-icon { animation: none; }
+
+      .requirement-row.is-burning .heat-wash { opacity: .5; clip-path: inset(0); }
+    }
+  </style>
+</head>
+<body>
+  <main class="demo-shell">
+    <header class="demo-intro">
+      <div>
+        <p class="eyebrow">Micro interaction / urgent</p>
+        <h1>紧急需求，一触即燃</h1>
+        <p>把鼠标移到第一条紧急需求上：单一橙红热浪会连续扫过整行，约 1 秒完成，不停顿、不反复。</p>
+      </div>
+      <button class="replay-button" type="button" data-replay>
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M13 5.5V2.8l-2.2 1.5A5 5 0 1 0 12.7 10" />
+        </svg>
+        重播动效
+      </button>
+    </header>
+
+    <section class="workspace" aria-label="紧急需求动效演示">
+      <div class="toolbar">
+        <div class="title-stack">
+          <strong>原始需求池</strong>
+          <span>共 24 条需求</span>
+        </div>
+        <div class="toolbar-spacer"></div>
+        <span class="toolbar-pill">全部状态</span>
+        <span class="toolbar-pill">默认视图</span>
+      </div>
+
+      <div class="list-head" aria-hidden="true">
+        <div class="head-urgent">🔥</div>
+        <div>原始需求</div>
+        <div>业务线</div>
+        <div class="hide-mobile">状态</div>
+        <div class="hide-small">优先级</div>
+        <div class="hide-small">产品经理</div>
+      </div>
+
+      <div class="requirement-row urgent-row" tabindex="0">
+        <div class="heat-wash"></div>
+        <div class="burn-field" aria-hidden="true"></div>
+        <div class="cell urgent-cell">
+          <span class="urgent-trigger" title="加急需求：移入查看动效" aria-label="加急需求动效">
+            <svg class="flame-icon" viewBox="0 0 16 20" aria-hidden="true">
+              <defs>
+                <linearGradient id="iconFireGradient" x1="8" y1="1" x2="8" y2="19" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stop-color="#ffbd2e" />
+                  <stop offset=".48" stop-color="#f47b20" />
+                  <stop offset="1" stop-color="#d9482c" />
+                </linearGradient>
+              </defs>
+              <path class="flame-outer" d="M9.2 1.1c.5 3.2-1.1 4.2-2.3 5.8C5.8 8.3 5 9.7 5 11.7c0 .4 0 .7.1 1C4 11.8 3.6 10.5 4 8.8 1.9 11 2 14.2 3.7 16.5c1 1.4 2.5 2.3 4.3 2.3 3.1 0 5.6-2.5 5.6-5.8 0-2.9-1.4-5.4-3.7-7.1.2 1.7-.2 3-1.4 4 .1-2.5-.7-4.4.7-8.8Z" />
+              <path class="flame-core" d="M8.2 11.1c1.5 1.3 2 2.3 2 3.5 0 1.3-.9 2.4-2.2 2.4s-2.2-1.1-2.2-2.4c0-1.2.7-2.2 2.4-3.5Z" />
+            </svg>
+          </span>
+        </div>
+        <div class="cell title-cell">
+          <div class="requirement-title">支付回调异常导致订单状态不同步</div>
+          <span class="req-no">RAW-202607-0184</span>
+        </div>
+        <div class="cell">支付业务</div>
+        <div class="cell hide-mobile"><span class="status-dot"></span>待评估</div>
+        <div class="cell priority hide-small">P0</div>
+        <div class="cell hide-small"><span class="avatar">林</span>林晓</div>
+      </div>
+
+      <div class="requirement-row" tabindex="0">
+        <div class="cell urgent-cell"></div>
+        <div class="cell title-cell">
+          <div class="requirement-title">企业客户账单中心导出能力优化</div>
+          <span class="req-no">RAW-202607-0183</span>
+        </div>
+        <div class="cell">企业服务</div>
+        <div class="cell hide-mobile"><span class="status-dot"></span>分析中</div>
+        <div class="cell hide-small">P2</div>
+        <div class="cell hide-small"><span class="avatar">周</span>周放</div>
+      </div>
+
+      <div class="requirement-row" tabindex="0">
+        <div class="cell urgent-cell"></div>
+        <div class="cell title-cell">
+          <div class="requirement-title">营销活动配置新增批量复制</div>
+          <span class="req-no">RAW-202607-0182</span>
+        </div>
+        <div class="cell">增长业务</div>
+        <div class="cell hide-mobile"><span class="status-dot"></span>待受理</div>
+        <div class="cell hide-small">P3</div>
+        <div class="cell hide-small"><span class="avatar">陈</span>陈屿</div>
+      </div>
+    </section>
+
+    <div class="demo-note">紧急需求整行均为触发热区；每次移入播放一轮，移出后才能再次触发。</div>
+  </main>
+
+  <script>
+    const rows = [...document.querySelectorAll('.urgent-row')]
+    const replay = document.querySelector('[data-replay]')
+
+    function ignite(row) {
+      if (row.dataset.played === 'true') return
+      row.dataset.played = 'true'
+      row.classList.remove('is-burning')
+      void row.offsetWidth
+      row.classList.add('is-burning')
+      window.setTimeout(() => row.classList.remove('is-burning'), 1040)
+    }
+
+    rows.forEach((row) => {
+      row.addEventListener('pointerenter', () => ignite(row))
+      row.addEventListener('focus', () => ignite(row))
+      row.addEventListener('pointerleave', () => { row.dataset.played = 'false' })
+      row.addEventListener('blur', () => { row.dataset.played = 'false' })
+    })
+
+    replay.addEventListener('click', () => {
+      rows.forEach((row) => {
+        row.dataset.played = 'false'
+        ignite(row)
+      })
+    })
+  </script>
+</body>
+</html>

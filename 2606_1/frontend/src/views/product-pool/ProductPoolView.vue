@@ -41,61 +41,88 @@
 
     <section class="workspace-shell wb-shell">
       <div class="list-panel wb-panel grouped-list" :class="`density-${listDensity}`" :aria-busy="loading">
-        <template v-if="loading"><section v-for="groupIndex in 2" :key="`group-skeleton-${groupIndex}`" class="requirement-group linear-group-skeleton"><header class="group-header"><div class="group-title"><LnSkeleton circle width="9px"/><LnSkeleton width="72px"/></div></header><div v-for="rowIndex in 3" :key="rowIndex" class="issue-row"><div class="skeleton-identity"><LnSkeleton :width="`${48 + rowIndex * 8}%`"/><LnSkeleton width="58px" height="10px"/></div><div class="skeleton-tags"><LnSkeleton v-for="tag in 5" :key="tag" width="62px" height="24px"/></div></div></section></template>
-        <section v-for="group in loading ? [] : displayedRequirementGroups" :key="group.key" class="requirement-group">
-          <header class="group-header">
-            <div class="group-title">
-              <span class="group-caret"><LnIcon name="chevron-down" /></span>
-              <span class="status-dot" :class="group.tone"></span>
-              <strong>{{ group.label }}</strong>
-              <span class="group-count">{{ group.items.length }}</span>
-            </div>
-            <LnButton v-if="canCreateProduct" size="small" icon-only variant="ghost" aria-label="在此分组新建" @click="handleCreate(group.createStatus)"><template #icon><LnIcon name="plus" /></template></LnButton>
-          </header>
+        <template v-if="loading"><section v-for="groupIndex in 2" :key="`group-skeleton-${groupIndex}`" class="requirement-group linear-group-skeleton"><header class="group-header"><div class="group-title"><LnSkeleton circle width="9px"/><LnSkeleton width="72px"/></div></header><div v-for="rowIndex in 3" :key="rowIndex" class="issue-row issue-grid skeleton-row"><div class="skeleton-identity"><LnSkeleton :width="`${48 + rowIndex * 8}%`"/><LnSkeleton width="58px" height="10px"/></div><div class="skeleton-tags"><LnSkeleton v-for="tag in 5" :key="tag" width="62px" height="24px"/></div></div></section></template>
+        <div v-else class="list-table" :style="{ minWidth: issueGridMinWidth }">
+          <div v-if="tableData.length" class="issue-columns issue-grid" :style="{ gridTemplateColumns: issueGridTemplate }" aria-hidden="true">
+            <span>产品需求</span>
+            <span v-if="showTypeTag">需求类型</span>
+            <span v-if="showBusinessLineTag">业务线</span>
+            <span v-if="showStatusTag">状态</span>
+            <span v-if="showPriorityTag">优先级</span>
+            <span v-if="showHandlerTag">处理人</span>
+            <span v-if="showSprintTag">迭代</span>
+            <span v-if="showParentTag">原始需求</span>
+            <span v-if="showPrdTag">文档</span>
+          </div>
 
-          <div
-            v-for="item in group.items"
-            :key="item.id"
-            class="issue-row"
-            :class="{ selected: activeRequirementId === item.id, voided: isVoided(item.status), hovering: hoverRequirementId === item.id }"
-            tabindex="0"
-            @click="openRequirement(item, 'detail')"
-            @mouseenter="hoverRequirementId = item.id"
-            @focus="hoverRequirementId = item.id"
-            @mouseleave="hoverRequirementId = hoverRequirementId === item.id ? null : hoverRequirementId"
-            @blur="hoverRequirementId = hoverRequirementId === item.id ? null : hoverRequirementId"
-          >
-          <div class="issue-identity">
-            <div class="title-line">
-              <div class="title-text" :class="{ striked: isVoided(item.status) }">{{ item.title }}</div>
-              <span class="req-no">{{ item.reqNo }}</span>
-              <div class="title-flags">
-                <span v-if="item.isDirect === 1" class="meta-text muted">直接创建</span>
+          <section v-for="group in displayedRequirementGroups" :key="group.key" class="requirement-group" :class="{ 'is-collapsed': isGroupCollapsed(group.key) }">
+            <header class="group-header">
+              <button
+                class="group-toggle"
+                type="button"
+                :aria-expanded="!isGroupCollapsed(group.key)"
+                :aria-controls="`product-group-${group.key}`"
+                @click="toggleGroup(group.key)"
+              >
+                <span class="group-caret" :class="{ 'is-collapsed': isGroupCollapsed(group.key) }"><LnIcon name="chevron-down" /></span>
+                <span class="status-dot" :class="group.tone"></span>
+                <strong>{{ group.label }}</strong>
+                <span class="group-count">{{ group.items.length }}</span>
+              </button>
+              <LnButton v-if="canCreateProduct && canCreateInGroup(group.createStatus)" size="small" icon-only variant="ghost" :aria-label="`在“${group.label}”中新建产品需求`" :title="`在“${group.label}”中新建产品需求`" @click.stop="handleCreate(group.createStatus, group.key)"><template #icon><LnIcon name="plus" /></template></LnButton>
+            </header>
+
+            <div v-show="!isGroupCollapsed(group.key)" :id="`product-group-${group.key}`" class="group-rows">
+              <div
+                v-for="item in group.items"
+                :key="item.id"
+                class="issue-row issue-grid"
+                :class="{ selected: activeRequirementId === item.id, created: createdRequirementId === item.id, voided: isVoided(item.status), hovering: hoverRequirementId === item.id }"
+                :style="{ gridTemplateColumns: issueGridTemplate }"
+                tabindex="0"
+                @click="openRequirement(item, 'peek')"
+                @mouseenter="hoverRequirementId = item.id"
+                @focus="hoverRequirementId = item.id"
+                @mouseleave="hoverRequirementId = hoverRequirementId === item.id ? null : hoverRequirementId"
+                @blur="hoverRequirementId = hoverRequirementId === item.id ? null : hoverRequirementId"
+              >
+                <div class="issue-identity">
+                  <div class="title-line">
+                    <div class="title-text" :class="{ striked: isVoided(item.status) }">{{ item.title }}</div>
+                  </div>
+                  <div class="identity-meta">
+                    <span class="req-no">{{ item.reqNo }}</span>
+                    <span v-if="item.isDirect === 1" class="source-note">直接创建</span>
+                  </div>
+                </div>
+
+                <div v-if="showTypeTag" class="issue-property" @click.stop><LnPropertyPicker :model-value="item.reqType || ''" title="修改需求类型" :options="linearReqTypeOptions" @update:model-value="(val) => handleInlineSave(item.id, 'reqType', val)" /></div>
+                <div v-if="showBusinessLineTag" class="issue-property" @click.stop><LnPropertyPicker :model-value="String(item.businessLineId || '')" title="修改业务线" :options="linearBusinessLineOptions" @update:model-value="(val) => handleInlineSave(item.id, 'businessLineId', val ? Number(val) : null)" /></div>
+                <div v-if="showStatusTag" class="issue-property" @click.stop><LnPropertyPicker :model-value="item.status || ''" title="修改状态" :options="linearStatusOptions" @update:model-value="(val) => handleInlineSave(item.id, 'status', val)" /></div>
+                <div v-if="showPriorityTag" class="issue-property" @click.stop><LnPropertyPicker :model-value="item.priority || ''" title="修改优先级" :options="linearPriorityOptions" @update:model-value="(val) => handleInlineSave(item.id, 'priority', val)" /></div>
+                <div v-if="showHandlerTag" class="issue-property" @click.stop><LnPropertyPicker :model-value="item.handler || ''" title="修改处理人" :options="linearHandlerOptions" @update:model-value="(val) => handleInlineSave(item.id, 'handler', val)" /></div>
+                <div v-if="showSprintTag" class="issue-property" @click.stop><LnPropertyPicker :model-value="String(item.sprintId || '')" title="修改迭代" :options="linearSprintOptions" @update:model-value="(val) => handleInlineSave(item.id, 'sprintId', val ? Number(val) : null)" /></div>
+                <div v-if="showParentTag" class="issue-reference" @click.stop>
+                  <LnButton
+                    v-if="item.rawReqId && item.isDirect !== 1"
+                    class="tag-link"
+                    size="small"
+                    variant="ghost"
+                    :title="`预览原始需求：${item.rawReqTitle || `RAW-${item.rawReqId}`}`"
+                    @click.stop="openRawPreview(item.rawReqId)"
+                  >
+                    {{ item.rawReqTitle || `RAW-${item.rawReqId}` }}
+                  </LnButton>
+                  <span v-else class="empty-cell">—</span>
+                </div>
+                <div v-if="showPrdTag" class="issue-document" @click.stop>
+                  <LnButton v-if="item.prdUrl" class="tag-link prd-link" size="small" variant="ghost" :href="item.prdUrl" target="_blank" rel="noopener noreferrer" title="打开 PRD" @click.stop><template #icon><LnIcon name="external-link"/></template>PRD</LnButton>
+                  <span v-else class="empty-cell">—</span>
+                </div>
               </div>
             </div>
-          </div>
-
-          <div class="issue-tags" @click.stop>
-            <LnPropertyPicker v-if="showTypeTag" :model-value="item.reqType || ''" title="修改需求类型" :options="linearReqTypeOptions" @update:model-value="(val) => handleInlineSave(item.id, 'reqType', val)" />
-            <LnPropertyPicker v-if="showBusinessLineTag" :model-value="String(item.businessLineId || '')" title="修改业务线" :options="linearBusinessLineOptions" @update:model-value="(val) => handleInlineSave(item.id, 'businessLineId', val ? Number(val) : null)" />
-            <LnPropertyPicker v-if="showStatusTag" :model-value="item.status || ''" title="修改状态" :options="linearStatusOptions" @update:model-value="(val) => handleInlineSave(item.id, 'status', val)" />
-            <LnPropertyPicker v-if="showPriorityTag" :model-value="item.priority || ''" title="修改优先级" :options="linearPriorityOptions" @update:model-value="(val) => handleInlineSave(item.id, 'priority', val)" />
-            <LnPropertyPicker v-if="showHandlerTag" :model-value="item.handler || ''" title="修改处理人" :options="linearHandlerOptions" @update:model-value="(val) => handleInlineSave(item.id, 'handler', val)" />
-            <LnPropertyPicker v-if="showSprintTag" :model-value="String(item.sprintId || '')" title="修改迭代" :options="linearSprintOptions" @update:model-value="(val) => handleInlineSave(item.id, 'sprintId', val ? Number(val) : null)" />
-            <LnButton
-              v-if="showParentTag && item.rawReqId && item.isDirect !== 1"
-              class="tag-link"
-              size="small"
-              variant="ghost"
-              :title="`预览原始需求：${item.rawReqTitle || `RAW-${item.rawReqId}`}`"
-              @click.stop="openRawPreview(item.rawReqId)"
-            >
-              {{ item.rawReqTitle || `RAW-${item.rawReqId}` }}
-            </LnButton>
-            <LnButton v-if="showPrdTag && item.prdUrl" class="tag-link" size="small" variant="ghost" :href="item.prdUrl" target="_blank" rel="noopener noreferrer" title="打开 PRD" @click.stop>PRD ↗</LnButton>
-          </div>
-          </div>
-        </section>
+          </section>
+        </div>
 
         <LnEmptyState v-if="tableData.length === 0 && !loading" title="没有匹配的产品需求" description="筛选、搜索或视图切换后没有匹配结果，列表分组结构会保持不变。"><LnButton v-if="hasActiveFilters" size="small" variant="ghost" @click="clearFilters">清空筛选</LnButton></LnEmptyState>
 
@@ -110,7 +137,21 @@
         class="peek-panel wb-panel"
         :class="previewMode === 'detail' ? 'detail-mode' : 'peek-mode'"
       >
-        <template v-if="activeRequirementId">
+        <UnifiedRequirementPeek
+          v-if="previewMode === 'peek'"
+          source-type="product"
+          :source-id="activeRequirementId"
+          :sequence="visiblePeekSequence"
+          :source-index="visiblePeekSequence.findIndex(item => item.id === activeRequirementId)"
+          :editable="canEditProduct"
+          :momentary="spacePreviewOpenedByHold"
+          @previous="movePeek(-1)"
+          @next="movePeek(1)"
+          @open-detail="openUnifiedDetail"
+          @updated="handleUnifiedUpdated"
+          @close="closeRequirement"
+        />
+        <template v-else-if="activeRequirementId">
           <div class="peek-scroll wb-detail-scroll">
             <div v-if="activeRequirementLoading" class="peek-loading" aria-label="正在加载产品需求详情">
               <LnSkeleton width="86px" height="10px" />
@@ -124,7 +165,8 @@
                 <div class="peek-title-row">
                   <h3 class="peek-title">{{ activeRequirementDetail.title }}</h3>
                   <div class="peek-header-actions">
-                    <LnButton v-if="previewMode === 'peek'" size="small" variant="primary" @click="previewMode = 'detail'">详情</LnButton><LnButton size="small" icon-only variant="ghost" aria-label="关闭" @click="closeRequirement"><template #icon>×</template></LnButton>
+                    <LnButton v-if="route.query.from === 'kanban'" size="small" variant="ghost" @click="returnToKanban">← 返回看板</LnButton>
+                    <LnButton size="small" icon-only variant="ghost" aria-label="关闭" @click="closeRequirement"><template #icon><LnIcon name="close"/></template></LnButton>
                   </div>
                 </div>
                 <div class="peek-tags">
@@ -384,10 +426,19 @@
       </div>
     </LnDrawer>
 
-    <LnDialog v-model="createDialogVisible" :title="editingProductId ? '编辑产品需求' : '新建产品需求'" description="完善需求范围、归属和交付上下文。" width="680px" :close-on-backdrop="false">
+    <LnDialog :model-value="createDialogVisible" :title="editingProductId ? '编辑产品需求' : '新建产品需求'" :description="editingProductId ? '修改产品需求的范围、归属和交付上下文。' : `创建后进入${createTargetStatusLabel}。`" width="680px" :close-on-backdrop="false" @update:model-value="handleCreateDialogVisible">
       <LnForm ref="createFormRef" :model="createForm" :rules="createRules" label-width="100px">
+        <div v-if="createSubmitError" class="create-error-summary" role="alert">
+          <LnIcon name="warning"/>
+          <div>
+            <strong>{{ createSubmitError.title }}</strong>
+            <span>{{ createSubmitError.message }}</span>
+            <small v-if="createSubmitError.traceId">追踪码：{{ createSubmitError.traceId }}</small>
+          </div>
+          <LnButton v-if="createSubmitError.traceId" size="small" variant="ghost" @click="copyCreateTraceId">复制追踪码</LnButton>
+        </div>
         <LnFormItem label="需求标题" prop="title">
-          <LnInput v-model="createForm.title" placeholder="输入产品需求标题" />
+          <LnInput v-model="createForm.title" :maxlength="200" show-count placeholder="输入产品需求标题" />
         </LnFormItem>
         <LnFormItem label="需求描述" prop="description">
           <LnRichTextEditor
@@ -429,8 +480,8 @@
         </div>
       </LnForm>
       <template #footer>
-        <LnButton variant="ghost" @click="createDialogVisible = false">取消</LnButton>
-        <LnButton variant="primary" :loading="submitLoading" @click="handleSubmitCreate">{{ editingProductId ? '保存' : '创建' }}</LnButton>
+        <LnButton variant="ghost" @click="requestCloseCreate">取消</LnButton>
+        <LnButton variant="primary" :loading="submitLoading" :disabled="submitLoading" @click="handleSubmitCreate">{{ submitLoading ? (editingProductId ? '保存中…' : '创建中…') : (editingProductId ? '保存' : '创建') }}</LnButton>
       </template>
     </LnDialog>
 
@@ -456,6 +507,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
   pageQueryProductRequirements,
   createProductRequirement,
@@ -469,7 +521,9 @@ import { listDictData } from '@/api/dict'
 import { listSprintOptions } from '@/api/sprint'
 import EditableField from '@/components/EditableField.vue'
 import SupplementDialog from '@/components/requirement/SupplementDialog.vue'
-import { lnToast, LnButton, LnCheckbox, LnDateInput, LnDialog, LnDrawer, LnEmptyState, LnForm, LnFormItem, LnIcon, LnInput, LnPagination, LnPopover, LnPropertyPicker, LnRichTextEditor, LnSelect, LnSkeleton, LnTabs, type LnFormInstance, type LnFormRules, type LnOption, type LnTabOption } from '@/components/linear'
+import UnifiedRequirementPeek from '@/components/requirement/UnifiedRequirementPeek.vue'
+import { lnToast, lnConfirm, LnButton, LnCheckbox, LnDateInput, LnDialog, LnDrawer, LnEmptyState, LnForm, LnFormItem, LnIcon, LnInput, LnPagination, LnPopover, LnPropertyPicker, LnRichTextEditor, LnSelect, LnSkeleton, LnTabs, type LnFormInstance, type LnFormRules, type LnOption, type LnTabOption } from '@/components/linear'
+import { getBusinessLineVisual, getPriorityVisual, getRequirementTypeVisual } from '@/components/linear/optionVisuals'
 import type {
   ProductRequirementListVO,
   ProductRequirementCreateDTO,
@@ -484,6 +538,8 @@ import { sanitizeRichText } from '@/utils/rich-text'
 import { useUserStore } from '@/store/user'
 
 const userStore = useUserStore()
+const route = useRoute()
+const router = useRouter()
 const canCreateProduct = computed(() => userStore.hasAnyPermission(['product-pool:add']))
 const canEditProduct = computed(() => userStore.hasAnyPermission(['product-pool:edit', 'product-pool:filter', 'product-pool:judge']))
 
@@ -516,6 +572,29 @@ const showHandlerTag = ref(true)
 const showSprintTag = ref(true)
 const showParentTag = ref(true)
 const showPrdTag = ref(true)
+const collapsedGroupKeys = ref<Set<string>>(new Set())
+
+const issueColumns = computed(() => [
+  { visible: true, width: 360, track: 'minmax(360px, 3.2fr)' },
+  { visible: showTypeTag.value, width: 104, track: 'minmax(104px, .9fr)' },
+  { visible: showBusinessLineTag.value, width: 112, track: 'minmax(112px, .95fr)' },
+  { visible: showStatusTag.value, width: 104, track: 'minmax(104px, .85fr)' },
+  { visible: showPriorityTag.value, width: 104, track: 'minmax(104px, .85fr)' },
+  { visible: showHandlerTag.value, width: 104, track: 'minmax(104px, .9fr)' },
+  { visible: showSprintTag.value, width: 116, track: 'minmax(116px, 1fr)' },
+  { visible: showParentTag.value, width: 168, track: 'minmax(168px, 1.35fr)' },
+  { visible: showPrdTag.value, width: 64, track: 'minmax(64px, .55fr)' },
+].filter((column) => column.visible))
+
+const issueGridTemplate = computed(() =>
+  issueColumns.value.map((column) => column.track).join(' '),
+)
+
+const issueGridMinWidth = computed(() => {
+  const contentWidth = issueColumns.value.reduce((sum, column) => sum + column.width, 0)
+  const gapsWidth = Math.max(0, issueColumns.value.length - 1) * 12
+  return `${Math.max(760, contentWidth + gapsWidth + 24)}px`
+})
 
 const activeRequirementId = ref<number | null>(null)
 const previewMode = ref<'peek' | 'detail'>('peek')
@@ -543,6 +622,9 @@ const createDialogVisible = ref(false)
 const submitLoading = ref(false)
 const createTargetStatus = ref('pending_design')
 const createRequestId = ref('')
+const createTargetGroupKey = ref('')
+const createdRequirementId = ref<number | null>(null)
+const createSubmitError = ref<{ title: string; message: string; traceId?: string } | null>(null)
 const createFormRef = ref<LnFormInstance>()
 const editingProductId = ref<number | null>(null)
 const descriptionDialogVisible = ref(false)
@@ -563,40 +645,39 @@ const createForm = reactive<ProductRequirementCreateDTO>({
 })
 
 const createRules: LnFormRules = {
-  title: [{ required: true, message: '请输入需求标题', trigger: 'blur' }],
+  title: [{ required: true, message: '请输入需求标题', trigger: 'blur' }, { max: 200, message: '需求标题不能超过 200 个字符', trigger: 'blur' }],
+  productModule: [{ max: 100, message: '功能模块不能超过 100 个字符', trigger: 'blur' }],
+  prdUrl: [{ pattern: /^(|https?:\/\/[^\s]+)$/i, message: '请输入以 http:// 或 https:// 开头的有效地址', trigger: 'blur' }],
 }
+const createTargetStatusLabel = computed(() => productStatusSelectOptions.find(item => item.value === createTargetStatus.value)?.label || '待设计')
 
 const productStatusSelectOptions: LnOption[] = [
-  { value: 'backlog', label: '待规划', color: '#9b9ba4', icon: '○' },
-  { value: 'researching', label: '调研中', color: '#d28b36', icon: '◔' },
-  { value: 'pending_design', label: '待设计', color: '#d28b36', icon: '◔' },
-  { value: 'designing', label: '设计中', color: '#5e6ad2', icon: '◒' },
-  { value: 'developing', label: '开发中', color: '#5e6ad2', icon: '◒' },
-  { value: 'testing', label: '测试中', color: '#5e6ad2', icon: '◒' },
-  { value: 'online', label: '已上线', color: '#2f9e6f', icon: '●' },
-  { value: 'accepted', label: '已验收', color: '#2f9e6f', icon: '✓' },
-  { value: 'rejected', label: '验收不通过', color: '#d05757', icon: '⊘' },
-  { value: 'suspended', label: '已暂停', color: '#d28b36', icon: 'Ⅱ' },
-  { value: 'closed', label: '已关闭', color: '#6f6f78', icon: '×' },
+  { value: 'backlog', label: '待规划', color: '#9b9ba4', icon: 'pending' },
+  { value: 'researching', label: '调研中', color: '#d28b36', icon: 'pending' },
+  { value: 'pending_design', label: '待设计', color: '#d28b36', icon: 'pending' },
+  { value: 'designing', label: '设计中', color: '#5e6ad2', icon: 'progress' },
+  { value: 'developing', label: '开发中', color: '#5e6ad2', icon: 'progress' },
+  { value: 'testing', label: '测试中', color: '#5e6ad2', icon: 'progress' },
+  { value: 'online', label: '已上线', color: '#2f9e6f', icon: 'success' },
+  { value: 'accepted', label: '已验收', color: '#2f9e6f', icon: 'check' },
+  { value: 'rejected', label: '验收不通过', color: '#d05757', icon: 'blocked' },
+  { value: 'suspended', label: '已暂停', color: '#d28b36', icon: 'paused' },
+  { value: 'closed', label: '已关闭', color: '#6f6f78', icon: 'closed' },
 ]
 
-const priorityVisuals: Record<string, Pick<LnOption, 'color' | 'icon'>> = {
-  P0: { color: '#d05757', icon: '▰' }, P1: { color: '#d28b36', icon: '▆' },
-  P2: { color: '#5e6ad2', icon: '▄' }, P3: { color: '#6f6f78', icon: '▂' },
-}
 const linearStatusOptions = productStatusSelectOptions
-const linearPriorityOptions = computed<LnOption[]>(() => dictPriorityOptions.value.map(item => ({ label:item.label,value:item.value,...priorityVisuals[item.value] })))
+const linearPriorityOptions = computed<LnOption[]>(() => dictPriorityOptions.value.map(item => ({ label:item.label,value:item.value,...getPriorityVisual(item.value, item.label) })))
 const linearBusinessLineOptions = computed<LnOption[]>(() => [
-  { label:'未设置',value:'',icon:'—' }, ...dictBusinessLineOptions.value.map(item => ({ label:item.label,value:String(item.id),icon:'◇' })),
+  { label:'未设置',value:'',icon: 'none' }, ...dictBusinessLineOptions.value.map(item => ({ label:item.label,value:String(item.id),...getBusinessLineVisual(item.label, String(item.id)) })),
 ])
 const linearReqTypeOptions = computed<LnOption[]>(() => [
-  { label:'未设置',value:'',icon:'—' }, ...dictReqTypeOptions.value.map(item => ({ label:item.label,value:item.value,icon:'▤' })),
+  { label:'未设置',value:'',icon: 'none' }, ...dictReqTypeOptions.value.map(item => ({ label:item.label,value:item.value,...getRequirementTypeVisual(item.label, item.value) })),
 ])
 const linearSprintOptions = computed<LnOption[]>(() => [
-  { label:'未关联',value:'',icon:'—' }, ...dictSprintOptions.value.map(item => ({ label:item.name,value:String(item.id),icon:'◆' })),
+  { label:'未关联',value:'',icon: 'none' }, ...dictSprintOptions.value.map(item => ({ label:item.name,value:String(item.id),icon: 'sprint' })),
 ])
 const linearHandlerOptions = computed<LnOption[]>(() => [
-  { label:'未分配',value:'',icon:'—' }, ...dictHandlerOptions.value.map(item => ({ label:item.label,value:item.value,icon:'◉' })),
+  { label:'未分配',value:'',icon: 'none' }, ...dictHandlerOptions.value.map(item => ({ label:item.label,value:item.value,icon: 'user' })),
 ])
 const queryBusinessLineId = computed({ get:()=>queryForm.businessLineId ? String(queryForm.businessLineId) : '', set:(value:string)=>{ queryForm.businessLineId=normalizeOptionalNumber(value) } })
 const querySprintId = computed({ get:()=>queryForm.sprintId ? String(queryForm.sprintId) : '', set:(value:string)=>{ queryForm.sprintId=normalizeOptionalNumber(value) } })
@@ -652,6 +733,9 @@ const parentGroupedRequirements = computed(() => {
 const displayedRequirementGroups = computed(() =>
   groupingMode.value === 'parent' ? parentGroupedRequirements.value : groupedRequirements.value,
 )
+const visiblePeekSequence = computed(() => displayedRequirementGroups.value
+  .filter((group) => !isGroupCollapsed(group.key))
+  .flatMap((group) => group.items.map((item) => ({ id: item.id, reqNo: item.reqNo }))))
 
 function setDisplaySettingsOpen(open: boolean) { showDisplaySettings.value = open; if (open) showFilter.value = false }
 
@@ -670,6 +754,18 @@ function selectProductView(key: string) {
 
 function selectGroupingMode(value: string) {
   groupingMode.value = value as 'status' | 'parent'
+  collapsedGroupKeys.value = new Set()
+}
+
+function isGroupCollapsed(key: string): boolean {
+  return collapsedGroupKeys.value.has(key)
+}
+
+function toggleGroup(key: string) {
+  const nextKeys = new Set(collapsedGroupKeys.value)
+  if (nextKeys.has(key)) nextKeys.delete(key)
+  else nextKeys.add(key)
+  collapsedGroupKeys.value = nextKeys
 }
 
 const hasActiveFilters = computed(() => {
@@ -837,10 +933,51 @@ async function openRequirement(item: ProductRequirementListVO, mode: 'peek' | 'd
   }
 }
 
+function movePeek(offset: number) {
+  if (!activeRequirementId.value) return
+  const sequence = visiblePeekSequence.value
+  const index = sequence.findIndex((item) => item.id === activeRequirementId.value)
+  const targetId = sequence[index + offset]?.id
+  const target = tableData.value.find((item) => item.id === targetId)
+  if (target) void openRequirement(target, 'peek')
+}
+
+function openUnifiedDetail(type: 'raw' | 'product', id: number) {
+  if (type === 'raw') {
+    void openRawPreview(id)
+    return
+  }
+  const row = tableData.value.find((item) => item.id === id)
+  if (row) void openRequirement(row, 'detail')
+}
+
+async function handleUnifiedUpdated(type: 'raw' | 'product', id: number) {
+  await Promise.all([loadData(), loadStats()])
+  if (type === 'product' && activeRequirementId.value === id) {
+    const row = tableData.value.find((item) => item.id === id)
+    if (!row) closeRequirement()
+  }
+}
+
 function closeRequirement() {
   activeRequirementId.value = null
   activeRequirementDetail.value = null
   previewMode.value = 'peek'
+}
+
+function returnToKanban() {
+  let query: Record<string, string> = {}
+  try {
+    const context = JSON.parse(sessionStorage.getItem('kanban-return-context') || '{}')
+    query = Object.fromEntries(
+      Object.entries(context)
+        .filter(([key, value]) => key !== 'scrollLeft' && value !== '' && value != null)
+        .map(([key, value]) => [key, String(value)]),
+    )
+  } catch {
+    query = {}
+  }
+  void router.push({ path: '/kanban', query })
 }
 
 function clearSpacePreviewState() {
@@ -865,10 +1002,14 @@ function reopenRequirementById(id: number | null) {
   if (row) openRequirement(row, 'peek')
 }
 
-function handleCreate(status = 'pending_design') {
+function canCreateInGroup(status: string) { return ['pending_design', 'designing'].includes(status) }
+
+function handleCreate(status = 'pending_design', groupKey = '') {
   if (!canCreateProduct.value) return
   createTargetStatus.value = status
+  createTargetGroupKey.value = groupKey
   createRequestId.value = crypto.randomUUID()
+  createSubmitError.value = null
   editingProductId.value = null
   Object.assign(createForm, {
     title: '',
@@ -884,6 +1025,27 @@ function handleCreate(status = 'pending_design') {
     rawReqId: undefined,
   })
   createDialogVisible.value = true
+  requestAnimationFrame(() => createFormRef.value?.clearValidate())
+}
+
+function hasCreateDraft() {
+  return !!(createForm.title?.trim() || createForm.description?.trim() || createForm.businessLineId || createForm.productModule?.trim() || createForm.reqType || createForm.sprintId || createForm.prdUrl?.trim() || createForm.handler || createForm.expectedDate)
+}
+
+async function requestCloseCreate() {
+  if (!hasCreateDraft() || submitLoading.value) {
+    if (!submitLoading.value) createDialogVisible.value = false
+    return
+  }
+  try {
+    await lnConfirm({ title: '放弃未保存内容？', message: '关闭后，本次填写的产品需求内容不会保留。', confirmText: '放弃并关闭', cancelText: '继续填写', tone: 'warning' })
+    createDialogVisible.value = false
+  } catch { /* 继续编辑 */ }
+}
+
+function handleCreateDialogVisible(value: boolean) {
+  if (value) createDialogVisible.value = true
+  else void requestCloseCreate()
 }
 
 function handleCreateFromRaw(item: ProductRequirementListVO) {
@@ -944,6 +1106,7 @@ async function handleSubmitCreate() {
   const form = createFormRef.value
   if (!form) return
   submitLoading.value = true
+  createSubmitError.value = null
   try {
     const valid = await form.validate().catch(() => false)
     if (!valid) return
@@ -953,7 +1116,6 @@ async function handleSubmitCreate() {
       sprintId: normalizeOptionalNumber(createForm.sprintId),
       description: sanitizeRichText(createForm.description),
       isDirect: createForm.rawReqId ? 0 : 1,
-      creator: '当前用户',
       status: createTargetStatus.value,
       ...(!editingProductId.value && createRequestId.value
         ? { clientRequestId: createRequestId.value }
@@ -963,15 +1125,67 @@ async function handleSubmitCreate() {
       await updateProductRequirement(editingProductId.value, payload)
       lnToast.success('已更新产品需求')
     } else {
-      await createProductRequirement(payload)
-      lnToast.success('已创建产品需求')
+      const response: any = await createProductRequirement(payload)
+      createdRequirementId.value = Number(response.data) || null
     }
     createDialogVisible.value = false
     editingProductId.value = null
+    if (createTargetGroupKey.value) collapsedGroupKeys.value.delete(createTargetGroupKey.value)
     await Promise.all([loadData(), loadStats()])
+    if (createdRequirementId.value) {
+      const created = tableData.value.find(item => item.id === createdRequirementId.value)
+      lnToast.success(created?.reqNo ? `已创建产品需求 ${created.reqNo}` : '已创建产品需求')
+      if (created) {
+        requestAnimationFrame(() => document.querySelector<HTMLElement>('.issue-row.created')?.scrollIntoView({ block: 'center', behavior: 'smooth' }))
+        window.setTimeout(() => { createdRequirementId.value = null }, 3000)
+      } else {
+        lnToast.info(`需求已创建，位于“${createTargetStatusLabel.value}”状态`)
+      }
+    }
+  } catch (error: any) {
+    const responseData = error?.response?.data
+    const traceId = error?.traceId || responseData?.traceId
+    const message = error?.message && error.message !== 'Network Error'
+      ? error.message
+      : responseData?.message || '网络连接异常，请检查网络后重试'
+    const field = error?.field || responseData?.field || resolveCreateErrorField(message)
+    const isPermissionError = error?.code === 403 || error?.response?.status === 403
+    createSubmitError.value = {
+      title: isPermissionError
+        ? '当前账号无创建权限'
+        : field
+          ? '请检查表单内容'
+          : editingProductId.value
+            ? '保存未完成'
+            : '创建未完成',
+      message: `${message}。输入内容已保留，可修改后重试。`,
+      traceId,
+    }
+    if (field) createFormRef.value?.setFieldError(field, message)
   } finally {
     submitLoading.value = false
   }
+}
+
+function resolveCreateErrorField(message: string): string | undefined {
+  const mappings: Array<[string, string]> = [
+    ['标题', 'title'],
+    ['业务线', 'businessLineId'],
+    ['迭代', 'sprintId'],
+    ['需求类型', 'reqType'],
+    ['处理人', 'handler'],
+    ['负责人', 'handler'],
+    ['PRD', 'prdUrl'],
+    ['地址', 'prdUrl'],
+    ['功能模块', 'productModule'],
+  ]
+  return mappings.find(([keyword]) => message.includes(keyword))?.[1]
+}
+
+async function copyCreateTraceId() {
+  if (!createSubmitError.value?.traceId) return
+  await navigator.clipboard.writeText(createSubmitError.value.traceId)
+  lnToast.success('追踪码已复制')
 }
 
 function openDescriptionEditor(id: number, description?: string) {
@@ -1168,8 +1382,13 @@ function handleGlobalKeyup(event: KeyboardEvent) {
   reopenRequirementById(candidateId)
 }
 
-onMounted(() => {
-  loadData()
+onMounted(async () => {
+  await loadData()
+  const focusId = Number(route.query.focus)
+  if (focusId) {
+    const focusedRow = tableData.value.find(item => item.id === focusId)
+    if (focusedRow) await openRequirement(focusedRow, 'detail')
+  }
   loadStats()
   loadDictData()
   window.addEventListener('keydown', handleGlobalKeydown)
@@ -1201,7 +1420,7 @@ onUnmounted(() => {
 
 .linear-display-menu {
   width: 220px; padding: 4px; display: grid; gap: 3px; font-family: var(--ln-font);
-  strong { padding: 6px 7px 8px; color: var(--ln-text-tertiary); font-size: 10px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; }
+  strong { padding: 6px 7px 8px; color: var(--ln-text-tertiary); font-size: 11px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; }
   label { min-height: 34px; padding: 0 7px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 5px; color: var(--ln-text-secondary); font-size: 12px; &:hover { background: var(--ln-surface-hover); } }
 }
 .linear-display-field { padding: 5px 7px 8px; display: grid; gap: 5px; color: var(--ln-text-secondary); font-size: 11px; }
@@ -1211,6 +1430,9 @@ onUnmounted(() => {
 :deep(.linear-display-field .ln-select__trigger) { width: 100%; min-width: 0; }
 
 .linear-group-skeleton { pointer-events: none; }
+.linear-group-skeleton .group-header { top: 0; }
+.linear-group-skeleton .group-title { min-width: 0; height: 28px; display: flex; align-items: center; gap: 6px; }
+.skeleton-row { grid-template-columns: minmax(280px, 1fr) minmax(420px, auto); }
 .skeleton-identity { display: flex; align-items: center; gap: 10px; }
 .skeleton-tags { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
 
@@ -1230,12 +1452,29 @@ onUnmounted(() => {
   padding-bottom: 8px;
 }
 
+.list-table { width: 100%; }
 .requirement-group + .requirement-group { border-top: 1px solid var(--border-light); }
+
+.issue-columns {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  min-height: 32px;
+  padding: 0 12px;
+  align-items: center;
+  border-bottom: 1px solid rgba(31, 35, 40, 0.08);
+  background: rgba(252, 252, 251, 0.98);
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 620;
+  letter-spacing: 0.025em;
+  backdrop-filter: blur(10px);
+}
 
 .group-header {
   position: sticky;
-  top: 0;
-  z-index: 2;
+  top: 32px;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1246,9 +1485,36 @@ onUnmounted(() => {
   border-bottom: 1px solid rgba(31, 35, 40, 0.06);
 }
 
-.group-title { min-width: 0; height: 28px; display: flex; align-items: center; gap: 6px; color: var(--text-primary); font-size: 12px; line-height: 1; }
-.group-title strong { line-height: 16px; }
-.group-caret { width: 14px; height: 14px; display: grid; place-items: center; flex: 0 0 14px; color: var(--text-tertiary); font-size: 13px; }
+.group-toggle {
+  min-width: 0;
+  height: 28px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.group-toggle:hover { background: rgba(17, 24, 39, 0.05); }
+.group-toggle:focus-visible { outline: 2px solid var(--ln-accent); outline-offset: 1px; }
+.group-toggle strong { line-height: 16px; }
+.group-caret {
+  width: 14px;
+  height: 14px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 14px;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  transition: transform 0.16s ease;
+}
+.group-caret.is-collapsed { transform: rotate(-90deg); }
 .group-count { min-width: 12px; line-height: 16px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; text-align: left; }
 .group-add { width: 26px; height: 26px; border: 0; border-radius: 6px; background: transparent; color: var(--text-tertiary); cursor: pointer; font-size: 17px; }
 .group-add:hover { background: rgba(17, 24, 39, 0.06); color: var(--text-primary); }
@@ -1260,11 +1526,13 @@ onUnmounted(() => {
 .status-dot.blocked { border-color: #b5796d; background: #f4e4df; }
 .status-dot.closed { border-color: #a6a6a6; background: #ececec; }
 
-.issue-row {
+.issue-grid {
   display: grid;
-  grid-template-columns: minmax(280px, 1fr) minmax(420px, auto);
+  column-gap: 12px;
+}
+
+.issue-row {
   align-items: center;
-  gap: 18px;
   min-height: 54px;
   padding: 7px 12px;
   border-bottom: 1px solid rgba(31, 35, 40, 0.055);
@@ -1274,18 +1542,35 @@ onUnmounted(() => {
   &:hover,
   &.hovering { background: #f6f6f4; }
   &.selected { background: #f1f2ef; box-shadow: inset 2px 0 0 #6d746f; }
+  &.created { animation: created-row 2.8s ease both; }
 }
+@keyframes created-row { 0%,35% { background: #e8f3ec; box-shadow: inset 3px 0 0 #3b8b62; } 100% { background: transparent; box-shadow: none; } }
+.create-error-summary { margin-bottom: 14px; padding: 12px; display: grid; grid-template-columns: 18px minmax(0,1fr) auto; align-items: flex-start; gap: 9px; border: 1px solid rgba(196,71,65,.2); border-radius: 9px; background: rgba(196,71,65,.055); color: #a8423a; font-size: 13px; line-height: 1.55; }
+.create-error-summary > div { display:grid; gap:3px; }
+.create-error-summary strong { font-size:14px; font-weight:650; }
+.create-error-summary small { font-size:12px; color:#a85b55; }
 
 .density-compact .issue-row { min-height: 48px; padding-top: 5px; padding-bottom: 5px; }
 .density-comfortable .issue-row { min-height: 64px; padding-top: 11px; padding-bottom: 11px; }
 .stable-empty { min-height: 120px; display: grid; place-content: center; gap: 6px; text-align: center; color: var(--text-tertiary); font-size: 12px; }
 .stable-empty strong { color: var(--text-secondary); font-size: 13px; }
 
-.issue-identity { min-width: 0; }
-.issue-tags { display: flex; align-items: center; justify-content: flex-end; gap: 5px; min-width: 0; }
-.issue-tags :deep(.editable-cell) { width: auto; min-width: 0; border-radius: 6px; background: rgba(17, 24, 39, 0.035); }
-.issue-tags :deep(.editable-cell-display) { min-height: 26px; padding: 3px 7px; white-space: nowrap; }
-.tag-link { max-width: 156px; height: 26px; padding: 0 7px; font-size: 11px; }
+.issue-identity { min-width: 0; display: grid; gap: 3px; }
+.identity-meta { min-width: 0; display: flex; align-items: center; gap: 7px; }
+.source-note {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+.source-note::before { content: '·'; margin-right: 7px; color: var(--border-strong); }
+.issue-property { min-width: 0; display: flex; align-items: center; }
+.issue-property :deep(.property-trigger) { width: 100%; justify-content: flex-start; }
+.issue-reference,
+.issue-document { min-width: 0; display: flex; align-items: center; }
+.empty-cell { color: var(--text-tertiary); font-size: 12px; }
+.tag-link { width: 100%; max-width: 100%; height: 28px; padding: 0 5px; justify-content: flex-start; font-size: 12px; }
+.prd-link { width: auto; padding-inline: 2px; }
 :deep(.tag-link .ln-button__label) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 .story-stack {
@@ -1551,8 +1836,9 @@ onUnmounted(() => {
 }
 
 .req-no {
+  display: block;
   font-size: 11px;
-  line-height: 1;
+  line-height: 14px;
   letter-spacing: 0.015em;
   color: #7b8595;
   font-variant-numeric: tabular-nums;
@@ -1566,7 +1852,7 @@ onUnmounted(() => {
   padding: 0 6px;
   border-radius: 999px;
   background: rgba(17, 24, 39, 0.04);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--text-secondary);
   white-space: nowrap;
@@ -1585,7 +1871,7 @@ onUnmounted(() => {
   border-radius: 999px;
   background: rgba(17, 24, 39, 0.05);
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
 
   &.muted {
@@ -1599,7 +1885,7 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 650;
   line-height: 1.42;
 
@@ -1633,7 +1919,7 @@ onUnmounted(() => {
   border-radius: 999px;
   border: 1px solid rgba(17, 24, 39, 0.08);
   background: rgba(255, 255, 255, 0.86);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -1643,7 +1929,7 @@ onUnmounted(() => {
   min-height: 22px;
   padding: 0 9px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   border: 1px solid rgba(17, 24, 39, 0.08);
 }

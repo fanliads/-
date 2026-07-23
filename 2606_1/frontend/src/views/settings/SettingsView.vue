@@ -35,7 +35,7 @@
       <div v-if="activeTab === 'workflow'" class="tab-panel">
         <div class="panel-header">
           <LnTabs v-model="workflowSubTab" :options="workflowTabs" variant="segmented" aria-label="需求流转类型" />
-          <LnButton @click="openWorkflowDialog()">＋新增流转</LnButton>
+          <LnButton @click="openWorkflowDialog()"><template #icon><LnIcon name="plus"/></template>新增流转</LnButton>
         </div>
         <div class="table-wrap">
           <table class="data-table">
@@ -76,7 +76,7 @@
       <div v-if="activeTab === 'business'" class="tab-panel">
         <div class="panel-header">
           <h3 class="panel-title">业务线列表</h3>
-          <LnButton @click="openBusinessDialog()">＋新增业务线</LnButton>
+          <LnButton @click="openBusinessDialog()"><template #icon><LnIcon name="plus"/></template>新增业务线</LnButton>
         </div>
         <div class="table-wrap">
           <table class="data-table">
@@ -109,13 +109,13 @@
       <div v-if="activeTab === 'tags'" class="tab-panel">
         <div class="panel-header">
           <h3 class="panel-title">标签列表</h3>
-          <LnButton @click="openTagDialog()">＋新增标签</LnButton>
+          <LnButton @click="openTagDialog()"><template #icon><LnIcon name="plus"/></template>新增标签</LnButton>
         </div>
         <div class="tag-grid">
           <div v-for="tag in tagData" :key="tag.id" class="tag-card">
             <span class="tag-dot" :style="{ background: tag.color }"></span>
             <span class="tag-name">{{ tag.name }}</span>
-            <LnButton class="tag-delete" size="small" icon-only variant="ghost" aria-label="删除标签" @click="deleteTag(tag)"><template #icon>×</template></LnButton>
+            <LnButton class="tag-delete" size="small" icon-only variant="ghost" aria-label="删除标签" @click="deleteTag(tag)"><template #icon><LnIcon name="close"/></template></LnButton>
           </div>
         </div>
       </div>
@@ -124,7 +124,7 @@
       <div v-if="activeTab === 'users'" class="tab-panel">
         <div class="panel-header">
           <h3 class="panel-title">用户列表</h3>
-          <LnButton @click="openUserDialog()">＋新增用户</LnButton>
+          <LnButton @click="openUserDialog()"><template #icon><LnIcon name="plus"/></template>新增用户</LnButton>
         </div>
         <div class="table-wrap">
           <table class="data-table">
@@ -291,7 +291,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { lnToast, LnButton, LnColorPicker, LnDialog, LnInput, LnPasswordInput, LnSelect, LnSwitch, LnTabs, LnTextarea, type LnOption, type LnTabOption } from '@/components/linear'
+import { lnToast, LnButton, LnColorPicker, LnDialog, LnIcon, LnInput, LnPasswordInput, LnSelect, LnSwitch, LnTabs, LnTextarea, type LnOption, type LnTabOption } from '@/components/linear'
 import { getFlowConfig } from '@/api/workflow'
 import type { FlowConfigNode } from '@/api/workflow'
 

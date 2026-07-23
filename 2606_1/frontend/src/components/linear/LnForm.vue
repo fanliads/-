@@ -52,6 +52,14 @@ async function validateField(props: string | string[]) {
 
 function clearValidate(props?: string | string[]) { selectFields(props).forEach((field) => field.clearValidate()) }
 function resetFields(props?: string | string[]) { selectFields(props).forEach((field) => field.resetField()) }
+function setFieldError(prop: string, message: string, focus = true) {
+  const field = selectFields(prop)[0]
+  if (!field) return
+  field.setError(message)
+  if (focus) {
+    requestAnimationFrame(() => field.focus())
+  }
+}
 
 provide(lnFormContextKey, {
   model: computed(() => props.model),
@@ -62,7 +70,7 @@ provide(lnFormContextKey, {
   unregister,
 })
 
-defineExpose<LnFormInstance>({ validate, validateField, clearValidate, resetFields })
+defineExpose<LnFormInstance>({ validate, validateField, clearValidate, resetFields, setFieldError })
 </script>
 
 <style scoped lang="scss">

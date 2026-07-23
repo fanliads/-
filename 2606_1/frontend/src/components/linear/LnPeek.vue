@@ -2,7 +2,7 @@
   <Teleport to="body"><Transition name="ln-peek">
     <div v-if="open" class="ln-peek-layer" @mousedown.self="$emit('close')">
       <aside class="ln-peek" role="dialog" aria-modal="true" :aria-label="title">
-        <header class="ln-peek__header"><div><span class="ln-peek__eyebrow">{{ issueKey }}</span><h2>{{ title }}</h2></div><LnButton icon-only variant="ghost" aria-label="关闭" @click="$emit('close')"> <template #icon>×</template></LnButton></header>
+        <header class="ln-peek__header"><div><span class="ln-peek__eyebrow">{{ issueKey }}</span><h2>{{ title }}</h2></div><LnButton icon-only variant="ghost" aria-label="关闭" @click="$emit('close')"><template #icon><LnIcon name="close"/></template></LnButton></header>
         <div class="ln-peek__body"><slot /></div>
         <footer v-if="$slots.footer" class="ln-peek__footer"><slot name="footer" /></footer>
       </aside>
@@ -10,7 +10,7 @@
   </Transition></Teleport>
 </template>
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted } from 'vue'; import LnButton from './LnButton.vue'
+import { onBeforeUnmount, onMounted } from 'vue'; import LnButton from './LnButton.vue'; import LnIcon from './LnIcon.vue'
 const props = defineProps<{ open:boolean; title:string; issueKey?:string }>(); const emit = defineEmits<{(e:'close'):void}>()
 function escape(event:KeyboardEvent) { if (props.open && event.key === 'Escape') emit('close') }
 onMounted(() => document.addEventListener('keydown', escape)); onBeforeUnmount(() => document.removeEventListener('keydown', escape))

@@ -103,7 +103,7 @@ function getPriorityLabel(priority?: string | null): string {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
 }
 

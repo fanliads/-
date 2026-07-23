@@ -63,7 +63,9 @@
     <section class="workspace-shell wb-shell">
       <div class="list-panel wb-panel" :class="`density-${listDensity}`" :aria-busy="loading">
         <div class="list-header wb-list-header row-grid" :style="{ gridTemplateColumns: rawGridTemplate }">
-          <div class="head-cell urgent-head">急</div>
+          <div class="head-cell urgent-head" title="加急需求" aria-label="加急需求">
+            <LnIcon name="urgent" />
+          </div>
           <div class="head-cell title-head">原始需求</div>
           <div v-if="showBusinessLine" class="head-cell">业务线</div>
           <div v-if="showStatus" class="head-cell">状态</div>
@@ -87,28 +89,29 @@
           v-for="row in loading ? [] : tableData"
           :key="row.id"
           class="list-row wb-list-row row-grid"
-          :class="{ selected: activeRequirementId === row.id, hovering: hoverRequirementId === row.id }"
+          :class="{ selected: activeRequirementId === row.id, hovering: hoverRequirementId === row.id, 'is-urgent': row.isUrgent === 1 }"
           :style="{ gridTemplateColumns: rawGridTemplate }"
           tabindex="0"
-          @click="openRequirement(row, 'detail')"
+          @click="openRequirement(row, 'peek')"
           @mouseenter="hoverRequirementId = row.id"
           @focus="hoverRequirementId = row.id"
           @mouseleave="hoverRequirementId = hoverRequirementId === row.id ? null : hoverRequirementId"
           @blur="hoverRequirementId = hoverRequirementId === row.id ? null : hoverRequirementId"
         >
           <div class="cell urgent-cell">
-            <span v-if="row.isUrgent === 1" class="urgent-mark">急</span>
+            <span v-if="row.isUrgent === 1" class="urgent-mark" title="加急需求" aria-label="加急需求">
+              <LnIcon name="urgent" />
+            </span>
           </div>
 
           <div class="cell title-cell">
             <div class="title-line">
               <div class="title-text">{{ row.title }}</div>
-              <span class="req-no">{{ row.reqNo }}</span>
               <div class="title-flags">
-                <span v-if="isExternalSubmit(row)" class="flat-icon" title="外部提交" aria-label="外部提交">↗</span>
-                <span v-if="!isContentReady(row)" class="meta-text muted">待补充</span>
+                <span v-if="isExternalSubmit(row)" class="flat-icon" title="外部提交" aria-label="外部提交"><LnIcon name="external-link"/></span>
               </div>
             </div>
+            <span class="req-no">{{ row.reqNo }}</span>
           </div>
 
           <div v-if="showBusinessLine" class="cell" @click.stop>
@@ -187,7 +190,21 @@
         class="peek-panel wb-panel"
         :class="previewMode === 'detail' ? 'detail-mode' : 'peek-mode'"
       >
-        <template v-if="activeRequirementId">
+        <UnifiedRequirementPeek
+          v-if="previewMode === 'peek'"
+          source-type="raw"
+          :source-id="activeRequirementId"
+          :sequence="tableData.map(item => ({ id: item.id, reqNo: item.reqNo }))"
+          :source-index="tableData.findIndex(item => item.id === activeRequirementId)"
+          :editable="canEditRaw"
+          :momentary="spacePreviewOpenedByHold"
+          @previous="movePeek(-1)"
+          @next="movePeek(1)"
+          @open-detail="openUnifiedDetail"
+          @updated="handleUnifiedUpdated"
+          @close="closeRequirement"
+        />
+        <template v-else-if="activeRequirementId">
           <div class="peek-scroll wb-detail-scroll">
             <div v-if="activeRequirementLoading" class="peek-loading" aria-label="正在加载原始需求详情">
               <LnSkeleton width="86px" height="10px" />
@@ -201,8 +218,8 @@
                 <div class="peek-title-row">
                   <h3 class="peek-title">{{ activeRequirementDetail.title }}</h3>
                   <div class="peek-header-actions">
-                    <LnButton v-if="previewMode === 'peek'" size="small" variant="primary" @click="previewMode = 'detail'">详情</LnButton>
-                    <LnButton size="small" icon-only variant="ghost" aria-label="关闭" @click="closeRequirement"><template #icon>×</template></LnButton>
+                    <LnButton v-if="route.query.from === 'kanban'" size="small" variant="ghost" @click="returnToKanban">← 返回看板</LnButton>
+                    <LnButton size="small" icon-only variant="ghost" aria-label="关闭" @click="closeRequirement"><template #icon><LnIcon name="close"/></template></LnButton>
                   </div>
                 </div>
                 <div class="peek-tags">
@@ -633,7 +650,7 @@
           <div class="split-items">
             <div class="split-items-header">
               <span>拆分产品需求</span>
-              <LnButton size="small" variant="ghost" @click="addSplitItem"><template #icon>＋</template>添加一条</LnButton>
+              <LnButton size="small" variant="ghost" @click="addSplitItem"><template #icon><LnIcon name="plus"/></template>添加一条</LnButton>
             </div>
 
             <div v-for="(item, idx) in splitItems" :key="idx" class="split-item-card">
@@ -805,6 +822,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
   pageQueryRawRequirements,
   createRawRequirement,
@@ -820,7 +838,9 @@ import { listDictData } from '@/api/dict'
 import EditableCell from '@/components/EditableCell.vue'
 import EditableField from '@/components/EditableField.vue'
 import SupplementDialog from '@/components/requirement/SupplementDialog.vue'
+import UnifiedRequirementPeek from '@/components/requirement/UnifiedRequirementPeek.vue'
 import { lnToast, LnButton, LnCheckbox, LnDateInput, LnDateRange, LnDialog, LnEmptyState, LnForm, LnFormItem, LnIcon, LnInput, LnPagination, LnPopover, LnPropertyPicker, LnSelect, LnSkeleton, LnTabs, LnTextarea, isLnConfirmCancelled, lnConfirm, lnPrompt, type LnFormInstance, type LnFormRules, type LnOption, type LnTabOption } from '@/components/linear'
+import { getBusinessLineVisual, getPriorityVisual } from '@/components/linear/optionVisuals'
 import type {
   RawRequirementListVO,
   RawRequirementCreateDTO,
@@ -839,6 +859,8 @@ import {
 import { useUserStore } from '@/store/user'
 
 const userStore = useUserStore()
+const route = useRoute()
+const router = useRouter()
 const canCreateRaw = computed(() => userStore.hasAnyPermission(['raw-pool:add']))
 const canEditRaw = computed(() => userStore.hasAnyPermission(['raw-pool:edit', 'raw-pool:evaluate', 'raw-pool:approve']))
 const canSplitRaw = computed(() => userStore.hasAnyPermission(['product-pool:add', 'raw-pool:approve']))
@@ -850,20 +872,23 @@ const dictBusinessLineOptions = ref<DictDataVO[]>([])
 const dictProductManagerOptions = ref<DictDataVO[]>([])
 const dictProjectManagerOptions = ref<DictDataVO[]>([])
 const statusVisuals: Record<string, Pick<LnOption, 'color' | 'icon'>> = {
-  pending_judgement: { color: '#9b9ba4', icon: '○' },
-  pending_split: { color: '#d28b36', icon: '◔' },
-  in_progress: { color: '#5e6ad2', icon: '◒' },
-  online: { color: '#2f9e6f', icon: '●' },
-  closed: { color: '#6f6f78', icon: '✓' },
-  suspended: { color: '#d28b36', icon: 'Ⅱ' },
-  rejected: { color: '#d05757', icon: '⊘' },
+  pending_judgement: { color: '#9b9ba4', icon: 'pending' },
+  pending_split: { color: '#d28b36', icon: 'pending' },
+  in_progress: { color: '#5e6ad2', icon: 'progress' },
+  online: { color: '#2f9e6f', icon: 'success' },
+  closed: { color: '#6f6f78', icon: 'check' },
+  suspended: { color: '#d28b36', icon: 'paused' },
+  rejected: { color: '#d05757', icon: 'blocked' },
 }
-const priorityVisuals: Record<string, Pick<LnOption, 'color' | 'icon'>> = {
-  P0: { color: '#d05757', icon: '▰' },
-  P1: { color: '#d28b36', icon: '▆' },
-  P2: { color: '#5e6ad2', icon: '▄' },
-  P3: { color: '#6f6f78', icon: '▂' },
-}
+const fallbackStatusOptions: DictDataVO[] = [
+  { label: '待判定', value: 'pending_judgement' },
+  { label: '待拆分', value: 'pending_split' },
+  { label: '处理中', value: 'in_progress' },
+  { label: '已上线', value: 'online' },
+  { label: '已关闭', value: 'closed' },
+  { label: '已挂起', value: 'suspended' },
+  { label: '已拒绝', value: 'rejected' },
+] as DictDataVO[]
 const toLinearOptions = (items: DictDataVO[]): LnOption[] => items.map((item) => ({ label: item.label, value: item.value }))
 const linearStatusOptions = computed<LnOption[]>(() => dictStatusOptions.value.map((item) => ({
   label: item.label,
@@ -873,9 +898,13 @@ const linearStatusOptions = computed<LnOption[]>(() => dictStatusOptions.value.m
 const linearPriorityOptions = computed<LnOption[]>(() => dictPriorityOptions.value.map((item) => ({
   label: item.label,
   value: item.value,
-  ...priorityVisuals[item.value],
+  ...getPriorityVisual(item.value, item.label),
 })))
-const linearBusinessLineOptions = computed(() => toLinearOptions(dictBusinessLineOptions.value))
+const linearBusinessLineOptions = computed<LnOption[]>(() => dictBusinessLineOptions.value.map((item) => ({
+  label: item.label,
+  value: item.value,
+  ...getBusinessLineVisual(item.label, item.value),
+})))
 const linearProductManagerOptions = computed(() => toLinearOptions(dictProductManagerOptions.value))
 const linearProjectManagerOptions = computed(() => toLinearOptions(dictProjectManagerOptions.value))
 const yesNoOptions = [
@@ -1212,10 +1241,6 @@ function formatListDate(value?: string): string {
   return value.slice(0, 10)
 }
 
-function isContentReady(row: RawRequirementListVO): boolean {
-  return Boolean(row.description?.trim() || row.remark?.trim() || row.productDefinition?.trim() || row.supplements?.length)
-}
-
 function isExternalSubmit(row: RawRequirementListVO): boolean {
   return row.submitOrigin === 'external'
 }
@@ -1262,11 +1287,50 @@ async function openRequirement(row: RawRequirementListVO, mode: 'peek' | 'detail
   }
 }
 
+function movePeek(offset: number) {
+  if (!activeRequirementId.value) return
+  const index = tableData.value.findIndex((item) => item.id === activeRequirementId.value)
+  const target = tableData.value[index + offset]
+  if (target) void openRequirement(target, 'peek')
+}
+
+function openUnifiedDetail(type: 'raw' | 'product', id: number) {
+  if (type === 'product') {
+    void router.push({ path: '/product-pool', query: { focus: String(id) } })
+    return
+  }
+  const row = tableData.value.find((item) => item.id === id)
+  if (row) void openRequirement(row, 'detail')
+}
+
+async function handleUnifiedUpdated(type: 'raw' | 'product', id: number) {
+  await loadData()
+  if (type === 'raw' && activeRequirementId.value === id) {
+    const row = tableData.value.find((item) => item.id === id)
+    if (!row) closeRequirement()
+  }
+}
+
 function closeRequirement() {
   activeRequirementId.value = null
   activeRequirementDetail.value = null
   requirementLogs.value = []
   previewMode.value = 'peek'
+}
+
+function returnToKanban() {
+  let query: Record<string, string> = {}
+  try {
+    const context = JSON.parse(sessionStorage.getItem('kanban-return-context') || '{}')
+    query = Object.fromEntries(
+      Object.entries(context)
+        .filter(([key, value]) => key !== 'scrollLeft' && value !== '' && value != null)
+        .map(([key, value]) => [key, String(value)]),
+    )
+  } catch {
+    query = {}
+  }
+  void router.push({ path: '/kanban', query })
 }
 
 function clearSpacePreviewState() {
@@ -1534,25 +1598,23 @@ async function loadData() {
 }
 
 async function loadDictData() {
-  try {
-    const [statusRes, priorityRes, businessLineRes, pmRes, projRes] = await Promise.all([
+  const results = await Promise.allSettled([
       listDictData('req_status'),
       listDictData('priority_level'),
       listDictData('business_line'),
       listDictData('product_manager'),
       listDictData('project_manager'),
-    ])
-
-    dictStatusOptions.value = ((statusRes as any).data || []).filter((item: DictDataVO) =>
-      ['pending_judgement', 'pending_split', 'in_progress', 'online', 'closed', 'suspended', 'rejected'].includes(item.value),
-    )
-    dictPriorityOptions.value = (priorityRes as any).data || []
-    dictBusinessLineOptions.value = (businessLineRes as any).data || []
-    dictProductManagerOptions.value = (pmRes as any).data || []
-    dictProjectManagerOptions.value = (projRes as any).data || []
-  } catch {
-    // ignore
-  }
+  ])
+  const dataAt = (index: number): DictDataVO[] =>
+    results[index]?.status === 'fulfilled' ? ((results[index].value as any).data || []) : []
+  const statuses = dataAt(0).filter((item) =>
+    ['pending_judgement', 'pending_split', 'in_progress', 'online', 'closed', 'suspended', 'rejected'].includes(item.value),
+  )
+  dictStatusOptions.value = statuses.length ? statuses : fallbackStatusOptions
+  dictPriorityOptions.value = dataAt(1)
+  dictBusinessLineOptions.value = dataAt(2)
+  dictProductManagerOptions.value = dataAt(3)
+  dictProjectManagerOptions.value = dataAt(4)
 }
 
 function handleSearch() {
@@ -1746,8 +1808,13 @@ async function handleSubmitCreate() {
   }
 }
 
-onMounted(() => {
-  loadData()
+onMounted(async () => {
+  await loadData()
+  const focusId = Number(route.query.focus)
+  if (focusId) {
+    const focusedRow = tableData.value.find(item => item.id === focusId)
+    if (focusedRow) await openRequirement(focusedRow, 'detail')
+  }
   loadDictData()
   window.addEventListener('keydown', handleGlobalKeydown)
   window.addEventListener('keyup', handleGlobalKeyup)
@@ -1787,7 +1854,7 @@ onUnmounted(() => {
   strong {
     padding: 6px 7px 8px;
     color: var(--ln-text-tertiary);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 650;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -1846,7 +1913,16 @@ onUnmounted(() => {
 }
 
 .view-tabs {
-  padding: 0 2px 8px;
+  min-height: 38px;
+  padding: 0 2px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+:deep(.view-tabs > .ln-tabs) {
+  width: 100%;
 }
 
 .flat-icon {
@@ -2026,11 +2102,80 @@ onUnmounted(() => {
   text-align: center;
 }
 
+.urgent-head {
+  display: grid;
+  place-items: center;
+  color: #b86a55;
+
+  :deep(.ln-icon) {
+    width: 14px;
+    height: 14px;
+  }
+}
+
 .list-row {
+  --urgent-burn-rgb: 236, 93, 37;
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
   padding: 11px 16px;
   border-bottom: 1px solid rgba(17, 24, 39, 0.05);
   cursor: pointer;
   transition: 0.16s ease;
+
+  // Inline menus live inside the row's isolated stacking context. Elevate the
+  // active row so later rows cannot paint over an open status/property menu.
+  &:focus-within {
+    z-index: 4;
+  }
+
+  &.is-urgent::before,
+  &.is-urgent::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  &.is-urgent::before {
+    z-index: 0;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      rgba(var(--urgent-burn-rgb), 0.09) 0%,
+      rgba(var(--urgent-burn-rgb), 0.065) 48%,
+      transparent 100%
+    );
+    clip-path: inset(0 100% 0 0);
+  }
+
+  &.is-urgent::after {
+    z-index: 0;
+    inset: 0;
+    background: linear-gradient(
+      98deg,
+      transparent 0%,
+      transparent 38%,
+      rgba(var(--urgent-burn-rgb), 0.05) 42%,
+      rgba(var(--urgent-burn-rgb), 0.3) 50%,
+      rgba(var(--urgent-burn-rgb), 0.16) 56%,
+      transparent 62%,
+      transparent 100%
+    );
+    background-position: 100% 0;
+    background-size: 300% 100%;
+    clip-path: inset(0);
+    filter: blur(6px);
+    will-change: background-position;
+  }
+
+  &.is-urgent.hovering::before {
+    animation: urgent-burn-residue 980ms linear both;
+  }
+
+  &.is-urgent.hovering::after {
+    animation: urgent-burn-front 980ms linear both;
+  }
 
   &:hover {
     background: rgba(17, 24, 39, 0.025);
@@ -2059,14 +2204,30 @@ onUnmounted(() => {
 }
 
 .cell {
+  position: relative;
+  z-index: 1;
   min-width: 0;
   font-size: 12px;
   line-height: 1.45;
   color: var(--text-primary);
 }
 
+@keyframes urgent-burn-front {
+  0% { background-position: 100% 0; opacity: 0; }
+  8% { opacity: 1; }
+  92% { opacity: 1; }
+  100% { background-position: 0 0; opacity: 0; }
+}
+
+@keyframes urgent-burn-residue {
+  0% { opacity: 0; clip-path: inset(0 100% 0 0); }
+  52% { opacity: 0.72; clip-path: inset(0 45% 0 0); }
+  100% { opacity: 0; clip-path: inset(0 0 0 0); }
+}
+
 .urgent-cell {
   display: flex;
+  align-items: center;
   justify-content: center;
 }
 
@@ -2077,14 +2238,41 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: rgba(212, 92, 71, 0.1);
-  color: #c46246;
-  font-size: 9px;
-  font-weight: 800;
+  background: radial-gradient(circle at 50% 68%, rgba(233, 138, 63, 0.18), rgba(212, 92, 71, 0.08) 68%);
+  color: #cf603f;
+
+  :deep(.ln-icon) {
+    width: 10px;
+    height: 10px;
+    stroke-width: 1.6;
+    transform-origin: 50% 50%;
+    animation: urgent-icon-pulse 1.18s ease-in-out infinite;
+    filter: drop-shadow(0 1px 1px rgba(207, 96, 63, 0.2));
+    will-change: transform;
+  }
+}
+
+@keyframes urgent-icon-pulse {
+  0%, 100% { transform: translateY(0) scale(0.96); opacity: 0.82; }
+  50% { transform: translateY(-0.4px) scale(1.06); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .list-row.is-urgent.hovering::before,
+  .list-row.is-urgent.hovering::after,
+  .urgent-mark :deep(.ln-icon) {
+    animation: none;
+  }
+
+  .list-row.is-urgent.hovering::before {
+    opacity: 0.5;
+    clip-path: inset(0);
+  }
 }
 
 .title-cell {
   min-width: 0;
+  gap: 3px;
 }
 
 .title-line {
@@ -2118,8 +2306,9 @@ onUnmounted(() => {
 }
 
 .req-no {
+  display: block;
   font-size: 11px;
-  line-height: 1;
+  line-height: 14px;
   letter-spacing: 0.015em;
   color: #7b8595;
   font-variant-numeric: tabular-nums;
@@ -2168,7 +2357,7 @@ onUnmounted(() => {
   padding: 0 6px;
   border-radius: 999px;
   background: rgba(17, 24, 39, 0.04);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--text-secondary);
   white-space: nowrap;
@@ -2187,7 +2376,7 @@ onUnmounted(() => {
   border-radius: 999px;
   background: rgba(17, 24, 39, 0.05);
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
 
   &.muted {
@@ -2302,7 +2491,7 @@ onUnmounted(() => {
 .peek-loading { display: grid; gap: 14px; padding: 4px 0; }
 .peek-loading__tags { display: flex; flex-wrap: wrap; gap: 8px; }
 
-.form-divider { position: relative; margin: 22px 0 18px; display: flex; align-items: center; color: var(--ln-text-tertiary); font: 620 10px/1 var(--ln-font); letter-spacing: .09em; text-transform: uppercase; &::after { content: ''; height: 1px; flex: 1; margin-left: 10px; background: var(--ln-border); } span { white-space: nowrap; } }
+.form-divider { position: relative; margin: 22px 0 18px; display: flex; align-items: center; color: var(--ln-text-tertiary); font: 620 11px/1 var(--ln-font); letter-spacing: .09em; text-transform: uppercase; &::after { content: ''; height: 1px; flex: 1; margin-left: 10px; background: var(--ln-border); } span { white-space: nowrap; } }
 
 .peek-empty-state {
   height: 100%;

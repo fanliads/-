@@ -13,10 +13,14 @@ import com.reqmgmt.requirement.mapper.RequirementLogMapper;
 import com.reqmgmt.requirement.service.MyTaskService;
 import com.reqmgmt.requirement.service.impl.WorkflowServiceImpl;
 import com.reqmgmt.requirement.vo.MyTaskVO;
+import com.reqmgmt.system.entity.SysDictData;
+import com.reqmgmt.system.mapper.SysDictDataMapper;
+import cn.hutool.core.util.StrUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
@@ -33,9 +37,10 @@ public class MyTaskServiceImpl implements MyTaskService {
     private final RawRequirementMapper rawRequirementMapper;
     private final ProductRequirementMapper productRequirementMapper;
     private final RequirementLogMapper requirementLogMapper;
+    private final SysDictDataMapper sysDictDataMapper;
 
     @Override
-    public IPage<MyTaskVO> getPendingTasks(Integer page, Integer size) {
+    public IPage<MyTaskVO> getPendingTasks(Integer page, Integer size, String keyword) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
         String roleKey = SecurityUtils.getCurrentRoleKey();
 
@@ -102,11 +107,11 @@ public class MyTaskServiceImpl implements MyTaskService {
         }
 
         // 手动分页
-        return manualPage(allTasks, page, size);
+        return manualPage(filterTasks(allTasks, keyword), page, size);
     }
 
     @Override
-    public IPage<MyTaskVO> getDoneTasks(Integer page, Integer size) {
+    public IPage<MyTaskVO> getDoneTasks(Integer page, Integer size, String keyword) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
 
         // 查询 requirement_log 中 operator_id = 当前用户 且 action=status_change 的记录
@@ -131,6 +136,7 @@ public class MyTaskServiceImpl implements MyTaskService {
                     vo.setPriority(rawReq.getPriority());
                     vo.setStatus(rawReq.getStatus());
                     vo.setStatusName(WorkflowServiceImpl.getStatusName(rawReq.getStatus()));
+                    enrichRawTask(vo, rawReq);
                 }
             } else {
                 ProductRequirement prodReq = productRequirementMapper.selectById(log.getReqId());
@@ -140,6 +146,7 @@ public class MyTaskServiceImpl implements MyTaskService {
                     vo.setPriority(prodReq.getPriority());
                     vo.setStatus(prodReq.getStatus());
                     vo.setStatusName(WorkflowServiceImpl.getStatusName(prodReq.getStatus()));
+                    enrichProductTask(vo, prodReq);
                 }
             }
 
@@ -148,7 +155,7 @@ public class MyTaskServiceImpl implements MyTaskService {
             allTasks.add(vo);
         }
 
-        return manualPage(allTasks, page, size);
+        return manualPage(filterTasks(allTasks, keyword), page, size);
     }
 
     @Override
@@ -214,6 +221,7 @@ public class MyTaskServiceImpl implements MyTaskService {
         vo.setStatus(r.getStatus());
         vo.setStatusName(WorkflowServiceImpl.getStatusName(r.getStatus()));
         vo.setActionRequired(actionRequired);
+        enrichRawTask(vo, r);
         vo.setCreateTime(r.getCreateTime());
         vo.setUpdatedTime(r.getUpdateTime());
         return vo;
@@ -229,6 +237,7 @@ public class MyTaskServiceImpl implements MyTaskService {
         vo.setStatus(r.getStatus());
         vo.setStatusName(WorkflowServiceImpl.getStatusName(r.getStatus()));
         vo.setActionRequired(actionRequired);
+        enrichProductTask(vo, r);
         vo.setCreateTime(r.getCreateTime());
         vo.setUpdatedTime(r.getUpdateTime());
         return vo;
@@ -242,6 +251,69 @@ public class MyTaskServiceImpl implements MyTaskService {
             case "designing" -> "完成设计";
             default -> "处理";
         };
+    }
+
+    private void enrichRawTask(MyTaskVO vo, RawRequirement requirement) {
+        vo.setBusinessLineName(StrUtil.blankToDefault(
+                requirement.getBusinessLine(),
+                resolveBusinessLineName(requirement.getBusinessLineId())));
+        vo.setHandler(StrUtil.blankToDefault(
+                requirement.getCurrentHandler(),
+                StrUtil.blankToDefault(requirement.getProductManager(), requirement.getProjectManager())));
+        vo.setSourceLabel(StrUtil.blankToDefault(
+                requirement.getSubmitOrigin(),
+                StrUtil.blankToDefault(requirement.getSource(), "原始需求池")));
+        LocalDate expectedDate = requirement.getExpectedOnlineDate() != null
+                ? requirement.getExpectedOnlineDate()
+                : requirement.getExpectedDate();
+        vo.setExpectedDate(expectedDate);
+        vo.setUrgent(Objects.equals(requirement.getIsUrgent(), 1) || isDueSoon(expectedDate));
+    }
+
+    private void enrichProductTask(MyTaskVO vo, ProductRequirement requirement) {
+        vo.setBusinessLineName(resolveBusinessLineName(requirement.getBusinessLineId()));
+        vo.setHandler(requirement.getHandler());
+        vo.setSourceLabel(requirement.getIsDirect() != null && requirement.getIsDirect() == 1
+                ? "直接创建"
+                : "原始需求拆分");
+        vo.setExpectedDate(requirement.getExpectedDate());
+        vo.setUrgent(isDueSoon(requirement.getExpectedDate()));
+    }
+
+    private boolean isDueSoon(LocalDate expectedDate) {
+        if (expectedDate == null) {
+            return false;
+        }
+        LocalDate today = LocalDate.now();
+        return !expectedDate.isBefore(today) && !expectedDate.isAfter(today.plusDays(2));
+    }
+
+    private String resolveBusinessLineName(Long businessLineId) {
+        if (businessLineId == null || businessLineId <= 0) {
+            return null;
+        }
+        SysDictData dict = sysDictDataMapper.selectOne(new LambdaQueryWrapper<SysDictData>()
+                .eq(SysDictData::getId, businessLineId)
+                .eq(SysDictData::getDictCode, "business_line")
+                .last("LIMIT 1"));
+        return dict == null ? null : dict.getLabel();
+    }
+
+    private List<MyTaskVO> filterTasks(List<MyTaskVO> tasks, String keyword) {
+        if (StrUtil.isBlank(keyword)) {
+            return tasks;
+        }
+        String normalized = keyword.trim().toLowerCase(Locale.ROOT);
+        return tasks.stream()
+                .filter(task -> String.join(" ",
+                                StrUtil.nullToEmpty(task.getReqNo()),
+                                StrUtil.nullToEmpty(task.getTitle()),
+                                StrUtil.nullToEmpty(task.getActionRequired()),
+                                StrUtil.nullToEmpty(task.getBusinessLineName()),
+                                StrUtil.nullToEmpty(task.getHandler()))
+                        .toLowerCase(Locale.ROOT)
+                        .contains(normalized))
+                .toList();
     }
 
     private <T> IPage<T> manualPage(List<T> list, Integer page, Integer size) {

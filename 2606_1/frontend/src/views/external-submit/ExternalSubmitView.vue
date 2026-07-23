@@ -1,420 +1,207 @@
 <template>
-  <div class="external-submit-view">
-    <div class="hero-card wb-panel">
-      <div class="hero-copy">
-        <div class="hero-kicker wb-meta-pill">External Intake</div>
-        <h1 class="wb-page-title">外部需求提报</h1>
-        <p class="wb-page-subtitle">面向市场、客服、实施等协作角色。提交后将进入原始需求池，并先进入待判定流程。</p>
+  <main class="external-page">
+    <header class="public-header">
+      <div class="brand-mark">R</div>
+      <div><strong>需求受理中心</strong><span>Requirement Intake</span></div>
+    </header>
+
+    <div class="content-shell">
+      <div class="form-column">
+        <section class="intro">
+          <span class="eyebrow">EXTERNAL REQUEST</span>
+          <h1>提交原始需求</h1>
+          <p>无需登录，预计 3 分钟完成；提交后由需求团队评估。</p>
+        </section>
+
+        <LnForm ref="formRef" :model="form" :rules="rules" class="intake-form" label-position="top">
+      <section class="form-section">
+        <div class="section-index">01</div>
+        <div class="section-copy"><h2>提报人信息</h2><p>联系方式仅用于需求确认与后续跟进。</p></div>
+        <div class="form-grid">
+          <LnFormItem label="姓名 / 称呼" prop="proposer"><LnInput v-model="form.proposer" :maxlength="100" placeholder="怎么称呼你" /></LnFormItem>
+          <LnFormItem label="联系方式" prop="proposerContact"><LnInput v-model="form.proposerContact" :maxlength="200" placeholder="手机号、邮箱或微信号" /></LnFormItem>
+          <LnFormItem label="所属公司 / 客户"><LnInput v-model="form.company" :maxlength="200" placeholder="选填" /></LnFormItem>
+          <LnFormItem label="项目名称"><LnInput v-model="form.projectName" :maxlength="200" placeholder="选填，便于内部归类" /></LnFormItem>
+        </div>
+      </section>
+
+      <section class="form-section">
+        <div class="section-index">02</div>
+        <div class="section-copy"><h2>需求内容</h2><p>优先说明现状、问题和影响，帮助团队快速理解。</p></div>
+        <div class="form-grid">
+          <LnFormItem class="full" label="需求标题" prop="title"><LnInput v-model="form.title" :maxlength="100" show-count placeholder="用一句话概括需求" /></LnFormItem>
+          <LnFormItem class="full" label="问题 / 需求描述" prop="description"><LnTextarea v-model="form.description" :maxlength="4000" placeholder="请描述当前情况、遇到的问题、影响范围和使用场景" /></LnFormItem>
+          <LnFormItem class="full" label="期望结果"><LnTextarea v-model="form.expectedResult" :maxlength="4000" placeholder="选填，希望最终达到什么结果" /></LnFormItem>
+          <LnFormItem label="业务线"><LnSelect v-model="form.businessLine" :options="businessOptions" placeholder="选填" searchable clearable /></LnFormItem>
+          <LnFormItem label="期望上线时间"><LnDateInput v-model="form.expectedOnlineDate" clearable /></LnFormItem>
+          <LnFormItem class="full" label="资料链接" prop="reqLink"><LnInput v-model="form.reqLink" placeholder="选填，以 http:// 或 https:// 开头" /></LnFormItem>
+          <LnFormItem class="full" label="补充说明"><LnTextarea v-model="form.supplementary" :maxlength="4000" placeholder="选填，其他需要说明的信息" /></LnFormItem>
+        </div>
+      </section>
+
+      <section class="submit-section">
+        <LnCheckbox v-model="form.privacyAccepted" label="我已阅读并同意信息用途说明" />
+        <p>你提交的身份、联系和业务信息仅用于需求受理、评估及必要的后续沟通。</p>
+        <div v-if="submitError" class="submit-error" role="alert"><LnIcon name="warning"/><span>{{ submitError }}</span></div>
+        <LnButton class="submit-button" variant="primary" :loading="submitting" :disabled="submitting" @click="submit">
+          {{ submitting ? '正在提交…' : '提交需求' }}
+        </LnButton>
+      </section>
+        </LnForm>
       </div>
 
-      <LnForm
-        ref="formRef"
-        :model="formData"
-        :rules="rules"
-        label-position="top"
-        class="external-form"
-      >
-        <div class="grid two-col">
-          <LnFormItem label="需求标题" prop="title">
-            <LnInput v-model="formData.title" :maxlength="100" show-count placeholder="请输入需求标题" />
-          </LnFormItem>
-          <LnFormItem label="来源渠道">
-            <LnInput v-model="formData.source" placeholder="如：市场/客服/企微提报" />
-          </LnFormItem>
+      <aside class="sharing-panel" aria-label="通用提报二维码">
+        <span class="sharing-kicker">SHARE</span>
+        <h2>现场扫码提报</h2>
+        <p>二维码仅打开固定提报路径，不包含账号、令牌或客户信息。</p>
+        <div class="qr-frame">
+          <canvas ref="qrCanvas" aria-label="通用提报二维码"></canvas>
+          <div v-if="qrError" class="qr-error">{{ qrError }}</div>
         </div>
-
-        <div class="grid two-col">
-          <LnFormItem label="提报人">
-            <LnInput v-model="formData.proposer" placeholder="请输入姓名" />
-          </LnFormItem>
-          <LnFormItem label="业务线">
-            <LnSelect v-model="formData.businessLine" :options="dictBusinessLineOptions" placeholder="请选择业务线" searchable clearable />
-          </LnFormItem>
+        <code class="qr-url">{{ externalSubmitUrl }}</code>
+        <div class="qr-actions">
+          <LnButton size="small" variant="secondary" :disabled="!!qrError" @click="downloadQr('png')">下载 PNG</LnButton>
+          <LnButton size="small" variant="ghost" :disabled="!!qrError" @click="downloadQr('svg')">下载 SVG</LnButton>
         </div>
-
-        <LnFormItem label="需求描述">
-          <LnTextarea v-model="formData.description" :maxlength="2000" placeholder="请描述需求背景、问题和预期结果" />
-        </LnFormItem>
-
-        <div class="grid two-col">
-          <LnFormItem label="需求单链接" prop="reqLink">
-            <LnInput v-model="formData.reqLink" placeholder="请输入附件或需求链接" />
-          </LnFormItem>
-          <LnFormItem label="期望上线时间">
-            <LnDateInput v-model="formData.expectedOnlineDate" clearable />
-          </LnFormItem>
-        </div>
-
-        <div class="section-title">业务判定信息</div>
-        <div class="section-copy">如果暂时无法一次补齐全部字段，优先补项目背景与高风险项，后续也可以在内部继续补充。</div>
-
-        <div class="assessment-block">
-          <div class="assessment-title">项目与合同背景</div>
-          <div class="assessment-copy">先说明这条需求服务哪个项目、哪个客户、是否有合同边界。</div>
-          <div class="grid two-col">
-            <LnFormItem label="项目名称">
-              <LnInput v-model="assessmentForm.projectName" placeholder="请输入项目名称" />
-            </LnFormItem>
-            <LnFormItem label="客户名称">
-              <LnInput v-model="assessmentForm.customerName" placeholder="请输入客户名称" />
-            </LnFormItem>
-            <LnFormItem label="合同编号">
-              <LnInput v-model="assessmentForm.contractNo" placeholder="请输入合同编号" />
-            </LnFormItem>
-            <LnFormItem label="合同金额">
-              <LnInput v-model="assessmentForm.contractAmount" placeholder="请输入合同金额" />
-            </LnFormItem>
-            <LnFormItem label="项目类型">
-              <LnInput v-model="assessmentForm.projectType" placeholder="如：常规营收项目/专属定制" />
-            </LnFormItem>
-            <LnFormItem label="商务负责人">
-              <LnInput v-model="assessmentForm.businessOwner" placeholder="请输入商务负责人" />
-            </LnFormItem>
-            <LnFormItem label="合同范围" class="full-span">
-              <LnInput v-model="assessmentForm.contractScope" placeholder="请输入合同范围" />
-            </LnFormItem>
-          </div>
-        </div>
-
-        <div class="assessment-block">
-          <div class="assessment-title">交付与复用判断</div>
-          <div class="assessment-copy">这组信息帮助内部快速判断投入规模、交付约束和复用价值。</div>
-          <div class="grid two-col">
-            <LnFormItem label="预估工时">
-              <LnInput v-model="assessmentForm.estimatedWorkload" placeholder="请输入预估工时" />
-            </LnFormItem>
-            <LnFormItem label="刚性交付日期">
-              <LnDateInput v-model="assessmentForm.rigidDeliveryDate" clearable />
-            </LnFormItem>
-            <LnFormItem label="可复用性" class="full-span">
-              <LnInput v-model="assessmentForm.reusability" placeholder="如：可复用技术建设" />
-            </LnFormItem>
-          </div>
-        </div>
-
-        <div class="assessment-block">
-          <div class="assessment-title">风险与战略属性</div>
-          <div class="assessment-copy">集中回答“有没有风险、是不是重点客户、是否属于战略事项”。</div>
-          <div class="grid three-col">
-            <LnFormItem label="履约风险">
-              <LnSelect v-model="assessmentForm.deliveryRisk" :options="yesNoOptions" placeholder="请选择" clearable />
-            </LnFormItem>
-            <LnFormItem label="回款风险">
-              <LnSelect v-model="assessmentForm.paymentRisk" :options="yesNoOptions" placeholder="请选择" clearable />
-            </LnFormItem>
-            <LnFormItem label="验收风险">
-              <LnSelect v-model="assessmentForm.acceptanceRisk" :options="yesNoOptions" placeholder="请选择" clearable />
-            </LnFormItem>
-            <LnFormItem label="安全/合规风险">
-              <LnSelect v-model="assessmentForm.securityOrComplianceRisk" :options="yesNoOptions" placeholder="请选择" clearable />
-            </LnFormItem>
-            <LnFormItem label="重大故障风险">
-              <LnSelect v-model="assessmentForm.majorIncidentRisk" :options="yesNoOptions" placeholder="请选择" clearable />
-            </LnFormItem>
-            <LnFormItem label="省级督办">
-              <LnSelect v-model="assessmentForm.govSupervision" :options="yesNoOptions" placeholder="请选择" clearable />
-            </LnFormItem>
-            <LnFormItem label="战略客户/标杆客户">
-              <LnSelect v-model="assessmentForm.strategicCustomer" :options="yesNoOptions" placeholder="请选择" clearable />
-            </LnFormItem>
-            <LnFormItem label="核心产品线">
-              <LnSelect v-model="assessmentForm.coreProductLine" :options="yesNoOptions" placeholder="请选择" clearable />
-            </LnFormItem>
-            <LnFormItem label="是否样板">
-              <LnSelect v-model="assessmentForm.benchmarkCase" :options="yesNoOptions" placeholder="请选择" clearable />
-            </LnFormItem>
-          </div>
-        </div>
-
-        <LnFormItem label="特殊备注">
-          <LnTextarea v-model="assessmentForm.specialRemark" placeholder="请输入补充说明" />
-        </LnFormItem>
-
-        <LnFormItem label="处理备注" prop="remark">
-          <LnTextarea v-model="formData.remark" :maxlength="1000" placeholder="请输入备注" />
-        </LnFormItem>
-
-        <div class="footer-bar">
-          <div class="footer-tip">提交后不会进入后台页面，只展示受理结果。</div>
-          <LnButton variant="primary" :loading="submitting" @click="handleSubmit">
-            {{ submitting ? '提交中...' : '提交需求' }}
-          </LnButton>
-        </div>
-      </LnForm>
+        <span class="sharing-note">适合线上分享与 A4 打印，生产域名变化后请重新下载。</span>
+      </aside>
     </div>
-  </div>
+  </main>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { nextTick, onMounted, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import QRCode from 'qrcode'
 import { createExternalRawRequirement } from '@/api/raw-requirement'
-import type { PriorityAssessmentContextDTO, RawRequirementCreateDTO } from '@/types/requirement'
-import { lnToast, LnButton, LnDateInput, LnForm, LnFormItem, LnInput, LnSelect, LnTextarea, type LnFormInstance, type LnFormRules } from '@/components/linear'
+import { listPublicBusinessLines } from '@/api/dict'
+import type { ExternalSubmissionDTO } from '@/types/requirement'
+import { LnButton, LnCheckbox, LnDateInput, LnForm, LnFormItem, LnIcon, LnInput, LnSelect, LnTextarea, type LnFormInstance, type LnFormRules, type LnOption } from '@/components/linear'
 
+const DRAFT_KEY = 'external-requirement-draft-v2'
+const route = useRoute()
 const router = useRouter()
 const formRef = ref<LnFormInstance>()
 const submitting = ref(false)
-const dictBusinessLineOptions = ref([
-  { value: '校园G端', label: '校园G端' },
-  { value: '市监G端', label: '市监G端' },
-  { value: 'B端团餐', label: 'B端团餐' },
-  { value: '技术支撑（硬件等）', label: '技术支撑（硬件等）' },
-])
-const yesNoOptions = [
-  { label: '是', value: '是' },
-  { label: '否', value: '否' },
-]
+const submitError = ref('')
+const businessOptions = ref<LnOption[]>([])
+const qrCanvas = ref<HTMLCanvasElement>()
+const externalSubmitUrl = ref('')
+const qrError = ref('')
 
-function createDefaultAssessmentContext(): PriorityAssessmentContextDTO {
-  return {
-    projectName: '',
-    customerName: '',
-    contractNo: '',
-    contractAmount: '',
-    deliveryRisk: '',
-    paymentRisk: '',
-    acceptanceRisk: '',
-    securityOrComplianceRisk: '',
-    majorIncidentRisk: '',
-    govSupervision: '',
-    strategicCustomer: '',
-    coreProductLine: '',
-    projectType: '',
-    reusability: '',
-    benchmarkCase: '',
-    contractScope: '',
-    rigidDeliveryDate: '',
-    estimatedWorkload: '',
-    businessOwner: '',
-    expectedOnlineTime: '',
-    specialRemark: '',
-  }
-}
-
-const formData = reactive<RawRequirementCreateDTO>({
-  title: '',
-  source: 'external',
-  proposer: '',
-  businessLine: '',
-  description: '',
-  reqLink: '',
-  expectedOnlineDate: undefined,
-  remark: '',
+const form = reactive<ExternalSubmissionDTO>({
+  title: '', description: '', proposer: '', proposerContact: '', company: '', projectName: '', expectedResult: '', businessLine: '', expectedOnlineDate: '', reqLink: '', supplementary: '',
+  sourceChannel: route.query.channel === 'qrcode' ? 'qrcode' : 'link', identityProvider: '', identityName: '', clientRequestId: createRequestId(), privacyAccepted: false,
 })
 
-const assessmentForm = reactive<PriorityAssessmentContextDTO>(createDefaultAssessmentContext())
+const rules: LnFormRules = {
+  proposer: [{ required: true, message: '请输入姓名或称呼', trigger: 'blur' }],
+  proposerContact: [{ required: true, message: '请至少填写一种联系方式', trigger: 'blur' }],
+  title: [{ required: true, message: '请输入需求标题', trigger: 'blur' }, { max: 100, message: '需求标题不能超过 100 个字符', trigger: 'blur' }],
+  description: [{ required: true, message: '请描述问题或需求', trigger: 'blur' }],
+  reqLink: [{ pattern: /^(|https?:\/\/[^\s]+)$/i, message: '请输入以 http:// 或 https:// 开头的有效链接', trigger: 'blur' }],
+}
 
-const validateReqLinkOrRemark = (_rule: unknown, _value: unknown, callback: (error?: Error) => void) => {
-  if (formData.reqLink?.trim() || formData.remark?.trim()) {
-    callback()
+onMounted(async () => {
+  restoreDraft()
+  externalSubmitUrl.value = resolveExternalSubmitUrl()
+  await nextTick()
+  await renderQrCode()
+  try {
+    const response: any = await listPublicBusinessLines()
+    businessOptions.value = (response.data || []).map((item: any) => ({ label: item.label, value: item.value }))
+  } catch { businessOptions.value = [] }
+})
+
+async function submit() {
+  if (submitting.value) return
+  submitError.value = ''
+  persistDraft()
+  try {
+    await formRef.value?.validate()
+  } catch {
+    submitError.value = '请先完善标记出的必填或格式错误字段。'
     return
   }
-  callback(new Error('需求单链接和处理备注至少完善一项'))
-}
-
-const rules: LnFormRules = {
-  title: [{ required: true, message: '请输入需求标题', trigger: 'blur' }],
-  reqLink: [{ validator: validateReqLinkOrRemark, trigger: 'blur' }],
-  remark: [{ validator: validateReqLinkOrRemark, trigger: 'blur' }],
-}
-
-async function handleSubmit() {
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
-
+  if (!form.privacyAccepted) {
+    submitError.value = '请阅读并同意信息用途说明。'
+    return
+  }
   submitting.value = true
   try {
-    const res = await createExternalRawRequirement({
-      ...formData,
-      submitOrigin: 'external',
-      title: formData.title.trim(),
-      source: formData.source?.trim() || 'external',
-      proposer: formData.proposer?.trim() || '外部提报用户',
-      businessLine: formData.businessLine?.trim() || undefined,
-      description: formData.description?.trim() || undefined,
-      reqLink: formData.reqLink?.trim() || undefined,
-      remark: formData.remark?.trim() || undefined,
-      expectedOnlineDate: formData.expectedOnlineDate || undefined,
-      assessmentContext: {
-        ...assessmentForm,
-        projectName: assessmentForm.projectName?.trim() || undefined,
-        customerName: assessmentForm.customerName?.trim() || undefined,
-        contractNo: assessmentForm.contractNo?.trim() || undefined,
-        contractAmount: assessmentForm.contractAmount?.trim() || undefined,
-        deliveryRisk: assessmentForm.deliveryRisk || undefined,
-        paymentRisk: assessmentForm.paymentRisk || undefined,
-        acceptanceRisk: assessmentForm.acceptanceRisk || undefined,
-        securityOrComplianceRisk: assessmentForm.securityOrComplianceRisk || undefined,
-        majorIncidentRisk: assessmentForm.majorIncidentRisk || undefined,
-        govSupervision: assessmentForm.govSupervision || undefined,
-        strategicCustomer: assessmentForm.strategicCustomer || undefined,
-        coreProductLine: assessmentForm.coreProductLine || undefined,
-        projectType: assessmentForm.projectType?.trim() || undefined,
-        reusability: assessmentForm.reusability?.trim() || undefined,
-        benchmarkCase: assessmentForm.benchmarkCase || undefined,
-        contractScope: assessmentForm.contractScope?.trim() || undefined,
-        rigidDeliveryDate: assessmentForm.rigidDeliveryDate || undefined,
-        estimatedWorkload: assessmentForm.estimatedWorkload?.trim() || undefined,
-        businessOwner: assessmentForm.businessOwner?.trim() || undefined,
-        expectedOnlineTime: formData.expectedOnlineDate || undefined,
-        specialRemark: assessmentForm.specialRemark?.trim() || undefined,
-      },
+    const response = await createExternalRawRequirement({
+      ...form,
+      title: form.title.trim(), description: form.description.trim(), proposer: form.proposer.trim(), proposerContact: form.proposerContact.trim(),
     })
-    lnToast.success('外部提报已提交')
-    router.replace({
-      path: '/external-submit/result',
-      query: {
-        id: String((res as any).data || ''),
-        title: formData.title,
-      },
+    sessionStorage.removeItem(DRAFT_KEY)
+    await router.replace({ path: '/external-submit/result', query: { receipt: encodeURIComponent(JSON.stringify(response.data)), title: form.title } })
+  } catch (error: any) {
+    submitError.value = error?.message ? `提交失败：${error.message}。已保留填写内容，请稍后重试。` : '网络异常，已保留填写内容，请稍后重试。'
+  } finally { submitting.value = false }
+}
+
+function persistDraft() { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(form)) }
+function restoreDraft() {
+  try {
+    const draft = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || '{}')
+    Object.assign(form, draft, { clientRequestId: draft.clientRequestId || form.clientRequestId, sourceChannel: form.sourceChannel })
+  } catch { /* 无有效草稿 */ }
+}
+function createRequestId() { return `${Date.now().toString(36)}_${crypto.randomUUID().replace(/-/g, '')}` }
+
+function resolveExternalSubmitUrl() {
+  const configured = String(import.meta.env.VITE_EXTERNAL_SUBMIT_URL || '').trim()
+  if (configured) return configured
+  return `${window.location.origin}/external-submit?channel=qrcode`
+}
+
+async function renderQrCode() {
+  if (!qrCanvas.value) return
+  try {
+    await QRCode.toCanvas(qrCanvas.value, externalSubmitUrl.value, {
+      width: 196,
+      margin: 1,
+      errorCorrectionLevel: 'M',
+      color: { dark: '#20231f', light: '#ffffff' },
     })
+    qrError.value = ''
   } catch {
-    // handled by interceptor
-  } finally {
-    submitting.value = false
+    qrError.value = '二维码生成失败，请直接复制下方地址。'
   }
 }
 
+async function downloadQr(format: 'png' | 'svg') {
+  if (qrError.value || !qrCanvas.value) return
+  if (format === 'png') {
+    triggerDownload(qrCanvas.value.toDataURL('image/png'), 'external-requirement-qr.png')
+    return
+  }
+  const svg = await QRCode.toString(externalSubmitUrl.value, {
+    type: 'svg',
+    margin: 1,
+    errorCorrectionLevel: 'M',
+    color: { dark: '#20231f', light: '#ffffff' },
+  })
+  const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }))
+  triggerDownload(url, 'external-requirement-qr.svg')
+  setTimeout(() => URL.revokeObjectURL(url), 0)
+}
+
+function triggerDownload(url: string, filename: string) {
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+}
 </script>
 
 <style scoped lang="scss">
-.external-submit-view {
-  min-height: 100vh;
-  padding: 24px;
-  background:
-    radial-gradient(circle at top left, rgba(59, 130, 246, 0.1), transparent 26%),
-    linear-gradient(180deg, #f7f8fa 0%, #eef2f6 100%);
-}
-
-.hero-card {
-  width: min(1100px, 100%);
-  margin: 0 auto;
-  padding: 28px;
-}
-
-.hero-copy {
-  margin-bottom: 20px;
-}
-
-.hero-kicker {
-  margin-bottom: 12px;
-}
-
-.hero-copy h1 {
-  margin: 0 0 10px;
-}
-
-.hero-copy p {
-  margin: 0;
-}
-
-.external-form {
-  margin-top: 18px;
-}
-
-:deep(.ln-form-item__content > .ln-field),
-:deep(.ln-form-item__content > .ln-textarea-field),
-:deep(.ln-form-item__content > .ln-date-field),
-:deep(.ln-form-item__content > .ln-select-field),
-:deep(.ln-form-item__content > .ln-select-field .ln-popover-root),
-:deep(.ln-form-item__content > .ln-select-field .ln-popover-trigger),
-:deep(.ln-form-item__content > .ln-select-field .ln-select__trigger) {
-  width: 100%;
-}
-
-.grid {
-  display: grid;
-  gap: 0 16px;
-}
-
-.two-col {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.three-col {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.section-title {
-  margin: 28px 0 12px;
-  padding-top: 18px;
-  border-top: 1px solid rgba(17, 24, 39, 0.06);
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--text-tertiary);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.section-copy {
-  margin: -4px 0 12px;
-  font-size: 12px;
-  line-height: 1.65;
-  color: var(--text-secondary);
-}
-
-.assessment-block {
-  margin-top: 14px;
-  padding: 18px 18px 6px;
-  border-radius: 16px;
-  border: 1px solid rgba(17, 24, 39, 0.05);
-  background: rgba(248, 250, 252, 0.74);
-}
-
-.assessment-block + .assessment-block {
-  margin-top: 12px;
-}
-
-.assessment-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.assessment-copy {
-  margin: 5px 0 10px;
-  font-size: 12px;
-  line-height: 1.65;
-  color: var(--text-secondary);
-}
-
-.full-span {
-  grid-column: 1 / -1;
-}
-
-.footer-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-top: 24px;
-  padding-top: 18px;
-  border-top: 1px solid rgba(15, 23, 42, 0.08);
-}
-
-.footer-tip {
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
-@media (max-width: 900px) {
-  .external-submit-view {
-    padding: 12px;
-  }
-
-  .hero-card {
-    padding: 18px;
-  }
-
-  .two-col,
-  .three-col {
-    grid-template-columns: 1fr;
-  }
-
-  .footer-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-}
+.external-page { min-height: 100vh; padding: 0 24px 64px; color: #20231f; background: #f5f5f1; font-family: "Avenir Next", "PingFang SC", sans-serif; }
+.public-header { height: 72px; max-width: 1180px; margin: auto; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #dedfd8; }.brand-mark { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; background: #242a25; color: #fff; font: 700 14px Georgia,serif; }.public-header div:last-child { display: grid; }.public-header strong { font-size: 12px; }.public-header span { color: #858980; font-size: 9px; letter-spacing: .08em; }
+.content-shell { max-width: 1180px; margin: auto; display: grid; grid-template-columns: minmax(0, 1fr) 248px; gap: 22px; align-items: start; }.form-column { min-width: 0; }.intro { margin: 64px 0 36px; }.eyebrow { color: #657068; font-size: 10px; font-weight: 700; letter-spacing: .18em; }.intro h1 { margin: 14px 0 12px; font: 600 clamp(34px,6vw,54px)/1.12 Georgia,"Songti SC",serif; letter-spacing: -.035em; }.intro p { margin: 0; color: #6d726b; font-size: 14px; }
+.intake-form { display: grid; gap: 14px; }.form-section { padding: 30px; display: grid; grid-template-columns: 46px 180px minmax(0,1fr); gap: 22px; border: 1px solid #dedfd8; border-radius: 14px; background: #fbfbf8; box-shadow: 0 10px 30px rgba(35,40,34,.035); }.section-index { color: #9da097; font: 500 11px Georgia,serif; }.section-copy h2 { margin: 0 0 7px; font: 600 17px Georgia,"Songti SC",serif; }.section-copy p { margin: 0; color: #858980; font-size: 11px; line-height: 1.6; }.form-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px 14px; }.full { grid-column: 1/-1; }
+.submit-section { padding: 26px 30px; border: 1px solid #dedfd8; border-radius: 14px; background: #eceee8; }.submit-section > p { margin: 8px 0 18px 26px; color: #747970; font-size: 11px; line-height: 1.6; }.submit-error { margin-bottom: 14px; padding: 10px 12px; display: flex; gap: 8px; border: 1px solid #e4beb7; border-radius: 8px; background: #fff5f2; color: #9e4338; font-size: 12px; }.submit-button { width: 100%; min-height: 44px; }
+.sharing-panel { position: sticky; top: 24px; margin-top: 64px; padding: 22px; border: 1px solid #dedfd8; border-radius: 14px; background: #fbfbf8; box-shadow: 0 10px 30px rgba(35,40,34,.035); }.sharing-kicker { color: #657068; font-size: 9px; font-weight: 700; letter-spacing: .18em; }.sharing-panel h2 { margin: 10px 0 8px; font: 600 18px Georgia,"Songti SC",serif; }.sharing-panel > p { margin: 0; color: #747970; font-size: 11px; line-height: 1.65; }.qr-frame { min-height: 206px; margin: 18px 0 12px; padding: 5px; display: grid; place-items: center; border: 1px solid #e3e4de; border-radius: 10px; background: #fff; }.qr-frame canvas { width: 196px !important; height: 196px !important; max-width: 100%; }.qr-error { padding: 16px; color: #9e4338; font-size: 11px; line-height: 1.6; text-align: center; }.qr-url { display: block; overflow-wrap: anywhere; color: #555c55; font: 10px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }.qr-actions { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }.sharing-note { display: block; margin-top: 12px; color: #93978f; font-size: 9px; line-height: 1.5; }
+@media (max-width: 980px) { .content-shell { grid-template-columns: 1fr; }.sharing-panel { position: static; margin-top: 0; order: 2; }.qr-frame { width: 208px; }.sharing-panel { display: grid; grid-template-columns: minmax(0,1fr) auto; column-gap: 20px; }.sharing-kicker,.sharing-panel h2,.sharing-panel > p,.qr-url,.qr-actions,.sharing-note { grid-column: 1; }.qr-frame { grid-column: 2; grid-row: 1 / span 6; margin: 0; } }
+@media (max-width: 760px) { .external-page { padding-inline: 14px; }.public-header { height: 60px; }.intro { margin: 40px 6px 26px; }.form-section { padding: 22px 18px; grid-template-columns: 1fr; gap: 12px; }.section-index { display: none; }.section-copy { padding-bottom: 6px; border-bottom: 1px solid #e5e5df; }.form-grid { grid-template-columns: 1fr; }.full { grid-column: auto; }.submit-section { padding: 22px 18px; }.sharing-panel { display: block; }.qr-frame { width: auto; margin: 18px 0 12px; }.qr-actions { grid-template-columns: 1fr; } }
 </style>

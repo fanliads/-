@@ -11,9 +11,9 @@
       </div>
 
       <div class="header-actions">
-        <LnButton size="small" variant="ghost" icon-only aria-label="上个月" @click="prevMonth">‹</LnButton>
+        <LnButton size="small" variant="ghost" icon-only aria-label="上个月" @click="prevMonth"><template #icon><LnIcon name="chevron-left"/></template></LnButton>
         <LnButton size="small" @click="goToday">今天</LnButton>
-        <LnButton size="small" variant="ghost" icon-only aria-label="下个月" @click="nextMonth">›</LnButton>
+        <LnButton size="small" variant="ghost" icon-only aria-label="下个月" @click="nextMonth"><template #icon><LnIcon name="chevron-right"/></template></LnButton>
       </div>
     </section>
 
@@ -112,7 +112,7 @@ import dayjs from 'dayjs'
 import { pageQueryRawRequirements } from '@/api/raw-requirement'
 import type { RawRequirementListVO } from '@/types/requirement'
 import { normalizeRawRequirementStatus } from '@/types/requirement'
-import { LnButton, LnCalendarDay, LnEmptyState, LnSkeleton, type LnCalendarEvent } from '@/components/linear'
+import { LnButton, LnCalendarDay, LnEmptyState, LnIcon, LnSkeleton, type LnCalendarEvent } from '@/components/linear'
 
 interface CalEvent extends LnCalendarEvent {
   id: number

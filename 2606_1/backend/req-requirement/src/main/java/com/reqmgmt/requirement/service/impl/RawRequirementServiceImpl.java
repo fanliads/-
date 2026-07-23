@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -82,13 +83,46 @@ public class RawRequirementServiceImpl extends ServiceImpl<RawRequirementMapper,
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Long createExternalRawRequirement(RawRequirementCreateDTO dto) {
+    public ExternalSubmissionReceiptVO createExternalRawRequirement(ExternalSubmissionDTO submission) {
+        String requestId = StrUtil.trim(submission.getClientRequestId());
+        if (StrUtil.isNotBlank(requestId)) {
+            RawRequirement existing = this.getOne(new LambdaQueryWrapper<RawRequirement>()
+                    .eq(RawRequirement::getClientRequestId, requestId)
+                    .last("LIMIT 1"));
+            if (existing != null) {
+                LocalDateTime submittedAt = Optional.ofNullable(existing.getExternalSubmittedAt()).orElse(existing.getCreateTime());
+                return new ExternalSubmissionReceiptVO(existing.getId(), existing.getReqNo(), submittedAt, true);
+            }
+        }
+
+        RawRequirementCreateDTO dto = new RawRequirementCreateDTO();
+        dto.setTitle(StrUtil.trim(submission.getTitle()));
+        dto.setDescription(StrUtil.trim(submission.getDescription()));
+        dto.setSource("external_" + StrUtil.blankToDefault(submission.getSourceChannel(), "link"));
         dto.setSubmitOrigin(SUBMIT_ORIGIN_EXTERNAL);
-        return doCreateRawRequirement(dto, true);
+        dto.setProposer(StrUtil.trim(submission.getProposer()));
+        dto.setProposerContact(StrUtil.trim(submission.getProposerContact()));
+        dto.setProjectName(StrUtil.trim(submission.getProjectName()));
+        dto.setBusinessLine(StrUtil.trim(submission.getBusinessLine()));
+        dto.setExpectedOnlineDate(submission.getExpectedOnlineDate());
+        dto.setReqLink(StrUtil.trim(submission.getReqLink()));
+        dto.setRemark(StrUtil.blankToDefault(StrUtil.trim(submission.getSupplementary()), "外部匿名提报"));
+
+        Long id = doCreateRawRequirement(dto, true);
+        RawRequirement entity = this.getById(id);
+        entity.setClientRequestId(requestId);
+        entity.setExternalCompany(StrUtil.trim(submission.getCompany()));
+        entity.setExternalChannel(StrUtil.blankToDefault(submission.getSourceChannel(), "link"));
+        entity.setExternalIdentityProvider(StrUtil.trim(submission.getIdentityProvider()));
+        entity.setExternalIdentityName(StrUtil.trim(submission.getIdentityName()));
+        entity.setExternalExpectedResult(StrUtil.trim(submission.getExpectedResult()));
+        entity.setExternalSubmittedAt(LocalDateTime.now());
+        this.updateById(entity);
+        return new ExternalSubmissionReceiptVO(entity.getId(), entity.getReqNo(), entity.getExternalSubmittedAt(), false);
     }
 
     private Long doCreateRawRequirement(RawRequirementCreateDTO dto, boolean externalSubmit) {
-        if (StrUtil.isAllBlank(dto.getReqLink(), dto.getRemark())) {
+        if (!externalSubmit && StrUtil.isAllBlank(dto.getReqLink(), dto.getRemark())) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "需求单链接和处理备注至少完善一项");
         }
 

@@ -44,6 +44,7 @@ declare module 'vue' {
     LnMenu: typeof import('./components/linear/LnMenu.vue')['default']
     LnMetric: typeof import('./components/linear/LnMetric.vue')['default']
     LnNavItem: typeof import('./components/linear/LnNavItem.vue')['default']
+    LnOptionIcon: typeof import('./components/linear/LnOptionIcon.vue')['default']
     LnPagination: typeof import('./components/linear/LnPagination.vue')['default']
     LnPasswordInput: typeof import('./components/linear/LnPasswordInput.vue')['default']
     LnPeek: typeof import('./components/linear/LnPeek.vue')['default']
@@ -70,5 +71,6 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SupplementDialog: typeof import('./components/requirement/SupplementDialog.vue')['default']
+    UnifiedRequirementPeek: typeof import('./components/requirement/UnifiedRequirementPeek.vue')['default']
   }
 }

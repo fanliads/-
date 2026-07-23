@@ -17,7 +17,7 @@ public interface MyTaskService {
      * @param size 每页数量
      * @return 分页结果
      */
-    IPage<MyTaskVO> getPendingTasks(Integer page, Integer size);
+    IPage<MyTaskVO> getPendingTasks(Integer page, Integer size, String keyword);
 
     /**
      * 获取"已处理"列表
@@ -26,7 +26,7 @@ public interface MyTaskService {
      * @param size 每页数量
      * @return 分页结果
      */
-    IPage<MyTaskVO> getDoneTasks(Integer page, Integer size);
+    IPage<MyTaskVO> getDoneTasks(Integer page, Integer size, String keyword);
 
     /**
      * 待办统计

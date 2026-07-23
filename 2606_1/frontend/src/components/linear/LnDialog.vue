@@ -14,7 +14,7 @@
         >
           <header class="ln-dialog__header">
             <div><h2 :id="titleId">{{ title }}</h2><p v-if="description" :id="descriptionId">{{ description }}</p></div>
-            <button v-if="showClose" class="ln-dialog__close ln-focus-ring" type="button" aria-label="关闭对话框" @click="close">×</button>
+            <button v-if="showClose" class="ln-dialog__close ln-focus-ring" type="button" aria-label="关闭对话框" @click="close"><LnIcon name="close" /></button>
           </header>
           <div class="ln-dialog__body"><slot /></div>
           <footer v-if="$slots.footer" class="ln-dialog__footer"><slot name="footer" /></footer>
@@ -26,6 +26,7 @@
 
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import LnIcon from './LnIcon.vue'
 
 const props = withDefaults(defineProps<{
   modelValue: boolean
@@ -95,8 +96,8 @@ onBeforeUnmount(release)
 <style scoped lang="scss">
 .ln-dialog-layer { position:fixed;inset:0;z-index:2200;padding:24px;display:grid;place-items:center;background:rgba(22,22,26,.42);backdrop-filter:blur(3px);font-family:var(--ln-font); }
 .ln-dialog { max-width:calc(100vw - 32px);max-height:calc(100vh - 48px);overflow:hidden;border:1px solid rgba(255,255,255,.55);border-radius:12px;display:flex;flex-direction:column;color:var(--ln-text);background:var(--ln-surface-raised);box-shadow:0 24px 70px rgba(20,20,24,.24),0 4px 16px rgba(20,20,24,.12);outline:0; }
-.ln-dialog__header { min-height:58px;padding:16px 18px 12px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;border-bottom:1px solid var(--ln-border); h2{margin:0;font-size:14px;font-weight:620;line-height:20px;letter-spacing:-.01em} p{margin:3px 0 0;color:var(--ln-text-tertiary);font-size:11px;line-height:1.5} }
-.ln-dialog__close { width:26px;height:26px;flex:none;border:0;border-radius:5px;color:var(--ln-text-tertiary);background:transparent;font-size:18px;line-height:1;cursor:pointer;&:hover{color:var(--ln-text);background:var(--ln-surface-hover)} }
+.ln-dialog__header { min-height:64px;padding:17px 18px 13px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;border-bottom:1px solid var(--ln-border); h2{margin:0;font-size:17px;font-weight:650;line-height:23px;letter-spacing:-.01em} p{margin:4px 0 0;color:var(--ln-text-tertiary);font-size:13px;line-height:1.55} }
+.ln-dialog__close { width:28px;height:28px;display:grid;place-items:center;flex:none;border:0;border-radius:5px;color:var(--ln-icon);background:transparent;cursor:pointer;&:hover{color:var(--ln-text);background:var(--ln-surface-hover)}svg{width:16px;height:16px} }
 .ln-dialog__body { min-height:0;padding:16px 18px;overflow:auto; }
 .ln-dialog__footer { padding:12px 18px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--ln-border);background:#fcfcfd; }
 .ln-dialog-enter-active,.ln-dialog-leave-active{transition:opacity var(--ln-normal)}.ln-dialog-enter-active .ln-dialog,.ln-dialog-leave-active .ln-dialog{transition:transform var(--ln-normal),opacity var(--ln-normal)}.ln-dialog-enter-from,.ln-dialog-leave-to{opacity:0}.ln-dialog-enter-from .ln-dialog,.ln-dialog-leave-to .ln-dialog{opacity:0;transform:translateY(8px) scale(.985)}

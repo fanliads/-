@@ -16,6 +16,8 @@ public class R<T> implements Serializable {
     private int code;
     private String message;
     private T data;
+    private String field;
+    private String traceId;
 
     private R() {
     }
@@ -25,6 +27,9 @@ public class R<T> implements Serializable {
         this.message = message;
         this.data = data;
     }
+
+    public R<T> withField(String field) { this.field = field; return this; }
+    public R<T> withTraceId(String traceId) { this.traceId = traceId; return this; }
 
     /**
      * 成功响应（无数据）

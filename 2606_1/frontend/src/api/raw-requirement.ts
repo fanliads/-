@@ -18,6 +18,8 @@ import type {
   PriorityAssessmentVO,
   PageResult,
   ApiResponse,
+  ExternalSubmissionDTO,
+  ExternalSubmissionReceiptVO,
 } from '@/types/requirement'
 
 const BASE_URL = 'raw-requirements'
@@ -28,8 +30,8 @@ export function createRawRequirement(data: RawRequirementCreateDTO) {
 }
 
 /** 外部提报创建原始需求 */
-export function createExternalRawRequirement(data: RawRequirementCreateDTO) {
-  return post<ApiResponse<number>>(`/${BASE_URL}/external-submit`, data)
+export function createExternalRawRequirement(data: ExternalSubmissionDTO) {
+  return post<ApiResponse<ExternalSubmissionReceiptVO>>(`/${BASE_URL}/external-submit`, data)
 }
 
 /** 获取原始需求详情 */

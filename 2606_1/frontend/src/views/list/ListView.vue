@@ -17,9 +17,9 @@
           placeholder="搜索编号、标题或描述"
           clearable
           @keydown.enter="handleSearch"
-        ><template #prefix>⌕</template></LnInput>
+        ><template #prefix><LnIcon name="search"/></template></LnInput>
         <LnButton variant="ghost" @click="handleReset">清空筛选</LnButton>
-        <LnButton variant="primary" @click="router.push('/submit')"><template #icon>＋</template>新建需求</LnButton>
+        <LnButton variant="primary" @click="router.push('/submit')"><template #icon><LnIcon name="plus"/></template>新建需求</LnButton>
       </div>
     </section>
 
@@ -163,7 +163,8 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { pageQueryRawRequirements } from '@/api/raw-requirement'
 import type { RawRequirementListVO } from '@/types/requirement'
-import { LnBadge, LnButton, LnEmptyState, LnInput, LnPagination, LnPressable, LnSelect, LnSkeleton, type LnOption } from '@/components/linear'
+import { LnBadge, LnButton, LnEmptyState, LnIcon, LnInput, LnPagination, LnPressable, LnSelect, LnSkeleton, type LnOption } from '@/components/linear'
+import { getPriorityVisual } from '@/components/linear/optionVisuals'
 import {
   RAW_STATUS_MAP,
   PRIORITY_MAP,
@@ -191,7 +192,7 @@ const total = ref(0)
 const selectedRequirementId = ref<number | null>(null)
 const selectedRequirement = computed(() => tableData.value.find((item) => item.id === selectedRequirementId.value) || null)
 const statusOptions: LnOption[] = Object.entries(RAW_STATUS_MAP).map(([value, label]) => ({ value, label }))
-const priorityOptions: LnOption[] = Object.entries(PRIORITY_MAP).map(([value, label]) => ({ value, label }))
+const priorityOptions: LnOption[] = Object.entries(PRIORITY_MAP).map(([value, label]) => ({ value, label, ...getPriorityVisual(value, label) }))
 const sourceOptions: LnOption[] = Object.entries(SOURCE_MAP).map(([value, label]) => ({ value, label }))
 const activeFilterCount = computed(() => [queryForm.status, queryForm.priority, queryForm.source].filter(Boolean).length)
 

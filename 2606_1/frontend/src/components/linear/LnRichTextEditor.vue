@@ -259,7 +259,7 @@ onMounted(() => setEditorHtml(props.modelValue))
   margin-left: auto;
   padding: 0 6px;
   color: var(--ln-text-tertiary);
-  font-size: 10px;
+  font-size:11px;
 }
 
 .ln-rich-editor__file {

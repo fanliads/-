@@ -89,6 +89,32 @@ export interface RawRequirementCreateDTO {
   assessmentContext?: PriorityAssessmentContextDTO
 }
 
+export interface ExternalSubmissionDTO {
+  title: string
+  description: string
+  proposer: string
+  proposerContact: string
+  company?: string
+  projectName?: string
+  expectedResult?: string
+  businessLine?: string
+  expectedOnlineDate?: string
+  reqLink?: string
+  supplementary?: string
+  sourceChannel?: 'link' | 'qrcode' | 'wechat' | 'dingtalk'
+  identityProvider?: '' | 'wechat' | 'dingtalk'
+  identityName?: string
+  clientRequestId: string
+  privacyAccepted: boolean
+}
+
+export interface ExternalSubmissionReceiptVO {
+  id: number
+  reqNo: string
+  submittedAt: string
+  duplicate: boolean
+}
+
 /** 原始需求更新DTO */
 export interface RawRequirementUpdateDTO {
   title?: string
@@ -233,6 +259,12 @@ export interface RawRequirementDetailVO {
   description: string
   source: string
   submitOrigin?: 'internal' | 'external'
+  externalChannel?: string
+  externalIdentityProvider?: string
+  externalIdentityName?: string
+  externalExpectedResult?: string
+  externalCompany?: string
+  externalSubmittedAt?: string
   proposer: string
   proposerContact: string
   projectName: string

@@ -19,11 +19,17 @@ public class RawRequirement {
     @TableField("req_no")
     private String reqNo;
 
+    @TableField("client_request_id")
+    private String clientRequestId;
+
     @TableField("title")
     private String title;
 
     @TableField("description")
     private String description;
+
+    @TableField("external_expected_result")
+    private String externalExpectedResult;
 
     @TableField("source")
     private String source;
@@ -31,11 +37,23 @@ public class RawRequirement {
     @TableField("submit_origin")
     private String submitOrigin;
 
+    @TableField("external_channel")
+    private String externalChannel;
+
+    @TableField("external_identity_provider")
+    private String externalIdentityProvider;
+
+    @TableField("external_identity_name")
+    private String externalIdentityName;
+
     @TableField("proposer")
     private String proposer;
 
     @TableField("proposer_contact")
     private String proposerContact;
+
+    @TableField("external_company")
+    private String externalCompany;
 
     @TableField("project_name")
     private String projectName;
@@ -114,6 +132,9 @@ public class RawRequirement {
 
     @TableField("propose_time")
     private LocalDate proposeTime;
+
+    @TableField("external_submitted_at")
+    private LocalDateTime externalSubmittedAt;
 
     @TableField("product_definition")
     private String productDefinition;

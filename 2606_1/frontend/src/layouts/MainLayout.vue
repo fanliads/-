@@ -57,7 +57,7 @@
           :title="sidebarCollapsed ? '退出登录' : ''"
           @click="handleCommand('logout')"
         >
-          <template #icon><span class="utility-icon">↗</span></template>
+          <template #icon><LnIcon name="external-link"/></template>
           <span v-if="!sidebarCollapsed">退出登录</span>
         </LnButton>
 
@@ -184,11 +184,11 @@ const userName = computed(() => userStore.userInfo?.realName || '用户')
 const userRoleName = computed(() => userStore.userInfo?.roleName || '成员')
 const canCreateRaw = computed(() => userStore.hasPermission('submit-form:add') || userStore.hasPermission('raw-pool:add'))
 const userMenuItems = computed(() => [
-  { label:'个人信息',value:'profile',icon:'◉',description:userName.value },
+  { label:'个人信息',value:'profile',icon: 'user',description:userName.value },
   { label:'系统设置',value:'settings',icon:'◎' },
-  { label:'退出登录',value:'logout',icon:'↗',danger:true,separatorBefore:true },
+  { label:'退出登录',value:'logout',icon: 'external-link',danger:true,separatorBefore:true },
 ])
-const shellCommands = computed(() => visibleMenuGroups.value.flatMap(group => group.items.map(item => ({ label:`打开${item.label}`,value:item.path,icon:'→',description:group.title }))).concat(canCreateRaw.value?[{label:'新建原始需求',value:'/submit',icon:'＋',description:'需求'}]:[]))
+const shellCommands = computed(() => visibleMenuGroups.value.flatMap(group => group.items.map(item => ({ label:`打开${item.label}`,value:item.path,icon: 'external-link',description:group.title }))).concat(canCreateRaw.value?[{label:'新建原始需求',value:'/submit',icon: 'plus',description:'需求'}]:[]))
 
 const currentSectionLabel = computed(() => {
   const matchedGroup = visibleMenuGroups.value.find((group) =>
@@ -396,7 +396,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalCommand))
 }
 
 .collapsed-section {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--text-tertiary);
@@ -446,7 +446,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalCommand))
   min-height: 18px;
   display: grid;
   place-items: center;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--text-tertiary);
@@ -509,7 +509,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalCommand))
   border-radius: 999px;
   background: rgba(39, 49, 58, 0.08);
   color: var(--text-tertiary);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -591,7 +591,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalCommand))
   border-radius: 999px;
   background: rgba(39, 49, 58, 0.08);
   color: var(--text-tertiary);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;

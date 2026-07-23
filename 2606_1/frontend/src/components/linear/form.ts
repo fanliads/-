@@ -22,6 +22,8 @@ export interface LnFormFieldController {
   validate: (trigger?: LnFormTrigger) => Promise<boolean>
   clearValidate: () => void
   resetField: () => void
+  setError: (message: string) => void
+  focus: () => void
   error: ComputedRef<string>
 }
 
@@ -39,6 +41,7 @@ export interface LnFormInstance {
   validateField: (props: string | string[]) => Promise<boolean>
   clearValidate: (props?: string | string[]) => void
   resetFields: (props?: string | string[]) => void
+  setFieldError: (prop: string, message: string, focus?: boolean) => void
 }
 
 export const lnFormContextKey: InjectionKey<LnFormContext> = Symbol('ln-form')

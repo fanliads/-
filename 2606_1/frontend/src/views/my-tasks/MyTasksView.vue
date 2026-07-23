@@ -5,57 +5,58 @@
         <div class="title-row wb-title-row">
           <h2 class="page-title wb-page-title">我的工作</h2>
           <span class="page-count wb-page-meta">{{ stats.pendingCount }} 待处理</span>
-          <span class="page-hint wb-page-meta">统一待办视图</span>
         </div>
-        <p class="page-subtitle wb-page-subtitle">把待办和已处理记录收敛到同一工作区里，首屏只保留当前最需要决策的信息。</p>
       </div>
 
       <div class="header-side">
-        <span class="refresh-status" :class="{ syncing: actionRefreshing }">
+        <span v-if="actionRefreshing" class="refresh-status syncing">
           {{ refreshStatusText }}
         </span>
+        <LnButton icon-only variant="ghost" :loading="actionRefreshing" aria-label="刷新我的工作" title="刷新" @click="manualRefresh"><template #icon><LnIcon name="refresh" /></template></LnButton>
       </div>
     </section>
 
     <section class="summary-strip wb-summary-strip">
-      <div class="summary-pill wb-summary-pill active">
+      <button class="summary-pill wb-summary-pill active" type="button" @click="switchView('pending')">
         <span class="summary-label wb-summary-label">待处理</span>
-        <span class="summary-value wb-summary-value">{{ stats.pendingCount }}</span>
-      </div>
+        <span class="summary-value wb-summary-value">{{ statsError ? '—' : stats.pendingCount }}</span>
+      </button>
       <div class="summary-pill wb-summary-pill">
         <span class="summary-label wb-summary-label">今日完成</span>
-        <span class="summary-value wb-summary-value">{{ stats.todayDoneCount }}</span>
+        <span class="summary-value wb-summary-value">{{ statsError ? '—' : stats.todayDoneCount }}</span>
       </div>
       <div class="summary-pill wb-summary-pill">
         <span class="summary-label wb-summary-label">本周完成</span>
-        <span class="summary-value wb-summary-value">{{ stats.weekDoneCount }}</span>
+        <span class="summary-value wb-summary-value">{{ statsError ? '—' : stats.weekDoneCount }}</span>
       </div>
     </section>
 
-    <section class="workspace-shell wb-shell">
+    <section class="workspace-shell wb-shell" :class="{ 'detail-collapsed': !detailOpen }">
       <div class="list-panel wb-panel" :aria-busy="currentLoading">
         <div class="list-toolbar wb-panel-toolbar">
           <LnTabs class="view-switch" :model-value="currentView" :options="currentViewOptions" variant="segmented" aria-label="任务处理状态" @update:model-value="switchViewValue" />
-          <div class="toolbar-note">{{ currentViewNote }}</div><LnInput v-model="taskKeyword" class="task-search" placeholder="搜索编号、标题或动作" clearable><template #prefix>⌕</template></LnInput>
+          <div class="toolbar-actions"><LnInput v-model="taskKeyword" class="task-search" placeholder="搜索编号、标题或动作" clearable><template #prefix><LnIcon name="search"/></template></LnInput><LnButton icon-only variant="ghost" :aria-label="detailOpen ? '收起详情面板' : '展开详情面板'" :title="detailOpen ? '收起详情' : '展开详情'" @click="detailOpen = !detailOpen"><template #icon><LnIcon :name="detailOpen ? 'chevron-right' : 'chevron-left'" /></template></LnButton></div>
         </div>
 
         <div class="list-header wb-list-header row-grid">
           <div class="head-cell title-head">事项</div>
           <div class="head-cell">类型</div>
+          <div class="head-cell">优先级</div>
           <div class="head-cell">状态</div>
           <div class="head-cell">动作</div>
           <div class="head-cell">更新时间</div>
           <div class="head-cell action-head">处理</div>
         </div>
 
-        <template v-if="currentLoading"><div v-for="row in 6" :key="row" class="task-skeleton-row"><div><LnSkeleton width="64%"/><LnSkeleton width="42%" height="10px"/></div><LnSkeleton width="62px"/><LnSkeleton width="72px"/><LnSkeleton width="76px"/><LnSkeleton width="68px"/></div></template>
+        <template v-if="currentLoading"><div v-for="row in 6" :key="row" class="task-skeleton-row"><div><LnSkeleton width="64%"/><LnSkeleton width="42%" height="10px"/></div><LnSkeleton width="62px"/><LnSkeleton width="48px"/><LnSkeleton width="72px"/><LnSkeleton width="76px"/><LnSkeleton width="68px"/></div></template>
+        <div v-else-if="currentError" class="list-error" role="alert"><strong>任务列表加载失败</strong><span>{{ currentError }}</span><LnButton size="small" @click="reloadCurrent">重新加载</LnButton></div>
         <LnTaskRow
-          v-for="task in currentLoading ? [] : filteredCurrentList"
+          v-for="task in currentLoading || currentError ? [] : filteredCurrentList"
           :key="getTaskKey(task)"
           :req-no="task.reqNo" :title="task.title" :type-label="getReqTypeLabel(task.reqType)" :priority="task.priority || 'P2'"
           :status-label="task.statusName || '-'" :status-tone="getTaskStatusTone(task.status)"
           :action-label="task.actionRequired || (currentView === 'pending' ? '待处理' : '已完成')"
-          :updated-at="formatTime(task.updatedTime || task.createTime)" :urgent="currentView === 'pending' && isUrgent(task.updatedTime)"
+          :updated-at="formatTime(task.updatedTime || task.createTime)" :urgent="currentView === 'pending' && !!task.urgent"
           :selected="selectedTaskKey === getTaskKey(task)" :done="currentView === 'done'"
           @click="selectTask(task)"
         >
@@ -66,12 +67,13 @@
               :req-id="task.id"
               :current-status="task.status"
               @action-done="handleActionDone"
+              @action-error="(error) => handleActionError(task, error)"
             />
             <LnButton v-else size="small" variant="ghost" @click="selectTask(task)">查看</LnButton>
           </template>
         </LnTaskRow>
 
-        <LnEmptyState v-if="filteredCurrentList.length === 0 && !currentLoading" :title="taskKeyword ? '没有匹配的事项' : currentView === 'pending' ? '当前没有待我处理事项' : '暂无已处理记录'" :description="taskKeyword ? '尝试调整搜索关键词。' : '新的待办或处理记录会显示在这里。'" />
+        <LnEmptyState v-if="filteredCurrentList.length === 0 && !currentLoading && !currentError" :title="taskKeyword ? '没有匹配的事项' : currentView === 'pending' ? '当前没有待我处理事项' : '暂无已处理记录'" :description="taskKeyword ? '尝试调整搜索关键词。' : '新的待办或处理记录会显示在这里。'" />
 
         <div class="pagination-line">
           <LnPagination v-if="currentView === 'pending'" v-model:page="pendingPage" :page-size="pageSize" :page-sizes="[pageSize]" :total="pendingTotal" @change="loadPending" />
@@ -79,11 +81,12 @@
         </div>
       </div>
 
-      <aside class="detail-panel wb-panel">
+      <div v-if="detailOpen && selectedTask" class="detail-backdrop" aria-hidden="true" @click="detailOpen = false"></div>
+      <aside v-if="detailOpen" class="detail-panel wb-panel">
         <template v-if="selectedTask">
           <div class="detail-scroll wb-detail-scroll">
             <div class="detail-header">
-              <div class="detail-id">{{ selectedTask.reqNo }}</div>
+              <div class="detail-header-top"><div class="detail-id">{{ selectedTask.reqNo }}</div><LnButton icon-only size="small" variant="ghost" aria-label="关闭详情面板" @click="detailOpen = false"><template #icon><LnIcon name="close" /></template></LnButton></div>
               <h3 class="detail-title wb-detail-title">{{ selectedTask.title }}</h3>
               <div class="detail-tags">
                 <span class="status-tag" :class="`status-${selectedTask.status || 'default'}`">{{ selectedTask.statusName || '-' }}</span>
@@ -98,50 +101,53 @@
             </div>
 
             <div class="info-section wb-section surface-section primary-section">
-              <div class="section-head wb-section-head">
-                <div class="section-title wb-section-title">当前判断</div>
-                <div class="section-note wb-section-note">只保留当前推进这条事项时最需要确认的上下文。</div>
-              </div>
+              <div class="section-head wb-section-head"><div class="section-title wb-section-title">当前动作</div></div>
               <div class="info-grid">
                 <div class="info-item wb-info-item">
                   <span class="info-label">需要动作</span>
                   <span class="info-value">{{ selectedTask.actionRequired || (currentView === 'pending' ? '待处理' : '已处理') }}</span>
                 </div>
                 <div class="info-item wb-info-item">
+                  <span class="info-label">负责人 / 处理人</span>
+                  <span class="info-value">{{ selectedTask.handler || '未分配' }}</span>
+                </div>
+                <div class="info-item wb-info-item">
+                  <span class="info-label">业务线</span>
+                  <span class="info-value">{{ selectedTask.businessLineName || '未设置' }}</span>
+                </div>
+                <div class="info-item wb-info-item">
+                  <span class="info-label">任务来源</span>
+                  <span class="info-value">{{ selectedTask.sourceLabel || getReqTypeLabel(selectedTask.reqType) }}</span>
+                </div>
+                <div class="info-item wb-info-item">
+                  <span class="info-label">期望完成</span>
+                  <span class="info-value" :class="{ 'is-urgent': selectedTask.urgent }">{{ formatDate(selectedTask.expectedDate) }}</span>
+                </div>
+                <div class="info-item wb-info-item">
                   <span class="info-label">最近更新</span>
                   <span class="info-value">{{ formatTime(selectedTask.updatedTime || selectedTask.createTime) }}</span>
                 </div>
-                <div class="info-item wb-info-item">
-                  <span class="info-label">创建时间</span>
-                  <span class="info-value">{{ formatTime(selectedTask.createTime) }}</span>
-                </div>
-                <div class="info-item wb-info-item">
-                  <span class="info-label">处理状态</span>
-                  <span class="info-value">{{ currentView === 'pending' ? '待我推进' : '已完成处理' }}</span>
-                </div>
               </div>
             </div>
 
-            <div class="info-section wb-section">
-              <div class="section-head wb-section-head">
-                <div class="section-title wb-section-title">处理建议</div>
-                <div class="section-note wb-section-note">右侧作为聚焦确认区，动作仍然围绕左侧连续处理展开。</div>
+            <div class="detail-actions">
+              <div v-if="taskActionError" class="action-error" role="alert">
+                <div>
+                  <strong>操作未完成</strong>
+                  <span>{{ taskActionError.message }}</span>
+                  <small v-if="taskActionError.traceId">追踪码：{{ taskActionError.traceId }}</small>
+                </div>
+                <LnButton v-if="taskActionError.traceId" size="small" variant="ghost" @click="copyTraceId(taskActionError.traceId)">复制追踪码</LnButton>
               </div>
-              <p class="section-copy">
-                {{ currentView === 'pending'
-                  ? '优先在左侧列表连续处理当前待办；需要进一步判断时，可先选中条目，再在这里确认状态与动作语义。'
-                  : '已处理记录默认作为回溯使用，只保留必要上下文，避免与主工作流争抢注意力。'
-                }}
-              </p>
-            </div>
-
-            <div v-if="currentView === 'pending'" class="detail-actions">
               <ActionButtons
+                v-if="currentView === 'pending'"
                 :req-type="selectedTask.reqType"
                 :req-id="selectedTask.id"
                 :current-status="selectedTask.status"
                 @action-done="handleActionDone"
+                @action-error="handleSelectedActionError"
               />
+              <LnButton variant="secondary" @click="openFullRequirement">查看完整需求</LnButton>
             </div>
           </div>
         </template>
@@ -153,11 +159,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import ActionButtons from '@/components/workflow/ActionButtons.vue'
 import { getPendingTasks, getDoneTasks, getMyTaskStats, type MyTaskVO, type MyTaskStats } from '@/api/my-tasks'
-import { LnButton, LnEmptyState, LnInput, LnPagination, LnSkeleton, LnTabs, LnTaskRow, type LnTabOption } from '@/components/linear'
+import { lnToast, LnButton, LnEmptyState, LnIcon, LnInput, LnPagination, LnSkeleton, LnTabs, LnTaskRow, type LnTabOption } from '@/components/linear'
 
 const pendingLoading = ref(false)
 const doneLoading = ref(false)
@@ -166,6 +173,13 @@ const lastRefreshAt = ref<string>('')
 const currentView = ref<'pending' | 'done'>('pending')
 const selectedTaskKey = ref('')
 const taskKeyword = ref('')
+const detailOpen = ref(true)
+const pendingError = ref('')
+const doneError = ref('')
+const statsError = ref(false)
+const taskActionError = ref<{ message: string; traceId?: string } | null>(null)
+const router = useRouter()
+let searchTimer: number | undefined
 
 const stats = reactive<MyTaskStats>({
   pendingCount: 0,
@@ -190,14 +204,10 @@ const refreshStatusText = computed(() => {
 })
 
 const currentList = computed(() => currentView.value === 'pending' ? pendingList.value : doneList.value)
-const filteredCurrentList = computed(() => { const keyword=taskKeyword.value.trim().toLowerCase();return keyword?currentList.value.filter(item=>`${item.reqNo} ${item.title} ${item.actionRequired||''}`.toLowerCase().includes(keyword)):currentList.value })
+const filteredCurrentList = computed(() => currentList.value)
 const currentLoading = computed(() => currentView.value === 'pending' ? pendingLoading.value : doneLoading.value)
 const selectedTask = computed(() => currentList.value.find((item) => getTaskKey(item) === selectedTaskKey.value) || null)
-const currentViewNote = computed(() =>
-  currentView.value === 'pending'
-    ? '连续处理模式 · 选中后在右侧确认上下文'
-    : '回溯模式 · 仅保留结果确认与必要背景'
-)
+const currentError = computed(() => currentView.value === 'pending' ? pendingError.value : doneError.value)
 const currentViewOptions = computed<LnTabOption[]>(() => [
   { label: '待我处理', value: 'pending', count: pendingTotal.value },
   { label: '已处理', value: 'done', count: doneTotal.value || stats.weekDoneCount },
@@ -231,6 +241,8 @@ function ensureSelectedTask(list: MyTaskVO[]) {
 
 function selectTask(task: MyTaskVO) {
   selectedTaskKey.value = getTaskKey(task)
+  taskActionError.value = null
+  detailOpen.value = true
 }
 
 function switchView(view: 'pending' | 'done') {
@@ -251,25 +263,26 @@ async function loadStats() {
       stats.pendingCount = data.pendingCount
       stats.todayDoneCount = data.todayDoneCount
       stats.weekDoneCount = data.weekDoneCount
+      statsError.value = false
     }
   } catch {
-    // ignore
+    statsError.value = true
   }
 }
 
 async function loadPending() {
   pendingLoading.value = true
+  pendingError.value = ''
   try {
-    const res = await getPendingTasks({ page: pendingPage.value, size: pageSize })
+    const res = await getPendingTasks({ page: pendingPage.value, size: pageSize, keyword: taskKeyword.value.trim() || undefined })
     const data = (res as any).data
     if (data) {
       pendingList.value = data.records || []
       pendingTotal.value = data.total || 0
       if (currentView.value === 'pending') ensureSelectedTask(pendingList.value)
     }
-  } catch {
-    pendingList.value = []
-    if (currentView.value === 'pending') selectedTaskKey.value = ''
+  } catch (error: any) {
+    pendingError.value = error?.message || '请检查网络连接后重试'
   } finally {
     pendingLoading.value = false
     lastRefreshAt.value = dayjs().toISOString()
@@ -278,38 +291,66 @@ async function loadPending() {
 
 async function loadDone() {
   doneLoading.value = true
+  doneError.value = ''
   try {
-    const res = await getDoneTasks({ page: donePage.value, size: pageSize })
+    const res = await getDoneTasks({ page: donePage.value, size: pageSize, keyword: taskKeyword.value.trim() || undefined })
     const data = (res as any).data
     if (data) {
       doneList.value = data.records || []
       doneTotal.value = data.total || 0
       if (currentView.value === 'done') ensureSelectedTask(doneList.value)
     }
-  } catch {
-    doneList.value = []
-    if (currentView.value === 'done') selectedTaskKey.value = ''
+  } catch (error: any) {
+    doneError.value = error?.message || '请检查网络连接后重试'
   } finally {
     doneLoading.value = false
   }
 }
 
 async function handleActionDone() {
+  const previousIndex = pendingList.value.findIndex((item) => getTaskKey(item) === selectedTaskKey.value)
   actionRefreshing.value = true
+  taskActionError.value = null
   try {
     await Promise.all([
       loadStats(),
       loadPending(),
       currentView.value === 'done' ? loadDone() : Promise.resolve(),
     ])
+    if (currentView.value === 'pending' && pendingList.value.length) {
+      selectedTaskKey.value = getTaskKey(pendingList.value[Math.min(Math.max(previousIndex, 0), pendingList.value.length - 1)])
+    }
   } finally {
     actionRefreshing.value = false
   }
 }
 
-function isUrgent(time: string) {
-  if (!time) return false
-  return dayjs(time).isBefore(dayjs().add(2, 'day'), 'day')
+function handleActionError(task: MyTaskVO, error: { message: string; traceId?: string }) {
+  selectedTaskKey.value = getTaskKey(task)
+  detailOpen.value = true
+  taskActionError.value = error
+}
+
+function handleSelectedActionError(error: { message: string; traceId?: string }) {
+  taskActionError.value = error
+}
+
+async function copyTraceId(traceId: string) {
+  await navigator.clipboard.writeText(traceId)
+  lnToast.success('追踪码已复制')
+}
+
+async function manualRefresh() {
+  actionRefreshing.value = true
+  try { await Promise.all([loadStats(), reloadCurrent()]) } finally { actionRefreshing.value = false }
+}
+
+function reloadCurrent() { return currentView.value === 'pending' ? loadPending() : loadDone() }
+
+function openFullRequirement() {
+  if (!selectedTask.value) return
+  const path = selectedTask.value.reqType === 'product' ? '/product-pool' : '/raw-pool'
+  void router.push({ path, query: { focus: String(selectedTask.value.id) } })
 }
 
 function formatTime(time: string) {
@@ -317,10 +358,25 @@ function formatTime(time: string) {
   return dayjs(time).format('MM-DD HH:mm')
 }
 
+function formatDate(date?: string) {
+  if (!date) return '未设置'
+  return dayjs(date).format('YYYY-MM-DD')
+}
+
+watch(taskKeyword, () => {
+  window.clearTimeout(searchTimer)
+  searchTimer = window.setTimeout(() => {
+    if (currentView.value === 'pending') pendingPage.value = 1
+    else donePage.value = 1
+    void reloadCurrent()
+  }, 300)
+})
+
 onMounted(() => {
   loadStats()
   loadPending()
 })
+onUnmounted(() => window.clearTimeout(searchTimer))
 </script>
 
 <style lang="scss" scoped>
@@ -361,8 +417,13 @@ onMounted(() => {
   justify-content: space-between;
   gap: 16px;
 }
+.header-side,.toolbar-actions,.detail-header-top { display: flex; align-items: center; gap: 7px; }
+.detail-header-top { justify-content: space-between; }
 
 .summary-pill {
+  border: 0;
+  font: inherit;
+  text-align: left;
   &.active {
     border-color: rgba(0, 113, 227, 0.18);
     background: linear-gradient(180deg, rgba(0, 113, 227, 0.06) 0%, rgba(255, 255, 255, 0.96) 100%);
@@ -386,6 +447,7 @@ onMounted(() => {
 .workspace-shell {
   grid-template-columns: minmax(0, 1.25fr) minmax(320px, 420px);
 }
+.workspace-shell.detail-collapsed { grid-template-columns: minmax(0, 1fr); }
 
 .list-panel,
 .detail-panel {
@@ -409,9 +471,10 @@ onMounted(() => {
 
 .task-search { width: 220px; }
 :deep(.task-search .ln-input-wrap) { width: 220px; }
-.task-skeleton-row { min-height: 64px; padding: 10px 14px; display: grid; grid-template-columns: minmax(260px,2fr) 90px 110px 100px 100px; align-items: center; gap: 12px; border-bottom: 1px solid var(--ln-border); }
+.task-skeleton-row { min-height: 64px; padding: 10px 14px; display: grid; grid-template-columns: minmax(240px,2fr) 82px 72px 104px minmax(104px,1fr) 92px; align-items: center; gap: 10px; border-bottom: 1px solid var(--ln-border); }
 .task-skeleton-row>div { display: grid; gap: 8px; }
 .detail-panel :deep(.ln-empty-state) { height: 100%; }
+.list-error { min-height: 220px; padding: 28px; display: grid; place-content: center; justify-items: center; gap: 9px; color: var(--text-secondary); font-size: 12px; text-align: center; }
 
 .toolbar-note {
   font-size: 12px;
@@ -421,8 +484,8 @@ onMounted(() => {
 
 .row-grid {
   display: grid;
-  grid-template-columns: minmax(0, 2.45fr) 96px 104px 120px 112px 148px;
-  column-gap: 12px;
+  grid-template-columns: minmax(240px,2fr) 82px 72px 104px minmax(104px,1fr) 92px minmax(112px,auto);
+  column-gap: 10px;
   align-items: center;
 }
 
@@ -430,7 +493,7 @@ onMounted(() => {
   padding: 0 18px;
   min-height: 36px;
   border-bottom: 1px solid var(--border);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
 }
 
@@ -538,7 +601,7 @@ onMounted(() => {
   padding: 0 6px;
   border-radius: 999px;
   background: rgba(17, 24, 39, 0.04);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--text-secondary);
   white-space: nowrap;
@@ -646,7 +709,11 @@ onMounted(() => {
 
 .detail-panel {
   overflow: hidden;
+  position: relative;
+  z-index: 2;
 }
+
+.detail-backdrop { display: none; }
 
 .detail-header {
   position: sticky;
@@ -668,7 +735,7 @@ onMounted(() => {
 }
 
 .detail-id {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
   margin-bottom: 8px;
 }
@@ -684,7 +751,7 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-secondary);
 }
 
@@ -710,21 +777,40 @@ onMounted(() => {
 }
 
 .info-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
 }
 
 .info-value {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--text-primary);
 }
+
+.info-value.is-urgent { color: var(--danger); font-weight: 650; }
 
 .detail-actions {
   margin-top: 6px;
   padding: 16px 16px 0;
   border-top: 1px solid var(--border);
 }
+
+.action-error {
+  margin: 0 0 14px;
+  padding: 12px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid rgba(196, 71, 65, 0.22);
+  border-radius: 10px;
+  background: rgba(196, 71, 65, 0.06);
+  color: #9f423c;
+}
+.action-error > div { display: grid; gap: 4px; }
+.action-error strong { font-size: 14px; }
+.action-error span { font-size: 13px; line-height: 1.55; }
+.action-error small { font-size: 12px; color: #a85b55; }
 
 .empty-title {
   font-size: 16px;
@@ -739,21 +825,46 @@ onMounted(() => {
   color: var(--text-secondary);
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1279px) {
   .workspace-shell {
     grid-template-columns: 1fr;
   }
 
+  .detail-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    display: block;
+    background: rgba(22, 22, 26, 0.28);
+    backdrop-filter: blur(2px);
+  }
+
   .detail-panel {
-    min-height: 320px;
+    position: fixed;
+    z-index: 1060;
+    top: 64px;
+    right: 16px;
+    bottom: 16px;
+    width: min(440px, calc(100vw - 32px));
+    min-height: 0;
+    box-shadow: 0 24px 64px rgba(20, 20, 24, 0.18);
   }
 }
 
 @media (max-width: 768px) {
+  .my-tasks-view { gap: 12px; }
+  .page-header { align-items: center; }
+  .refresh-status { display: none; }
+  .summary-strip { gap: 8px; }
+  .summary-pill { padding: 10px; }
+  .summary-value { font-size: 21px; }
+
   .list-toolbar {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
   }
+  .toolbar-actions { width: 100%; }
+  .task-search, :deep(.task-search .ln-input-wrap) { width: 100%; }
 
   .row-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -771,5 +882,24 @@ onMounted(() => {
   .info-grid {
     grid-template-columns: 1fr;
   }
+
+  .detail-panel {
+    inset: 0;
+    width: 100%;
+    border: 0;
+    border-radius: 0;
+  }
+  .detail-scroll { padding-bottom: 0; }
+  .detail-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    margin: 16px -20px 0;
+    padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(14px);
+  }
+  .detail-actions :deep(.action-buttons) { width: 100%; }
+  .detail-actions :deep(.action-buttons .ln-button) { flex: 1; }
 }
 </style>

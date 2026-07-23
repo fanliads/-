@@ -277,6 +277,7 @@ import { listDictData } from '@/api/dict'
 import type { DictDataVO, PriorityAssessmentContextDTO, RawRequirementCreateDTO } from '@/types/requirement'
 import { useUserStore } from '@/store/user'
 import { lnToast, LnButton, LnDateInput, LnForm, LnFormItem, LnFormSection, LnInput, LnSelect, LnTextarea, type LnFormInstance, type LnFormRules, type LnOption } from '@/components/linear'
+import { getBusinessLineVisual } from '@/components/linear/optionVisuals'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -316,7 +317,7 @@ function createDefaultAssessmentContext(): PriorityAssessmentContextDTO {
 
 // 字典数据
 const dictBusinessLineOptions = ref<DictDataVO[]>([])
-const linearBusinessLineOptions = computed<LnOption[]>(() => dictBusinessLineOptions.value.map(item => ({ label:item.label,value:item.value,icon:'◇' })))
+const linearBusinessLineOptions = computed<LnOption[]>(() => dictBusinessLineOptions.value.map(item => ({ label:item.label,value:item.value,...getBusinessLineVisual(item.label, item.value) })))
 const formData = reactive<RawRequirementCreateDTO>({
   title: '',
   description: '',
