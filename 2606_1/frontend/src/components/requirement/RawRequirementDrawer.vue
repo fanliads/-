@@ -230,6 +230,7 @@ import { getRawRequirementDetail, getRawRequirementLogs, getRawRequirementCommen
 import type { RawRequirementDetailVO, RequirementLogVO, CommentVO, SupplementVO, PriorityAssessmentContextDTO } from '@/types/requirement'
 import { getRawRequirementStatusClass, getRawRequirementStatusLabel, PRIORITY_MAP, SOURCE_MAP, REQ_TYPE_MAP } from '@/types/requirement'
 import { lnToast, LnButton, LnDrawer, LnEmptyState, LnSelect, LnSkeleton, LnTabs, LnTextarea, type LnOption, type LnTabOption } from '@/components/linear'
+import { getPriorityVisual } from '@/components/linear/optionVisuals'
 
 const props = defineProps<{
   visible: boolean
@@ -261,10 +262,10 @@ const drawerTabs: LnTabOption[] = [
   { label: '追加记录', value: 'supplements' },
 ]
 const priorityOptions: LnOption[] = [
-  { label: '一级A类（P0）', value: 'P0', color: '#d75656' },
-  { label: '一级B类（P1）', value: 'P1', color: '#e38b3c' },
-  { label: '二级（P2）', value: 'P2', color: '#d1a633' },
-  { label: '三级（P3）', value: 'P3', color: '#8a9099' },
+  { label: '一级A类（P0）', value: 'P0', ...getPriorityVisual('P0') },
+  { label: '一级B类（P1）', value: 'P1', ...getPriorityVisual('P1') },
+  { label: '二级（P2）', value: 'P2', ...getPriorityVisual('P2') },
+  { label: '三级（P3）', value: 'P3', ...getPriorityVisual('P3') },
 ]
 
 const assessmentContext = computed<PriorityAssessmentContextDTO | null>(() => {

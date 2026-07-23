@@ -82,6 +82,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // 放行登录注册接口
                 .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/dingtalk/config", "/api/auth/dingtalk/callback").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/dict/public/business-lines").permitAll()
                 // 放行Swagger/Knife4j相关路径
                 .requestMatchers("/doc.html", "/swagger-resources/**", "/webjars/**",
                         "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()

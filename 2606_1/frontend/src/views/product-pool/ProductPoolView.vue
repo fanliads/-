@@ -69,7 +69,7 @@
                 <strong>{{ group.label }}</strong>
                 <span class="group-count">{{ group.items.length }}</span>
               </button>
-              <LnButton v-if="canCreateProduct" size="small" icon-only variant="ghost" aria-label="在此分组新建" @click.stop="handleCreate(group.createStatus)"><template #icon><LnIcon name="plus" /></template></LnButton>
+              <LnButton v-if="canCreateProduct && canCreateInGroup(group.createStatus)" size="small" icon-only variant="ghost" :aria-label="`在“${group.label}”中新建产品需求`" :title="`在“${group.label}”中新建产品需求`" @click.stop="handleCreate(group.createStatus, group.key)"><template #icon><LnIcon name="plus" /></template></LnButton>
             </header>
 
             <div v-show="!isGroupCollapsed(group.key)" :id="`product-group-${group.key}`" class="group-rows">
@@ -77,10 +77,10 @@
                 v-for="item in group.items"
                 :key="item.id"
                 class="issue-row issue-grid"
-                :class="{ selected: activeRequirementId === item.id, voided: isVoided(item.status), hovering: hoverRequirementId === item.id }"
+                :class="{ selected: activeRequirementId === item.id, created: createdRequirementId === item.id, voided: isVoided(item.status), hovering: hoverRequirementId === item.id }"
                 :style="{ gridTemplateColumns: issueGridTemplate }"
                 tabindex="0"
-                @click="openRequirement(item, 'detail')"
+                @click="openRequirement(item, 'peek')"
                 @mouseenter="hoverRequirementId = item.id"
                 @focus="hoverRequirementId = item.id"
                 @mouseleave="hoverRequirementId = hoverRequirementId === item.id ? null : hoverRequirementId"
@@ -89,11 +89,11 @@
                 <div class="issue-identity">
                   <div class="title-line">
                     <div class="title-text" :class="{ striked: isVoided(item.status) }">{{ item.title }}</div>
-                    <div class="title-flags">
-                      <span v-if="item.isDirect === 1" class="meta-text muted">直接创建</span>
-                    </div>
                   </div>
-                  <span class="req-no">{{ item.reqNo }}</span>
+                  <div class="identity-meta">
+                    <span class="req-no">{{ item.reqNo }}</span>
+                    <span v-if="item.isDirect === 1" class="source-note">直接创建</span>
+                  </div>
                 </div>
 
                 <div v-if="showTypeTag" class="issue-property" @click.stop><LnPropertyPicker :model-value="item.reqType || ''" title="修改需求类型" :options="linearReqTypeOptions" @update:model-value="(val) => handleInlineSave(item.id, 'reqType', val)" /></div>
@@ -137,7 +137,21 @@
         class="peek-panel wb-panel"
         :class="previewMode === 'detail' ? 'detail-mode' : 'peek-mode'"
       >
-        <template v-if="activeRequirementId">
+        <UnifiedRequirementPeek
+          v-if="previewMode === 'peek'"
+          source-type="product"
+          :source-id="activeRequirementId"
+          :sequence="visiblePeekSequence"
+          :source-index="visiblePeekSequence.findIndex(item => item.id === activeRequirementId)"
+          :editable="canEditProduct"
+          :momentary="spacePreviewOpenedByHold"
+          @previous="movePeek(-1)"
+          @next="movePeek(1)"
+          @open-detail="openUnifiedDetail"
+          @updated="handleUnifiedUpdated"
+          @close="closeRequirement"
+        />
+        <template v-else-if="activeRequirementId">
           <div class="peek-scroll wb-detail-scroll">
             <div v-if="activeRequirementLoading" class="peek-loading" aria-label="正在加载产品需求详情">
               <LnSkeleton width="86px" height="10px" />
@@ -152,7 +166,7 @@
                   <h3 class="peek-title">{{ activeRequirementDetail.title }}</h3>
                   <div class="peek-header-actions">
                     <LnButton v-if="route.query.from === 'kanban'" size="small" variant="ghost" @click="returnToKanban">← 返回看板</LnButton>
-                    <LnButton v-if="previewMode === 'peek'" size="small" variant="primary" @click="previewMode = 'detail'">详情</LnButton><LnButton size="small" icon-only variant="ghost" aria-label="关闭" @click="closeRequirement"><template #icon><LnIcon name="close"/></template></LnButton>
+                    <LnButton size="small" icon-only variant="ghost" aria-label="关闭" @click="closeRequirement"><template #icon><LnIcon name="close"/></template></LnButton>
                   </div>
                 </div>
                 <div class="peek-tags">
@@ -412,10 +426,11 @@
       </div>
     </LnDrawer>
 
-    <LnDialog v-model="createDialogVisible" :title="editingProductId ? '编辑产品需求' : '新建产品需求'" description="完善需求范围、归属和交付上下文。" width="680px" :close-on-backdrop="false">
+    <LnDialog :model-value="createDialogVisible" :title="editingProductId ? '编辑产品需求' : '新建产品需求'" :description="editingProductId ? '修改产品需求的范围、归属和交付上下文。' : `创建后进入${createTargetStatusLabel}。`" width="680px" :close-on-backdrop="false" @update:model-value="handleCreateDialogVisible">
       <LnForm ref="createFormRef" :model="createForm" :rules="createRules" label-width="100px">
+        <div v-if="createSubmitError" class="create-error-summary" role="alert"><LnIcon name="warning"/><span>{{ createSubmitError }}</span></div>
         <LnFormItem label="需求标题" prop="title">
-          <LnInput v-model="createForm.title" placeholder="输入产品需求标题" />
+          <LnInput v-model="createForm.title" :maxlength="200" show-count placeholder="输入产品需求标题" />
         </LnFormItem>
         <LnFormItem label="需求描述" prop="description">
           <LnRichTextEditor
@@ -457,8 +472,8 @@
         </div>
       </LnForm>
       <template #footer>
-        <LnButton variant="ghost" @click="createDialogVisible = false">取消</LnButton>
-        <LnButton variant="primary" :loading="submitLoading" @click="handleSubmitCreate">{{ editingProductId ? '保存' : '创建' }}</LnButton>
+        <LnButton variant="ghost" @click="requestCloseCreate">取消</LnButton>
+        <LnButton variant="primary" :loading="submitLoading" :disabled="submitLoading" @click="handleSubmitCreate">{{ submitLoading ? (editingProductId ? '保存中…' : '创建中…') : (editingProductId ? '保存' : '创建') }}</LnButton>
       </template>
     </LnDialog>
 
@@ -498,8 +513,9 @@ import { listDictData } from '@/api/dict'
 import { listSprintOptions } from '@/api/sprint'
 import EditableField from '@/components/EditableField.vue'
 import SupplementDialog from '@/components/requirement/SupplementDialog.vue'
-import { lnToast, LnButton, LnCheckbox, LnDateInput, LnDialog, LnDrawer, LnEmptyState, LnForm, LnFormItem, LnIcon, LnInput, LnPagination, LnPopover, LnPropertyPicker, LnRichTextEditor, LnSelect, LnSkeleton, LnTabs, type LnFormInstance, type LnFormRules, type LnOption, type LnTabOption } from '@/components/linear'
-import { getBusinessLineVisual, getRequirementTypeVisual, priorityVisuals } from '@/components/linear/optionVisuals'
+import UnifiedRequirementPeek from '@/components/requirement/UnifiedRequirementPeek.vue'
+import { lnToast, lnConfirm, LnButton, LnCheckbox, LnDateInput, LnDialog, LnDrawer, LnEmptyState, LnForm, LnFormItem, LnIcon, LnInput, LnPagination, LnPopover, LnPropertyPicker, LnRichTextEditor, LnSelect, LnSkeleton, LnTabs, type LnFormInstance, type LnFormRules, type LnOption, type LnTabOption } from '@/components/linear'
+import { getBusinessLineVisual, getPriorityVisual, getRequirementTypeVisual } from '@/components/linear/optionVisuals'
 import type {
   ProductRequirementListVO,
   ProductRequirementCreateDTO,
@@ -551,19 +567,19 @@ const showPrdTag = ref(true)
 const collapsedGroupKeys = ref<Set<string>>(new Set())
 
 const issueColumns = computed(() => [
-  { visible: true, width: 320 },
-  { visible: showTypeTag.value, width: 104 },
-  { visible: showBusinessLineTag.value, width: 112 },
-  { visible: showStatusTag.value, width: 104 },
-  { visible: showPriorityTag.value, width: 104 },
-  { visible: showHandlerTag.value, width: 104 },
-  { visible: showSprintTag.value, width: 116 },
-  { visible: showParentTag.value, width: 168 },
-  { visible: showPrdTag.value, width: 64 },
+  { visible: true, width: 360, track: 'minmax(360px, 3.2fr)' },
+  { visible: showTypeTag.value, width: 104, track: 'minmax(104px, .9fr)' },
+  { visible: showBusinessLineTag.value, width: 112, track: 'minmax(112px, .95fr)' },
+  { visible: showStatusTag.value, width: 104, track: 'minmax(104px, .85fr)' },
+  { visible: showPriorityTag.value, width: 104, track: 'minmax(104px, .85fr)' },
+  { visible: showHandlerTag.value, width: 104, track: 'minmax(104px, .9fr)' },
+  { visible: showSprintTag.value, width: 116, track: 'minmax(116px, 1fr)' },
+  { visible: showParentTag.value, width: 168, track: 'minmax(168px, 1.35fr)' },
+  { visible: showPrdTag.value, width: 64, track: 'minmax(64px, .55fr)' },
 ].filter((column) => column.visible))
 
 const issueGridTemplate = computed(() =>
-  issueColumns.value.map((column, index) => index === 0 ? 'minmax(280px, 1fr)' : `${column.width}px`).join(' '),
+  issueColumns.value.map((column) => column.track).join(' '),
 )
 
 const issueGridMinWidth = computed(() => {
@@ -598,6 +614,9 @@ const createDialogVisible = ref(false)
 const submitLoading = ref(false)
 const createTargetStatus = ref('pending_design')
 const createRequestId = ref('')
+const createTargetGroupKey = ref('')
+const createdRequirementId = ref<number | null>(null)
+const createSubmitError = ref('')
 const createFormRef = ref<LnFormInstance>()
 const editingProductId = ref<number | null>(null)
 const descriptionDialogVisible = ref(false)
@@ -618,8 +637,11 @@ const createForm = reactive<ProductRequirementCreateDTO>({
 })
 
 const createRules: LnFormRules = {
-  title: [{ required: true, message: '请输入需求标题', trigger: 'blur' }],
+  title: [{ required: true, message: '请输入需求标题', trigger: 'blur' }, { max: 200, message: '需求标题不能超过 200 个字符', trigger: 'blur' }],
+  productModule: [{ max: 100, message: '功能模块不能超过 100 个字符', trigger: 'blur' }],
+  prdUrl: [{ pattern: /^(|https?:\/\/[^\s]+)$/i, message: '请输入以 http:// 或 https:// 开头的有效地址', trigger: 'blur' }],
 }
+const createTargetStatusLabel = computed(() => productStatusSelectOptions.find(item => item.value === createTargetStatus.value)?.label || '待设计')
 
 const productStatusSelectOptions: LnOption[] = [
   { value: 'backlog', label: '待规划', color: '#9b9ba4', icon: 'pending' },
@@ -636,7 +658,7 @@ const productStatusSelectOptions: LnOption[] = [
 ]
 
 const linearStatusOptions = productStatusSelectOptions
-const linearPriorityOptions = computed<LnOption[]>(() => dictPriorityOptions.value.map(item => ({ label:item.label,value:item.value,...priorityVisuals[item.value] })))
+const linearPriorityOptions = computed<LnOption[]>(() => dictPriorityOptions.value.map(item => ({ label:item.label,value:item.value,...getPriorityVisual(item.value, item.label) })))
 const linearBusinessLineOptions = computed<LnOption[]>(() => [
   { label:'未设置',value:'',icon: 'none' }, ...dictBusinessLineOptions.value.map(item => ({ label:item.label,value:String(item.id),...getBusinessLineVisual(item.label, String(item.id)) })),
 ])
@@ -703,6 +725,9 @@ const parentGroupedRequirements = computed(() => {
 const displayedRequirementGroups = computed(() =>
   groupingMode.value === 'parent' ? parentGroupedRequirements.value : groupedRequirements.value,
 )
+const visiblePeekSequence = computed(() => displayedRequirementGroups.value
+  .filter((group) => !isGroupCollapsed(group.key))
+  .flatMap((group) => group.items.map((item) => ({ id: item.id, reqNo: item.reqNo }))))
 
 function setDisplaySettingsOpen(open: boolean) { showDisplaySettings.value = open; if (open) showFilter.value = false }
 
@@ -900,6 +925,32 @@ async function openRequirement(item: ProductRequirementListVO, mode: 'peek' | 'd
   }
 }
 
+function movePeek(offset: number) {
+  if (!activeRequirementId.value) return
+  const sequence = visiblePeekSequence.value
+  const index = sequence.findIndex((item) => item.id === activeRequirementId.value)
+  const targetId = sequence[index + offset]?.id
+  const target = tableData.value.find((item) => item.id === targetId)
+  if (target) void openRequirement(target, 'peek')
+}
+
+function openUnifiedDetail(type: 'raw' | 'product', id: number) {
+  if (type === 'raw') {
+    void openRawPreview(id)
+    return
+  }
+  const row = tableData.value.find((item) => item.id === id)
+  if (row) void openRequirement(row, 'detail')
+}
+
+async function handleUnifiedUpdated(type: 'raw' | 'product', id: number) {
+  await Promise.all([loadData(), loadStats()])
+  if (type === 'product' && activeRequirementId.value === id) {
+    const row = tableData.value.find((item) => item.id === id)
+    if (!row) closeRequirement()
+  }
+}
+
 function closeRequirement() {
   activeRequirementId.value = null
   activeRequirementDetail.value = null
@@ -943,10 +994,14 @@ function reopenRequirementById(id: number | null) {
   if (row) openRequirement(row, 'peek')
 }
 
-function handleCreate(status = 'pending_design') {
+function canCreateInGroup(status: string) { return ['pending_design', 'designing'].includes(status) }
+
+function handleCreate(status = 'pending_design', groupKey = '') {
   if (!canCreateProduct.value) return
   createTargetStatus.value = status
+  createTargetGroupKey.value = groupKey
   createRequestId.value = crypto.randomUUID()
+  createSubmitError.value = ''
   editingProductId.value = null
   Object.assign(createForm, {
     title: '',
@@ -962,6 +1017,26 @@ function handleCreate(status = 'pending_design') {
     rawReqId: undefined,
   })
   createDialogVisible.value = true
+}
+
+function hasCreateDraft() {
+  return !!(createForm.title?.trim() || createForm.description?.trim() || createForm.businessLineId || createForm.productModule?.trim() || createForm.reqType || createForm.sprintId || createForm.prdUrl?.trim() || createForm.handler || createForm.expectedDate)
+}
+
+async function requestCloseCreate() {
+  if (!hasCreateDraft() || submitLoading.value) {
+    if (!submitLoading.value) createDialogVisible.value = false
+    return
+  }
+  try {
+    await lnConfirm({ title: '放弃未保存内容？', message: '关闭后，本次填写的产品需求内容不会保留。', confirmText: '放弃并关闭', cancelText: '继续填写', tone: 'warning' })
+    createDialogVisible.value = false
+  } catch { /* 继续编辑 */ }
+}
+
+function handleCreateDialogVisible(value: boolean) {
+  if (value) createDialogVisible.value = true
+  else void requestCloseCreate()
 }
 
 function handleCreateFromRaw(item: ProductRequirementListVO) {
@@ -1022,6 +1097,7 @@ async function handleSubmitCreate() {
   const form = createFormRef.value
   if (!form) return
   submitLoading.value = true
+  createSubmitError.value = ''
   try {
     const valid = await form.validate().catch(() => false)
     if (!valid) return
@@ -1041,12 +1117,25 @@ async function handleSubmitCreate() {
       await updateProductRequirement(editingProductId.value, payload)
       lnToast.success('已更新产品需求')
     } else {
-      await createProductRequirement(payload)
-      lnToast.success('已创建产品需求')
+      const response: any = await createProductRequirement(payload)
+      createdRequirementId.value = Number(response.data) || null
     }
     createDialogVisible.value = false
     editingProductId.value = null
+    if (createTargetGroupKey.value) collapsedGroupKeys.value.delete(createTargetGroupKey.value)
     await Promise.all([loadData(), loadStats()])
+    if (createdRequirementId.value) {
+      const created = tableData.value.find(item => item.id === createdRequirementId.value)
+      lnToast.success(created?.reqNo ? `已创建产品需求 ${created.reqNo}` : '已创建产品需求')
+      if (created) {
+        requestAnimationFrame(() => document.querySelector<HTMLElement>('.issue-row.created')?.scrollIntoView({ block: 'center', behavior: 'smooth' }))
+        window.setTimeout(() => { createdRequirementId.value = null }, 3000)
+      } else {
+        lnToast.info(`需求已创建，位于“${createTargetStatusLabel.value}”状态`)
+      }
+    }
+  } catch (error: any) {
+    createSubmitError.value = error?.message ? `创建失败：${error.message}。输入内容已保留，可修改后重试。` : '创建失败，输入内容已保留，请检查网络后重试。'
   } finally {
     submitLoading.value = false
   }
@@ -1406,7 +1495,10 @@ onUnmounted(() => {
   &:hover,
   &.hovering { background: #f6f6f4; }
   &.selected { background: #f1f2ef; box-shadow: inset 2px 0 0 #6d746f; }
+  &.created { animation: created-row 2.8s ease both; }
 }
+@keyframes created-row { 0%,35% { background: #e8f3ec; box-shadow: inset 3px 0 0 #3b8b62; } 100% { background: transparent; box-shadow: none; } }
+.create-error-summary { margin-bottom: 12px; padding: 10px 12px; display: flex; align-items: flex-start; gap: 8px; border: 1px solid rgba(196,71,65,.2); border-radius: 8px; background: rgba(196,71,65,.055); color: #a8423a; font-size: 12px; line-height: 1.5; }
 
 .density-compact .issue-row { min-height: 48px; padding-top: 5px; padding-bottom: 5px; }
 .density-comfortable .issue-row { min-height: 64px; padding-top: 11px; padding-bottom: 11px; }
@@ -1414,6 +1506,14 @@ onUnmounted(() => {
 .stable-empty strong { color: var(--text-secondary); font-size: 13px; }
 
 .issue-identity { min-width: 0; display: grid; gap: 3px; }
+.identity-meta { min-width: 0; display: flex; align-items: center; gap: 7px; }
+.source-note {
+  color: var(--text-tertiary);
+  font-size: 10.5px;
+  line-height: 14px;
+  white-space: nowrap;
+}
+.source-note::before { content: '·'; margin-right: 7px; color: var(--border-strong); }
 .issue-property { min-width: 0; display: flex; align-items: center; }
 .issue-property :deep(.property-trigger) { width: 100%; justify-content: flex-start; }
 .issue-reference,

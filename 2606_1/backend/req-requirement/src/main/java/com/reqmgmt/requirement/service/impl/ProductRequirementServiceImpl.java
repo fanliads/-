@@ -91,8 +91,11 @@ public class ProductRequirementServiceImpl extends ServiceImpl<ProductRequiremen
             }
         }
 
+        validateCreateReferences(dto);
+
         ProductRequirement entity = new ProductRequirement();
         BeanUtil.copyProperties(dto, entity);
+        entity.setTitle(StrUtil.trim(dto.getTitle()));
 
         // 生成编号 PRD-YYYYMMDD-NNN
         entity.setReqNo(generateReqNo());
@@ -133,6 +136,33 @@ public class ProductRequirementServiceImpl extends ServiceImpl<ProductRequiremen
         saveLog(entity.getId(), "create", null, null, "创建产品需求");
 
         return entity.getId();
+    }
+
+    private void validateCreateReferences(ProductRequirementCreateDTO dto) {
+        if (dto.getBusinessLineId() != null && sysDictDataMapper.selectCount(new LambdaQueryWrapper<SysDictData>()
+                .eq(SysDictData::getId, dto.getBusinessLineId())
+                .eq(SysDictData::getDictCode, "business_line")
+                .eq(SysDictData::getStatus, 1)) == 0) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "所选业务线已失效，请重新选择");
+        }
+        if (dto.getSprintId() != null && dto.getSprintId() > 0 && sprintQueryService.getSprintName(dto.getSprintId()) == null) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "所选迭代已失效，请重新选择");
+        }
+        if (StrUtil.isNotBlank(dto.getReqType()) && sysDictDataMapper.selectCount(new LambdaQueryWrapper<SysDictData>()
+                .eq(SysDictData::getDictCode, "req_type")
+                .eq(SysDictData::getValue, dto.getReqType())
+                .eq(SysDictData::getStatus, 1)) == 0) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "所选需求类型已失效，请重新选择");
+        }
+        if (StrUtil.isNotBlank(dto.getHandler()) && sysDictDataMapper.selectCount(new LambdaQueryWrapper<SysDictData>()
+                .eq(SysDictData::getDictCode, "product_manager")
+                .eq(SysDictData::getValue, dto.getHandler())
+                .eq(SysDictData::getStatus, 1)) == 0) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "所选处理人已失效，请重新选择");
+        }
+        if (dto.getRawReqId() != null && rawRequirementMapper.selectById(dto.getRawReqId()) == null) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "关联的原始需求已不存在，请重新选择");
+        }
     }
 
     @Override

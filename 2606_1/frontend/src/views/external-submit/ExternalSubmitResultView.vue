@@ -1,9 +1,10 @@
 <template>
   <div class="result-view">
     <div class="result-card wb-panel">
+      <div class="success-mark"><LnIcon name="check" /></div>
       <div class="result-badge wb-meta-pill">已受理</div>
-      <h1 class="wb-page-title">需求已进入受理流程</h1>
-      <p class="wb-page-subtitle">你的提报已经进入原始需求池，后续将按待判定、待拆分、开发中的流程推进。</p>
+      <h1 class="wb-page-title">需求已提交</h1>
+      <p class="wb-page-subtitle">请保存或截图此受理凭证，后续由相关人员与你联系。</p>
 
       <div class="result-panel">
         <div class="result-item">
@@ -11,12 +12,16 @@
           <span class="v">{{ title || '-' }}</span>
         </div>
         <div class="result-item">
-          <span class="k">记录ID</span>
-          <span class="v mono">{{ id || '-' }}</span>
+          <span class="k">受理编号</span>
+          <span class="v mono">{{ receipt?.reqNo || '-' }}</span>
         </div>
         <div class="result-item">
-          <span class="k">后续说明</span>
-          <span class="v">外部提报需求会先进入待判定，再按流程拆分和推进。</span>
+          <span class="k">提交时间</span>
+          <span class="v">{{ submittedAt }}</span>
+        </div>
+        <div v-if="receipt?.duplicate" class="result-item duplicate-note">
+          <span class="k">提交说明</span>
+          <span class="v">系统识别到重复提交，已返回原受理凭证，不会生成重复需求。</span>
         </div>
       </div>
 
@@ -30,13 +35,18 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { LnButton } from '@/components/linear'
+import { LnButton, LnIcon } from '@/components/linear'
+import type { ExternalSubmissionReceiptVO } from '@/types/requirement'
 
 const route = useRoute()
 const router = useRouter()
 
-const id = computed(() => route.query.id as string | undefined)
 const title = computed(() => route.query.title as string | undefined)
+const receipt = computed<ExternalSubmissionReceiptVO | null>(() => {
+  try { return JSON.parse(decodeURIComponent(String(route.query.receipt || ''))) }
+  catch { return null }
+})
+const submittedAt = computed(() => receipt.value?.submittedAt ? receipt.value.submittedAt.replace('T', ' ').slice(0, 19) : '-')
 
 function goBack() {
   router.replace('/external-submit')
@@ -62,6 +72,7 @@ function goBack() {
 
 .result-badge {
 }
+.success-mark { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; background: #e2f1e7; color: #26744d; font-size: 24px; }
 
 .result-card h1 {
   margin: 14px 0 10px;
@@ -103,4 +114,5 @@ function goBack() {
 .result-actions {
   margin-top: 22px;
 }
+.duplicate-note { padding-top: 10px; border-top: 1px solid rgba(17,24,39,.06); }
 </style>

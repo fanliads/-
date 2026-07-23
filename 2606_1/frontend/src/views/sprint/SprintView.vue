@@ -185,6 +185,7 @@ import { pageQueryProductRequirements } from '@/api/product-requirement'
 import { listDictData } from '@/api/dict'
 import { useUserStore } from '@/store/user'
 import { lnToast, LnButton, LnDateInput, LnDialog, LnEmptyState, LnForm, LnFormItem, LnIcon, LnInput, LnSelect, LnSkeleton, LnSprintRow, LnTextarea, type LnFormInstance, type LnFormRules, type LnOption } from '@/components/linear'
+import { getBusinessLineVisual } from '@/components/linear/optionVisuals'
 
 const userStore = useUserStore()
 const sprints = ref<SprintItem[]>([])
@@ -235,7 +236,7 @@ const selectedRequirementValue = computed({
   get: () => selectedRequirementId.value ? String(selectedRequirementId.value) : '',
   set: (value: string) => { selectedRequirementId.value = value ? Number(value) : null },
 })
-const businessLineSelectOptions = computed<LnOption[]>(() => businessLineOptions.value.map(item => ({ label: item.label, value: item.label })))
+const businessLineSelectOptions = computed<LnOption[]>(() => businessLineOptions.value.map(item => ({ label: item.label, value: item.label, ...getBusinessLineVisual(item.label, item.value) })))
 const sprintStatusOptions: LnOption[] = [{ label: '规划中', value: 'planning' }, { label: '进行中', value: 'in_progress' }, { label: '已发布', value: 'released' }]
 const periodDays = computed(() => getDurationDays(formData.startDate, formData.endDate))
 const periodLabel = computed(() => {

@@ -164,6 +164,7 @@ import { useRouter } from 'vue-router'
 import { pageQueryRawRequirements } from '@/api/raw-requirement'
 import type { RawRequirementListVO } from '@/types/requirement'
 import { LnBadge, LnButton, LnEmptyState, LnIcon, LnInput, LnPagination, LnPressable, LnSelect, LnSkeleton, type LnOption } from '@/components/linear'
+import { getPriorityVisual } from '@/components/linear/optionVisuals'
 import {
   RAW_STATUS_MAP,
   PRIORITY_MAP,
@@ -191,7 +192,7 @@ const total = ref(0)
 const selectedRequirementId = ref<number | null>(null)
 const selectedRequirement = computed(() => tableData.value.find((item) => item.id === selectedRequirementId.value) || null)
 const statusOptions: LnOption[] = Object.entries(RAW_STATUS_MAP).map(([value, label]) => ({ value, label }))
-const priorityOptions: LnOption[] = Object.entries(PRIORITY_MAP).map(([value, label]) => ({ value, label }))
+const priorityOptions: LnOption[] = Object.entries(PRIORITY_MAP).map(([value, label]) => ({ value, label, ...getPriorityVisual(value, label) }))
 const sourceOptions: LnOption[] = Object.entries(SOURCE_MAP).map(([value, label]) => ({ value, label }))
 const activeFilterCount = computed(() => [queryForm.status, queryForm.priority, queryForm.source].filter(Boolean).length)
 

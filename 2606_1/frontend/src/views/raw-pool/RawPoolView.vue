@@ -92,7 +92,7 @@
           :class="{ selected: activeRequirementId === row.id, hovering: hoverRequirementId === row.id, 'is-urgent': row.isUrgent === 1 }"
           :style="{ gridTemplateColumns: rawGridTemplate }"
           tabindex="0"
-          @click="openRequirement(row, 'detail')"
+          @click="openRequirement(row, 'peek')"
           @mouseenter="hoverRequirementId = row.id"
           @focus="hoverRequirementId = row.id"
           @mouseleave="hoverRequirementId = hoverRequirementId === row.id ? null : hoverRequirementId"
@@ -190,7 +190,21 @@
         class="peek-panel wb-panel"
         :class="previewMode === 'detail' ? 'detail-mode' : 'peek-mode'"
       >
-        <template v-if="activeRequirementId">
+        <UnifiedRequirementPeek
+          v-if="previewMode === 'peek'"
+          source-type="raw"
+          :source-id="activeRequirementId"
+          :sequence="tableData.map(item => ({ id: item.id, reqNo: item.reqNo }))"
+          :source-index="tableData.findIndex(item => item.id === activeRequirementId)"
+          :editable="canEditRaw"
+          :momentary="spacePreviewOpenedByHold"
+          @previous="movePeek(-1)"
+          @next="movePeek(1)"
+          @open-detail="openUnifiedDetail"
+          @updated="handleUnifiedUpdated"
+          @close="closeRequirement"
+        />
+        <template v-else-if="activeRequirementId">
           <div class="peek-scroll wb-detail-scroll">
             <div v-if="activeRequirementLoading" class="peek-loading" aria-label="正在加载原始需求详情">
               <LnSkeleton width="86px" height="10px" />
@@ -205,7 +219,6 @@
                   <h3 class="peek-title">{{ activeRequirementDetail.title }}</h3>
                   <div class="peek-header-actions">
                     <LnButton v-if="route.query.from === 'kanban'" size="small" variant="ghost" @click="returnToKanban">← 返回看板</LnButton>
-                    <LnButton v-if="previewMode === 'peek'" size="small" variant="primary" @click="previewMode = 'detail'">详情</LnButton>
                     <LnButton size="small" icon-only variant="ghost" aria-label="关闭" @click="closeRequirement"><template #icon><LnIcon name="close"/></template></LnButton>
                   </div>
                 </div>
@@ -825,8 +838,9 @@ import { listDictData } from '@/api/dict'
 import EditableCell from '@/components/EditableCell.vue'
 import EditableField from '@/components/EditableField.vue'
 import SupplementDialog from '@/components/requirement/SupplementDialog.vue'
+import UnifiedRequirementPeek from '@/components/requirement/UnifiedRequirementPeek.vue'
 import { lnToast, LnButton, LnCheckbox, LnDateInput, LnDateRange, LnDialog, LnEmptyState, LnForm, LnFormItem, LnIcon, LnInput, LnPagination, LnPopover, LnPropertyPicker, LnSelect, LnSkeleton, LnTabs, LnTextarea, isLnConfirmCancelled, lnConfirm, lnPrompt, type LnFormInstance, type LnFormRules, type LnOption, type LnTabOption } from '@/components/linear'
-import { getBusinessLineVisual, priorityVisuals } from '@/components/linear/optionVisuals'
+import { getBusinessLineVisual, getPriorityVisual } from '@/components/linear/optionVisuals'
 import type {
   RawRequirementListVO,
   RawRequirementCreateDTO,
@@ -884,7 +898,7 @@ const linearStatusOptions = computed<LnOption[]>(() => dictStatusOptions.value.m
 const linearPriorityOptions = computed<LnOption[]>(() => dictPriorityOptions.value.map((item) => ({
   label: item.label,
   value: item.value,
-  ...priorityVisuals[item.value],
+  ...getPriorityVisual(item.value, item.label),
 })))
 const linearBusinessLineOptions = computed<LnOption[]>(() => dictBusinessLineOptions.value.map((item) => ({
   label: item.label,
@@ -1270,6 +1284,30 @@ async function openRequirement(row: RawRequirementListVO, mode: 'peek' | 'detail
     lnToast.error('加载详情失败')
   } finally {
     activeRequirementLoading.value = false
+  }
+}
+
+function movePeek(offset: number) {
+  if (!activeRequirementId.value) return
+  const index = tableData.value.findIndex((item) => item.id === activeRequirementId.value)
+  const target = tableData.value[index + offset]
+  if (target) void openRequirement(target, 'peek')
+}
+
+function openUnifiedDetail(type: 'raw' | 'product', id: number) {
+  if (type === 'product') {
+    void router.push({ path: '/product-pool', query: { focus: String(id) } })
+    return
+  }
+  const row = tableData.value.find((item) => item.id === id)
+  if (row) void openRequirement(row, 'detail')
+}
+
+async function handleUnifiedUpdated(type: 'raw' | 'product', id: number) {
+  await loadData()
+  if (type === 'raw' && activeRequirementId.value === id) {
+    const row = tableData.value.find((item) => item.id === id)
+    if (!row) closeRequirement()
   }
 }
 

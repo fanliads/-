@@ -9,6 +9,15 @@ export const priorityVisuals: Record<string, LnOptionVisual> = {
   P3: { color: '#6f6f78', icon: 'priority' },
 }
 
+export function getPriorityCode(value = '', label = ''): string {
+  const match = `${value} ${label}`.toUpperCase().match(/P[0-3]/)
+  return match?.[0] || ''
+}
+
+export function getPriorityVisual(value = '', label = ''): LnOptionVisual {
+  return priorityVisuals[getPriorityCode(value, label)] || { color: '#7a8393', icon: 'priority' }
+}
+
 const businessLineVisuals: Array<[RegExp, LnOptionVisual]> = [
   [/校园/, { color: '#5e6ad2', icon: 'business-campus' }],
   [/市监|监管/, { color: '#2f9e6f', icon: 'business-regulator' }],

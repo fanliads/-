@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.stream.Collectors;
+import java.util.UUID;
 
 /**
  * 全局异常处理器
@@ -37,7 +38,8 @@ public class GlobalExceptionHandler {
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.joining(", "));
         log.warn("参数校验异常: {}", message);
-        return R.fail(ErrorCode.BAD_REQUEST.getCode(), message);
+        String field = e.getBindingResult().getFieldErrors().isEmpty() ? null : e.getBindingResult().getFieldErrors().get(0).getField();
+        return R.<Void>fail(ErrorCode.BAD_REQUEST.getCode(), message).withField(field);
     }
 
     /**
@@ -72,7 +74,8 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public R<Void> handleException(Exception e) {
-        log.error("系统异常: ", e);
-        return R.fail(ErrorCode.INTERNAL_ERROR);
+        String traceId = UUID.randomUUID().toString().substring(0, 8);
+        log.error("系统异常 traceId={}: ", traceId, e);
+        return R.<Void>fail(ErrorCode.INTERNAL_ERROR).withTraceId(traceId);
     }
 }

@@ -1,0 +1,8 @@
+product=req-mgmt
+version=v1.2.0
+iteration=2607_2
+build_date=2026-07-22
+base_commit=c17dc53f8ef10bc66756bdaf83d4074c78140cba
+java=17
+node=18.20.8
+database_migration=V19

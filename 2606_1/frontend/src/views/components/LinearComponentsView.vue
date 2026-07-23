@@ -123,7 +123,7 @@ const semanticIconGroups = [
   { title:'Requirement type', items:requirementTypeIconExamples },
   { title:'Business line', items:businessLineIconExamples },
 ]
-const search = ref(''); const editableTitle = ref('优化原始需求池筛选体验'); const peekOpen = ref(false); const commandOpen = ref(false); const dialogOpen=ref(false); const selected = ref('RAW-128'); const team=ref('core');const status=ref('active');const priority=ref('high')
+const search = ref(''); const editableTitle = ref('优化原始需求池筛选体验'); const peekOpen = ref(false); const commandOpen = ref(false); const dialogOpen=ref(false); const selected = ref('RAW-128'); const team=ref('core');const status=ref('active');const priority=ref('P1')
 const singleDate=ref('2026-07-25');const dateRange=ref(['2026-07-14','2026-07-25']);const description=ref('作为产品经理，我希望在需求列表中快速修改状态和负责人。');const demoPage=ref(3)
 const demoPassword=ref('linear-demo')
 const demoColor=ref('#5e6ad2');const demoColors=['#5e6ad2','#2f9e6f','#d28b36','#d05757','#7f6bb3','#68707c']
@@ -145,7 +145,7 @@ const activeIssue = computed(() => issues.find(item => item.key === selected.val
 function selectIssue(issue: typeof issues[number]) { selected.value = issue.key; peekOpen.value = true }
 const teamOptions=[{label:'基础产品',value:'core',description:'核心平台与通用能力'},{label:'增长业务',value:'growth',description:'用户增长与运营'},{label:'商业化',value:'business',description:'收入与客户交付'}]
 const statusOptions=[{label:'待处理',value:'todo',color:'#9b9ba4',icon: 'pending'},{label:'进行中',value:'active',color:'#5e6ad2',icon: 'progress'},{label:'已完成',value:'done',color:'#2f9e6f',icon: 'success'},{label:'已阻塞',value:'blocked',color:'#d05757',icon: 'blocked'}]
-const priorityOptions=[{label:'无优先级',value:'none',icon:'none'},{label:'低',value:'low',color:'#6f6f78',icon:'priority'},{label:'中',value:'medium',color:'#d28b36',icon:'priority'},{label:'高',value:'high',color:'#d05757',icon:'priority'}]
+const priorityOptions=[{label:'无优先级',value:'none',icon:'none'},{label:'低',value:'P3',...priorityVisuals.P3},{label:'中',value:'P2',...priorityVisuals.P2},{label:'高',value:'P1',...priorityVisuals.P1}]
 const menuItems=[{label:'复制需求链接',value:'copy',icon: 'copy',shortcut:'⌘L'},{label:'转为产品需求',value:'convert',icon: 'external-link'},{label:'归档需求',value:'archive',icon: 'archive',separatorBefore:true},{label:'删除需求',value:'delete',icon: 'closed',danger:true}]
 const commandItems=[{label:'新建原始需求',value:'new',icon: 'plus',shortcut:'C'},{label:'打开原始需求池',value:'raw',icon: 'archive'},{label:'打开产品需求池',value:'product',icon: 'type'},{label:'切换深色模式',value:'theme',icon: 'info'}]
 const filterFields=[{label:'状态',value:'status'},{label:'优先级',value:'priority'},{label:'负责人',value:'assignee'},{label:'业务线',value:'businessLine'}]

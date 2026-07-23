@@ -58,5 +58,5 @@ yarn-error.log*
 # Maven local repo cache
 backend/D:\maven/
 
-# Compiled class files in wrong location
-com/
+# Compiled class files in wrong location (only repository root; do not hide src/**/com tests)
+/com/

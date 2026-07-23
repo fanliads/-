@@ -32,7 +32,8 @@ service.interceptors.response.use(
       if (res.code === 401) {
         clearAuthAndRedirect()
       }
-      return Promise.reject(new Error(res.message || '请求失败'))
+      const businessError = Object.assign(new Error(res.message || '请求失败'), { code: res.code, field: res.field, traceId: res.traceId })
+      return Promise.reject(businessError)
     }
     return res
   },

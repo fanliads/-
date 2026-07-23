@@ -101,6 +101,7 @@ import {
   type LnOption,
   type LnTabOption,
 } from '@/components/linear'
+import { getBusinessLineVisual, getPriorityVisual } from '@/components/linear/optionVisuals'
 
 type BoardType = 'product' | 'raw'
 type BoardCard = ProductRequirementVO | RawRequirementVO
@@ -127,10 +128,10 @@ const draggedCard = ref<{ item: BoardCard; fromStatus: string } | null>(null)
 const OPTION_TIMEOUT_MS = 5000
 const columnColors = ['#9b9ba4', '#d28b36', '#5e6ad2', '#2f9e6f', '#d05757', '#6f6f78']
 const priorityOptions: LnOption[] = [
-  { label: 'P0', value: 'P0', color: '#d05757' },
-  { label: 'P1', value: 'P1', color: '#d28b36' },
-  { label: 'P2', value: 'P2', color: '#5e6ad2' },
-  { label: 'P3', value: 'P3', color: '#6f6f78' },
+  { label: 'P0', value: 'P0', ...getPriorityVisual('P0') },
+  { label: 'P1', value: 'P1', ...getPriorityVisual('P1') },
+  { label: 'P2', value: 'P2', ...getPriorityVisual('P2') },
+  { label: 'P3', value: 'P3', ...getPriorityVisual('P3') },
 ]
 
 const queryForm = reactive<Record<string, any>>({
@@ -140,7 +141,7 @@ const queryForm = reactive<Record<string, any>>({
   sprintId: route.query.sprintId ? Number(route.query.sprintId) : '',
   keyword: String(route.query.keyword || ''),
 })
-const linearBusinessLineOptions = computed<LnOption[]>(() => businessLineOptions.value.map(item => ({ label: item.label, value: String(item.value), icon: 'business' })))
+const linearBusinessLineOptions = computed<LnOption[]>(() => businessLineOptions.value.map(item => ({ label: item.label, value: String(item.value), ...getBusinessLineVisual(item.label, String(item.value)) })))
 const linearAssigneeOptions = computed<LnOption[]>(() => assigneeOptions.value.map(item => ({ label: item.label, value: String(item.value), icon: 'user' })))
 const linearSprintOptions = computed<LnOption[]>(() => sprintOptions.value.map(item => ({ label: item.label, value: String(item.value), icon: 'sprint' })))
 const queryBusinessLineValue = computed({

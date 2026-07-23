@@ -71,5 +71,6 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SupplementDialog: typeof import('./components/requirement/SupplementDialog.vue')['default']
+    UnifiedRequirementPeek: typeof import('./components/requirement/UnifiedRequirementPeek.vue')['default']
   }
 }

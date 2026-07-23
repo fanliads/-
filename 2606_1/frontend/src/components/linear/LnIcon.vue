@@ -25,6 +25,7 @@
     <template v-else-if="name === 'user'"><circle cx="8" cy="5.5" r="2.25"/><path d="M3.75 13c.4-2.35 1.8-3.5 4.25-3.5s3.85 1.15 4.25 3.5"/></template>
     <template v-else-if="name === 'tag'"><path d="M2.75 7.35V3.5c0-.42.33-.75.75-.75h3.85l5.9 5.9-4.6 4.6-5.9-5.9Z"/><circle cx="5.25" cy="5.25" r=".8"/></template>
     <template v-else-if="name === 'sprint'"><path d="M8 2.75a5.25 5.25 0 1 1-4.8 3.12"/><path d="M2.75 2.75v3.5h3.5M8 5.25V8l2 1.25"/></template>
+    <template v-else-if="name === 'refresh'"><path d="M12.7 6.2A5 5 0 1 0 13 9"/><path d="M10.1 3.2h2.8V6"/></template>
     <template v-else-if="name === 'more'"><circle class="ln-icon__fill" cx="3.5" cy="8" r="1"/><circle class="ln-icon__fill" cx="8" cy="8" r="1"/><circle class="ln-icon__fill" cx="12.5" cy="8" r="1"/></template>
     <template v-else-if="name === 'info'"><circle cx="8" cy="8" r="5.25"/><path d="M8 7.25v3.25"/><circle class="ln-icon__fill" cx="8" cy="5.25" r=".7"/></template>
     <template v-else-if="name === 'warning'"><path d="M7.02 3.05 2.5 11.1c-.45.8.12 1.8 1.04 1.8h8.92c.92 0 1.49-1 1.04-1.8L8.98 3.05a1.13 1.13 0 0 0-1.96 0Z"/><path d="M8 6v3.25"/><circle class="ln-icon__fill" cx="8" cy="11" r=".65"/></template>
@@ -37,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-type LnIconName = 'search' | 'chevron-down' | 'chevron-left' | 'chevron-right' | 'plus' | 'close' | 'check' | 'external-link' | 'copy' | 'archive' | 'calendar' | 'user' | 'tag' | 'sprint' | 'more' | 'info' | 'warning' | 'question' | 'urgent'
+type LnIconName = 'search' | 'chevron-down' | 'chevron-left' | 'chevron-right' | 'plus' | 'close' | 'check' | 'external-link' | 'copy' | 'archive' | 'calendar' | 'user' | 'tag' | 'sprint' | 'refresh' | 'more' | 'info' | 'warning' | 'question' | 'urgent'
 defineProps<{ name: LnIconName }>()
 </script>
 

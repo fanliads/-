@@ -4,10 +4,12 @@ import com.reqmgmt.common.response.R;
 import com.reqmgmt.requirement.dto.*;
 import com.reqmgmt.requirement.service.ProductRequirementService;
 import com.reqmgmt.requirement.service.RawRequirementService;
+import com.reqmgmt.requirement.service.impl.ExternalSubmissionRateLimiter;
 import com.reqmgmt.requirement.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,6 +26,7 @@ public class RawRequirementController {
 
     private final RawRequirementService rawRequirementService;
     private final ProductRequirementService productRequirementService;
+    private final ExternalSubmissionRateLimiter externalSubmissionRateLimiter;
 
     @PostMapping
     @Operation(summary = "创建原始需求")
@@ -34,9 +37,10 @@ public class RawRequirementController {
 
     @PostMapping("/external-submit")
     @Operation(summary = "外部提报创建原始需求")
-    public R<Long> externalSubmit(@Valid @RequestBody RawRequirementCreateDTO dto) {
-        Long id = rawRequirementService.createExternalRawRequirement(dto);
-        return R.ok(id);
+    public R<ExternalSubmissionReceiptVO> externalSubmit(@Valid @RequestBody ExternalSubmissionDTO dto,
+                                                         HttpServletRequest request) {
+        externalSubmissionRateLimiter.check(request.getRemoteAddr());
+        return R.ok(rawRequirementService.createExternalRawRequirement(dto));
     }
 
     @GetMapping("/{id}")

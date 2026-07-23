@@ -37,6 +37,12 @@ public class DictController {
         return R.ok(sysDictService.listDataByCode(dictCode));
     }
 
+    @GetMapping("/public/business-lines")
+    @Operation(summary = "查询外部提报可用业务线")
+    public R<List<DictDataVO>> listPublicBusinessLines() {
+        return R.ok(sysDictService.listDataByCode("business_line"));
+    }
+
     @PostMapping("/data")
     @Operation(summary = "新增字典数据")
     public R<Long> createData(@Valid @RequestBody DictDataCreateDTO dto) {

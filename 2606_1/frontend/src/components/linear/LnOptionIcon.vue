@@ -53,7 +53,7 @@ const kind = computed(() => {
   const value = String(props.value || '').trim().toLocaleLowerCase()
   const label = String(props.label || '').trim().toLocaleLowerCase()
   const token = `${value} ${label}`
-  if (/^p[0-3]$/.test(value)) return 'priority'
+  if (/p[0-3]/.test(token)) return 'priority'
   if (['business', 'business-campus', 'business-regulator', 'business-catering', 'business-support', 'type', 'type-iteration', 'type-issue', 'type-defect', 'type-feature', 'sprint', 'user', 'none', 'priority'].includes(String(props.icon))) return props.icon
   if (/(accepted|验收通过|已验收)/.test(token)) return 'check'
   if (/(online|done|completed|已上线|已完成)/.test(token)) return 'success'
@@ -66,8 +66,9 @@ const kind = computed(() => {
 })
 
 const priorityBars = computed(() => {
-  const value = String(props.value || '').trim().toUpperCase()
-  return ({ P0: 4, P1: 3, P2: 2, P3: 1 } as Record<string, number>)[value] || 1
+  const token = `${props.value || ''} ${props.label || ''}`.toUpperCase()
+  const priority = token.match(/P[0-3]/)?.[0] || ''
+  return ({ P0: 4, P1: 3, P2: 2, P3: 1 } as Record<string, number>)[priority] || 1
 })
 </script>
 
