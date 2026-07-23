@@ -26,16 +26,18 @@ public class MyTaskController {
     @Operation(summary = "获取待我处理列表")
     public R<IPage<MyTaskVO>> getPendingTasks(
             @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
-        return R.ok(myTaskService.getPendingTasks(page, size));
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(required = false) String keyword) {
+        return R.ok(myTaskService.getPendingTasks(page, size, keyword));
     }
 
     @GetMapping("/done")
     @Operation(summary = "获取已处理列表")
     public R<IPage<MyTaskVO>> getDoneTasks(
             @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
-        return R.ok(myTaskService.getDoneTasks(page, size));
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(required = false) String keyword) {
+        return R.ok(myTaskService.getDoneTasks(page, size, keyword));
     }
 
     @GetMapping("/stats")

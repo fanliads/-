@@ -39,13 +39,13 @@ function handleClick(event: MouseEvent) {
 .ln-button {
   height: var(--ln-control-md); padding: 0 11px; border: 1px solid transparent;
   border-radius: var(--ln-radius-md); display: inline-flex; align-items: center; justify-content: center;
-  gap: 6px; color: var(--ln-text); background: transparent; font: 500 13px/1 var(--ln-font);
+  gap: 6px; color: var(--ln-text); background: transparent; font: 520 14px/1 var(--ln-font);
   cursor: pointer; transition: background var(--ln-fast), border-color var(--ln-fast), box-shadow var(--ln-fast), transform var(--ln-fast);
   white-space: nowrap; user-select: none;
   text-decoration: none;
   &:active:not(:disabled) { transform: translateY(1px); }
   &:disabled { opacity: .48; cursor: not-allowed; }
-  &.is-small { height: var(--ln-control-sm); padding: 0 9px; font-size: 12px; }
+  &.is-small { height: var(--ln-control-sm); padding: 0 9px; font-size: 13px; }
   &.is-icon { width: var(--ln-control-md); padding: 0; }
   &.is-icon.is-small { width: var(--ln-control-sm); }
   &.is-primary { color: #fff; background: var(--ln-accent); box-shadow: inset 0 0 0 1px rgba(0,0,0,.08), 0 1px 2px rgba(31,35,80,.18); &:hover:not(:disabled) { background: var(--ln-accent-hover); } }

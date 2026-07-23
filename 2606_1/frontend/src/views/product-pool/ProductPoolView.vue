@@ -428,7 +428,15 @@
 
     <LnDialog :model-value="createDialogVisible" :title="editingProductId ? '编辑产品需求' : '新建产品需求'" :description="editingProductId ? '修改产品需求的范围、归属和交付上下文。' : `创建后进入${createTargetStatusLabel}。`" width="680px" :close-on-backdrop="false" @update:model-value="handleCreateDialogVisible">
       <LnForm ref="createFormRef" :model="createForm" :rules="createRules" label-width="100px">
-        <div v-if="createSubmitError" class="create-error-summary" role="alert"><LnIcon name="warning"/><span>{{ createSubmitError }}</span></div>
+        <div v-if="createSubmitError" class="create-error-summary" role="alert">
+          <LnIcon name="warning"/>
+          <div>
+            <strong>{{ createSubmitError.title }}</strong>
+            <span>{{ createSubmitError.message }}</span>
+            <small v-if="createSubmitError.traceId">追踪码：{{ createSubmitError.traceId }}</small>
+          </div>
+          <LnButton v-if="createSubmitError.traceId" size="small" variant="ghost" @click="copyCreateTraceId">复制追踪码</LnButton>
+        </div>
         <LnFormItem label="需求标题" prop="title">
           <LnInput v-model="createForm.title" :maxlength="200" show-count placeholder="输入产品需求标题" />
         </LnFormItem>
@@ -616,7 +624,7 @@ const createTargetStatus = ref('pending_design')
 const createRequestId = ref('')
 const createTargetGroupKey = ref('')
 const createdRequirementId = ref<number | null>(null)
-const createSubmitError = ref('')
+const createSubmitError = ref<{ title: string; message: string; traceId?: string } | null>(null)
 const createFormRef = ref<LnFormInstance>()
 const editingProductId = ref<number | null>(null)
 const descriptionDialogVisible = ref(false)
@@ -1001,7 +1009,7 @@ function handleCreate(status = 'pending_design', groupKey = '') {
   createTargetStatus.value = status
   createTargetGroupKey.value = groupKey
   createRequestId.value = crypto.randomUUID()
-  createSubmitError.value = ''
+  createSubmitError.value = null
   editingProductId.value = null
   Object.assign(createForm, {
     title: '',
@@ -1017,6 +1025,7 @@ function handleCreate(status = 'pending_design', groupKey = '') {
     rawReqId: undefined,
   })
   createDialogVisible.value = true
+  requestAnimationFrame(() => createFormRef.value?.clearValidate())
 }
 
 function hasCreateDraft() {
@@ -1097,7 +1106,7 @@ async function handleSubmitCreate() {
   const form = createFormRef.value
   if (!form) return
   submitLoading.value = true
-  createSubmitError.value = ''
+  createSubmitError.value = null
   try {
     const valid = await form.validate().catch(() => false)
     if (!valid) return
@@ -1107,7 +1116,6 @@ async function handleSubmitCreate() {
       sprintId: normalizeOptionalNumber(createForm.sprintId),
       description: sanitizeRichText(createForm.description),
       isDirect: createForm.rawReqId ? 0 : 1,
-      creator: '当前用户',
       status: createTargetStatus.value,
       ...(!editingProductId.value && createRequestId.value
         ? { clientRequestId: createRequestId.value }
@@ -1135,10 +1143,49 @@ async function handleSubmitCreate() {
       }
     }
   } catch (error: any) {
-    createSubmitError.value = error?.message ? `创建失败：${error.message}。输入内容已保留，可修改后重试。` : '创建失败，输入内容已保留，请检查网络后重试。'
+    const responseData = error?.response?.data
+    const traceId = error?.traceId || responseData?.traceId
+    const message = error?.message && error.message !== 'Network Error'
+      ? error.message
+      : responseData?.message || '网络连接异常，请检查网络后重试'
+    const field = error?.field || responseData?.field || resolveCreateErrorField(message)
+    const isPermissionError = error?.code === 403 || error?.response?.status === 403
+    createSubmitError.value = {
+      title: isPermissionError
+        ? '当前账号无创建权限'
+        : field
+          ? '请检查表单内容'
+          : editingProductId.value
+            ? '保存未完成'
+            : '创建未完成',
+      message: `${message}。输入内容已保留，可修改后重试。`,
+      traceId,
+    }
+    if (field) createFormRef.value?.setFieldError(field, message)
   } finally {
     submitLoading.value = false
   }
+}
+
+function resolveCreateErrorField(message: string): string | undefined {
+  const mappings: Array<[string, string]> = [
+    ['标题', 'title'],
+    ['业务线', 'businessLineId'],
+    ['迭代', 'sprintId'],
+    ['需求类型', 'reqType'],
+    ['处理人', 'handler'],
+    ['负责人', 'handler'],
+    ['PRD', 'prdUrl'],
+    ['地址', 'prdUrl'],
+    ['功能模块', 'productModule'],
+  ]
+  return mappings.find(([keyword]) => message.includes(keyword))?.[1]
+}
+
+async function copyCreateTraceId() {
+  if (!createSubmitError.value?.traceId) return
+  await navigator.clipboard.writeText(createSubmitError.value.traceId)
+  lnToast.success('追踪码已复制')
 }
 
 function openDescriptionEditor(id: number, description?: string) {
@@ -1418,7 +1465,7 @@ onUnmounted(() => {
   border-bottom: 1px solid rgba(31, 35, 40, 0.08);
   background: rgba(252, 252, 251, 0.98);
   color: var(--text-tertiary);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 620;
   letter-spacing: 0.025em;
   backdrop-filter: blur(10px);
@@ -1450,7 +1497,7 @@ onUnmounted(() => {
   background: transparent;
   color: var(--text-primary);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1;
   cursor: pointer;
 }
@@ -1498,7 +1545,10 @@ onUnmounted(() => {
   &.created { animation: created-row 2.8s ease both; }
 }
 @keyframes created-row { 0%,35% { background: #e8f3ec; box-shadow: inset 3px 0 0 #3b8b62; } 100% { background: transparent; box-shadow: none; } }
-.create-error-summary { margin-bottom: 12px; padding: 10px 12px; display: flex; align-items: flex-start; gap: 8px; border: 1px solid rgba(196,71,65,.2); border-radius: 8px; background: rgba(196,71,65,.055); color: #a8423a; font-size: 12px; line-height: 1.5; }
+.create-error-summary { margin-bottom: 14px; padding: 12px; display: grid; grid-template-columns: 18px minmax(0,1fr) auto; align-items: flex-start; gap: 9px; border: 1px solid rgba(196,71,65,.2); border-radius: 9px; background: rgba(196,71,65,.055); color: #a8423a; font-size: 13px; line-height: 1.55; }
+.create-error-summary > div { display:grid; gap:3px; }
+.create-error-summary strong { font-size:14px; font-weight:650; }
+.create-error-summary small { font-size:12px; color:#a85b55; }
 
 .density-compact .issue-row { min-height: 48px; padding-top: 5px; padding-bottom: 5px; }
 .density-comfortable .issue-row { min-height: 64px; padding-top: 11px; padding-bottom: 11px; }
@@ -1509,8 +1559,8 @@ onUnmounted(() => {
 .identity-meta { min-width: 0; display: flex; align-items: center; gap: 7px; }
 .source-note {
   color: var(--text-tertiary);
-  font-size: 10.5px;
-  line-height: 14px;
+  font-size: 12px;
+  line-height: 16px;
   white-space: nowrap;
 }
 .source-note::before { content: '·'; margin-right: 7px; color: var(--border-strong); }
@@ -1518,8 +1568,8 @@ onUnmounted(() => {
 .issue-property :deep(.property-trigger) { width: 100%; justify-content: flex-start; }
 .issue-reference,
 .issue-document { min-width: 0; display: flex; align-items: center; }
-.empty-cell { color: var(--text-tertiary); font-size: 11px; }
-.tag-link { width: 100%; max-width: 100%; height: 26px; padding: 0 5px; justify-content: flex-start; font-size: 11px; }
+.empty-cell { color: var(--text-tertiary); font-size: 12px; }
+.tag-link { width: 100%; max-width: 100%; height: 28px; padding: 0 5px; justify-content: flex-start; font-size: 12px; }
 .prd-link { width: auto; padding-inline: 2px; }
 :deep(.tag-link .ln-button__label) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
@@ -1835,7 +1885,7 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 650;
   line-height: 1.42;
 
@@ -1869,7 +1919,7 @@ onUnmounted(() => {
   border-radius: 999px;
   border: 1px solid rgba(17, 24, 39, 0.08);
   background: rgba(255, 255, 255, 0.86);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -1879,7 +1929,7 @@ onUnmounted(() => {
   min-height: 22px;
   padding: 0 9px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   border: 1px solid rgba(17, 24, 39, 0.08);
 }

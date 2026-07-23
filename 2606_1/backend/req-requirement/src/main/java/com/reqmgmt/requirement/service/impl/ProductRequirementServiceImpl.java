@@ -111,9 +111,7 @@ public class ProductRequirementServiceImpl extends ServiceImpl<ProductRequiremen
         if (entity.getIsDirect() == null) {
             entity.setIsDirect(0);
         }
-        if (StrUtil.isBlank(entity.getCreator())) {
-            entity.setCreator(SecurityUtils.getCurrentUsername());
-        }
+        entity.setCreator(SecurityUtils.getCurrentUsername());
         // workload 在 DB 是 DECIMAL 类型，空字符串会导致 MySQL Strict Mode 报错
         if (StrUtil.isBlank(entity.getWorkload())) {
             entity.setWorkload(null);

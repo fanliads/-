@@ -9,6 +9,11 @@ export interface MyTaskVO {
   status: string
   statusName: string
   actionRequired: string
+  businessLineName?: string
+  handler?: string
+  sourceLabel?: string
+  expectedDate?: string
+  urgent?: boolean
   createTime: string
   updatedTime: string
 }
@@ -28,12 +33,12 @@ export interface MyTaskStats {
 }
 
 /** 获取待我处理列表 */
-export function getPendingTasks(params: { page: number; size: number }) {
+export function getPendingTasks(params: { page: number; size: number; keyword?: string }) {
   return get<MyTaskPageResult>('/my-tasks/pending', { params })
 }
 
 /** 获取已处理列表 */
-export function getDoneTasks(params: { page: number; size: number }) {
+export function getDoneTasks(params: { page: number; size: number; keyword?: string }) {
   return get<MyTaskPageResult>('/my-tasks/done', { params })
 }
 

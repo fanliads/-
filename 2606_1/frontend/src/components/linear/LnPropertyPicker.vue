@@ -90,7 +90,7 @@ function choose(option: LnOption, close: () => void) {
   border-radius: 5px;
   background: transparent;
   color: var(--ln-text-secondary);
-  font: 12px/16px var(--ln-font);
+  font: 13px/17px var(--ln-font);
   cursor: pointer;
 
   &:hover {
@@ -113,7 +113,7 @@ function choose(option: LnOption, close: () => void) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  line-height: 16px;
+  line-height: 17px;
 }
 
 .property-caret {

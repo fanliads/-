@@ -56,7 +56,7 @@
           :req-no="task.reqNo" :title="task.title" :type-label="getReqTypeLabel(task.reqType)" :priority="task.priority || 'P2'"
           :status-label="task.statusName || '-'" :status-tone="getTaskStatusTone(task.status)"
           :action-label="task.actionRequired || (currentView === 'pending' ? '待处理' : '已完成')"
-          :updated-at="formatTime(task.updatedTime || task.createTime)" :urgent="currentView === 'pending' && isUrgent(task.updatedTime)"
+          :updated-at="formatTime(task.updatedTime || task.createTime)" :urgent="currentView === 'pending' && !!task.urgent"
           :selected="selectedTaskKey === getTaskKey(task)" :done="currentView === 'done'"
           @click="selectTask(task)"
         >
@@ -67,6 +67,7 @@
               :req-id="task.id"
               :current-status="task.status"
               @action-done="handleActionDone"
+              @action-error="(error) => handleActionError(task, error)"
             />
             <LnButton v-else size="small" variant="ghost" @click="selectTask(task)">查看</LnButton>
           </template>
@@ -80,6 +81,7 @@
         </div>
       </div>
 
+      <div v-if="detailOpen && selectedTask" class="detail-backdrop" aria-hidden="true" @click="detailOpen = false"></div>
       <aside v-if="detailOpen" class="detail-panel wb-panel">
         <template v-if="selectedTask">
           <div class="detail-scroll wb-detail-scroll">
@@ -106,27 +108,44 @@
                   <span class="info-value">{{ selectedTask.actionRequired || (currentView === 'pending' ? '待处理' : '已处理') }}</span>
                 </div>
                 <div class="info-item wb-info-item">
-                  <span class="info-label">最近更新</span>
-                  <span class="info-value">{{ formatTime(selectedTask.updatedTime || selectedTask.createTime) }}</span>
+                  <span class="info-label">负责人 / 处理人</span>
+                  <span class="info-value">{{ selectedTask.handler || '未分配' }}</span>
+                </div>
+                <div class="info-item wb-info-item">
+                  <span class="info-label">业务线</span>
+                  <span class="info-value">{{ selectedTask.businessLineName || '未设置' }}</span>
                 </div>
                 <div class="info-item wb-info-item">
                   <span class="info-label">任务来源</span>
-                  <span class="info-value">{{ getReqTypeLabel(selectedTask.reqType) }}</span>
+                  <span class="info-value">{{ selectedTask.sourceLabel || getReqTypeLabel(selectedTask.reqType) }}</span>
                 </div>
                 <div class="info-item wb-info-item">
-                  <span class="info-label">处理状态</span>
-                  <span class="info-value">{{ currentView === 'pending' ? '待我推进' : '已完成处理' }}</span>
+                  <span class="info-label">期望完成</span>
+                  <span class="info-value" :class="{ 'is-urgent': selectedTask.urgent }">{{ formatDate(selectedTask.expectedDate) }}</span>
+                </div>
+                <div class="info-item wb-info-item">
+                  <span class="info-label">最近更新</span>
+                  <span class="info-value">{{ formatTime(selectedTask.updatedTime || selectedTask.createTime) }}</span>
                 </div>
               </div>
             </div>
 
             <div class="detail-actions">
+              <div v-if="taskActionError" class="action-error" role="alert">
+                <div>
+                  <strong>操作未完成</strong>
+                  <span>{{ taskActionError.message }}</span>
+                  <small v-if="taskActionError.traceId">追踪码：{{ taskActionError.traceId }}</small>
+                </div>
+                <LnButton v-if="taskActionError.traceId" size="small" variant="ghost" @click="copyTraceId(taskActionError.traceId)">复制追踪码</LnButton>
+              </div>
               <ActionButtons
                 v-if="currentView === 'pending'"
                 :req-type="selectedTask.reqType"
                 :req-id="selectedTask.id"
                 :current-status="selectedTask.status"
                 @action-done="handleActionDone"
+                @action-error="handleSelectedActionError"
               />
               <LnButton variant="secondary" @click="openFullRequirement">查看完整需求</LnButton>
             </div>
@@ -140,12 +159,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import ActionButtons from '@/components/workflow/ActionButtons.vue'
 import { getPendingTasks, getDoneTasks, getMyTaskStats, type MyTaskVO, type MyTaskStats } from '@/api/my-tasks'
-import { LnButton, LnEmptyState, LnIcon, LnInput, LnPagination, LnSkeleton, LnTabs, LnTaskRow, type LnTabOption } from '@/components/linear'
+import { lnToast, LnButton, LnEmptyState, LnIcon, LnInput, LnPagination, LnSkeleton, LnTabs, LnTaskRow, type LnTabOption } from '@/components/linear'
 
 const pendingLoading = ref(false)
 const doneLoading = ref(false)
@@ -158,7 +177,9 @@ const detailOpen = ref(true)
 const pendingError = ref('')
 const doneError = ref('')
 const statsError = ref(false)
+const taskActionError = ref<{ message: string; traceId?: string } | null>(null)
 const router = useRouter()
+let searchTimer: number | undefined
 
 const stats = reactive<MyTaskStats>({
   pendingCount: 0,
@@ -183,7 +204,7 @@ const refreshStatusText = computed(() => {
 })
 
 const currentList = computed(() => currentView.value === 'pending' ? pendingList.value : doneList.value)
-const filteredCurrentList = computed(() => { const keyword=taskKeyword.value.trim().toLowerCase();return keyword?currentList.value.filter(item=>`${item.reqNo} ${item.title} ${item.actionRequired||''}`.toLowerCase().includes(keyword)):currentList.value })
+const filteredCurrentList = computed(() => currentList.value)
 const currentLoading = computed(() => currentView.value === 'pending' ? pendingLoading.value : doneLoading.value)
 const selectedTask = computed(() => currentList.value.find((item) => getTaskKey(item) === selectedTaskKey.value) || null)
 const currentError = computed(() => currentView.value === 'pending' ? pendingError.value : doneError.value)
@@ -220,6 +241,7 @@ function ensureSelectedTask(list: MyTaskVO[]) {
 
 function selectTask(task: MyTaskVO) {
   selectedTaskKey.value = getTaskKey(task)
+  taskActionError.value = null
   detailOpen.value = true
 }
 
@@ -252,7 +274,7 @@ async function loadPending() {
   pendingLoading.value = true
   pendingError.value = ''
   try {
-    const res = await getPendingTasks({ page: pendingPage.value, size: pageSize })
+    const res = await getPendingTasks({ page: pendingPage.value, size: pageSize, keyword: taskKeyword.value.trim() || undefined })
     const data = (res as any).data
     if (data) {
       pendingList.value = data.records || []
@@ -271,7 +293,7 @@ async function loadDone() {
   doneLoading.value = true
   doneError.value = ''
   try {
-    const res = await getDoneTasks({ page: donePage.value, size: pageSize })
+    const res = await getDoneTasks({ page: donePage.value, size: pageSize, keyword: taskKeyword.value.trim() || undefined })
     const data = (res as any).data
     if (data) {
       doneList.value = data.records || []
@@ -288,6 +310,7 @@ async function loadDone() {
 async function handleActionDone() {
   const previousIndex = pendingList.value.findIndex((item) => getTaskKey(item) === selectedTaskKey.value)
   actionRefreshing.value = true
+  taskActionError.value = null
   try {
     await Promise.all([
       loadStats(),
@@ -300,6 +323,21 @@ async function handleActionDone() {
   } finally {
     actionRefreshing.value = false
   }
+}
+
+function handleActionError(task: MyTaskVO, error: { message: string; traceId?: string }) {
+  selectedTaskKey.value = getTaskKey(task)
+  detailOpen.value = true
+  taskActionError.value = error
+}
+
+function handleSelectedActionError(error: { message: string; traceId?: string }) {
+  taskActionError.value = error
+}
+
+async function copyTraceId(traceId: string) {
+  await navigator.clipboard.writeText(traceId)
+  lnToast.success('追踪码已复制')
 }
 
 async function manualRefresh() {
@@ -315,20 +353,30 @@ function openFullRequirement() {
   void router.push({ path, query: { focus: String(selectedTask.value.id) } })
 }
 
-function isUrgent(time: string) {
-  if (!time) return false
-  return dayjs(time).isBefore(dayjs().add(2, 'day'), 'day')
-}
-
 function formatTime(time: string) {
   if (!time) return '-'
   return dayjs(time).format('MM-DD HH:mm')
 }
 
+function formatDate(date?: string) {
+  if (!date) return '未设置'
+  return dayjs(date).format('YYYY-MM-DD')
+}
+
+watch(taskKeyword, () => {
+  window.clearTimeout(searchTimer)
+  searchTimer = window.setTimeout(() => {
+    if (currentView.value === 'pending') pendingPage.value = 1
+    else donePage.value = 1
+    void reloadCurrent()
+  }, 300)
+})
+
 onMounted(() => {
   loadStats()
   loadPending()
 })
+onUnmounted(() => window.clearTimeout(searchTimer))
 </script>
 
 <style lang="scss" scoped>
@@ -445,7 +493,7 @@ onMounted(() => {
   padding: 0 18px;
   min-height: 36px;
   border-bottom: 1px solid var(--border);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
 }
 
@@ -661,7 +709,11 @@ onMounted(() => {
 
 .detail-panel {
   overflow: hidden;
+  position: relative;
+  z-index: 2;
 }
+
+.detail-backdrop { display: none; }
 
 .detail-header {
   position: sticky;
@@ -683,7 +735,7 @@ onMounted(() => {
 }
 
 .detail-id {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
   margin-bottom: 8px;
 }
@@ -699,7 +751,7 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-secondary);
 }
 
@@ -725,21 +777,40 @@ onMounted(() => {
 }
 
 .info-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
 }
 
 .info-value {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--text-primary);
 }
+
+.info-value.is-urgent { color: var(--danger); font-weight: 650; }
 
 .detail-actions {
   margin-top: 6px;
   padding: 16px 16px 0;
   border-top: 1px solid var(--border);
 }
+
+.action-error {
+  margin: 0 0 14px;
+  padding: 12px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid rgba(196, 71, 65, 0.22);
+  border-radius: 10px;
+  background: rgba(196, 71, 65, 0.06);
+  color: #9f423c;
+}
+.action-error > div { display: grid; gap: 4px; }
+.action-error strong { font-size: 14px; }
+.action-error span { font-size: 13px; line-height: 1.55; }
+.action-error small { font-size: 12px; color: #a85b55; }
 
 .empty-title {
   font-size: 16px;
@@ -754,21 +825,46 @@ onMounted(() => {
   color: var(--text-secondary);
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1279px) {
   .workspace-shell {
     grid-template-columns: 1fr;
   }
 
+  .detail-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    display: block;
+    background: rgba(22, 22, 26, 0.28);
+    backdrop-filter: blur(2px);
+  }
+
   .detail-panel {
-    min-height: 320px;
+    position: fixed;
+    z-index: 1060;
+    top: 64px;
+    right: 16px;
+    bottom: 16px;
+    width: min(440px, calc(100vw - 32px));
+    min-height: 0;
+    box-shadow: 0 24px 64px rgba(20, 20, 24, 0.18);
   }
 }
 
 @media (max-width: 768px) {
+  .my-tasks-view { gap: 12px; }
+  .page-header { align-items: center; }
+  .refresh-status { display: none; }
+  .summary-strip { gap: 8px; }
+  .summary-pill { padding: 10px; }
+  .summary-value { font-size: 21px; }
+
   .list-toolbar {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
   }
+  .toolbar-actions { width: 100%; }
+  .task-search, :deep(.task-search .ln-input-wrap) { width: 100%; }
 
   .row-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -786,5 +882,24 @@ onMounted(() => {
   .info-grid {
     grid-template-columns: 1fr;
   }
+
+  .detail-panel {
+    inset: 0;
+    width: 100%;
+    border: 0;
+    border-radius: 0;
+  }
+  .detail-scroll { padding-bottom: 0; }
+  .detail-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    margin: 16px -20px 0;
+    padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(14px);
+  }
+  .detail-actions :deep(.action-buttons) { width: 100%; }
+  .detail-actions :deep(.action-buttons .ln-button) { flex: 1; }
 }
 </style>

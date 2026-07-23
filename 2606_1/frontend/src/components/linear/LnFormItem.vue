@@ -48,6 +48,8 @@ const field = {
   validate,
   clearValidate,
   resetField,
+  setError,
+  focus,
   error: computed(() => errorMessage.value),
 }
 
@@ -115,6 +117,11 @@ async function validate(trigger?: LnFormTrigger) {
 }
 
 function clearValidate() { errorMessage.value = '' }
+function setError(message: string) { errorMessage.value = message }
+function focus() {
+  const focusable = root.value?.querySelector<HTMLElement>('input, textarea, select, button, [tabindex]:not([tabindex="-1"])')
+  focusable?.focus()
+}
 function resetField() {
   if (form && props.prop) setFormValue(form.model.value, props.prop, cloneFormValue(initialValue))
   clearValidate()
@@ -130,10 +137,10 @@ function handleFocusOut(event: FocusEvent) {
 .ln-form-item { min-width:0; margin-bottom:16px; display:grid; grid-template-columns:minmax(0,1fr); gap:6px; font-family:var(--ln-font); }
 .ln-form-item.has-label { grid-template-columns:var(--ln-form-label-width) minmax(0,1fr); align-items:start; column-gap:12px; }
 .ln-form-item.has-label.is-top-label { grid-template-columns:minmax(0,1fr); gap:6px; }
-.ln-form-item__label { padding-top:8px; color:var(--ln-text-secondary); font-size:12px; font-weight:540; line-height:1.35; }
+.ln-form-item__label { padding-top:8px; color:var(--ln-text-secondary); font-size:13px; font-weight:560; line-height:1.4; }
 .is-top-label .ln-form-item__label { padding-top:0; }
 .ln-form-item__content { min-width:0; }
-.ln-form-item__error { grid-column:1/-1; color:var(--ln-danger); font-size:11px; line-height:1.35; }
+.ln-form-item__error { grid-column:1/-1; color:var(--ln-danger); font-size:12px; line-height:1.4; }
 .has-label .ln-form-item__error { grid-column:2; }
 .has-label.is-top-label .ln-form-item__error { grid-column:1; }
 .ln-form-error-enter-active,.ln-form-error-leave-active{transition:opacity var(--ln-fast),transform var(--ln-fast)}.ln-form-error-enter-from,.ln-form-error-leave-to{opacity:0;transform:translateY(-2px)}
