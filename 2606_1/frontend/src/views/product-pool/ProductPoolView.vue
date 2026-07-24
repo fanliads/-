@@ -1008,7 +1008,7 @@ function handleCreate(status = 'pending_design', groupKey = '') {
   if (!canCreateProduct.value) return
   createTargetStatus.value = status
   createTargetGroupKey.value = groupKey
-  createRequestId.value = crypto.randomUUID()
+  createRequestId.value = createClientRequestId()
   createSubmitError.value = null
   editingProductId.value = null
   Object.assign(createForm, {
@@ -1051,7 +1051,7 @@ function handleCreateDialogVisible(value: boolean) {
 function handleCreateFromRaw(item: ProductRequirementListVO) {
   if (!canCreateProduct.value || !item.rawReqId) return
   createTargetStatus.value = 'pending_design'
-  createRequestId.value = crypto.randomUUID()
+  createRequestId.value = createClientRequestId()
   editingProductId.value = null
   Object.assign(createForm, {
     title: '',
@@ -1099,6 +1099,20 @@ function handleCreateFromDetail() {
   if (!activeRequirementId.value) return
   const row = tableData.value.find((item) => item.id === activeRequirementId.value)
   if (row) handleCreateFromRaw(row)
+}
+
+function createClientRequestId() {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID()
+  }
+
+  const randomValues = new Uint32Array(4)
+  if (typeof globalThis.crypto?.getRandomValues === 'function') {
+    globalThis.crypto.getRandomValues(randomValues)
+    return `prd_${Date.now().toString(36)}_${Array.from(randomValues, value => value.toString(36)).join('')}`
+  }
+
+  return `prd_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`
 }
 
 async function handleSubmitCreate() {
