@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AI工作台 · 众食安</title>
+  <link rel="stylesheet" href="assets/product-shell.css">
+  <link rel="stylesheet" href="workbench.css">
+  <link rel="stylesheet" href="business.css">
+</head>
+<body class="wb-page" data-page="workbench">
+<main id="app">
+  <div class="wb-breadcrumb">后厨管理　/　<span>AI工作台</span></div>
+  <div class="wb-heading">
+    <div class="wb-title"><h1>AI工作台</h1><span class="wb-scope">华东区域 · 3 家门店</span></div>
+    <div class="wb-actions"><button type="button" onclick="WB.history()">历史会话</button><button type="button" id="layout-toggle" onclick="WB.toggleLayout()">最大化工作区</button></div>
+  </div>
+  <div id="split-layout" class="wb-split">
+    <section class="wb-chat" aria-label="AI协作区">
+      <header class="wb-chat-head"><div class="wb-assistant"><span class="wb-ai-symbol" aria-hidden="true">✧</span><div><strong>巡检助手</strong><small id="session-title">新的工作会话</small></div></div><button type="button" class="wb-icon-btn" title="新建工作会话" aria-label="新建工作会话" onclick="WB.newSession()">＋</button></header>
+      <div id="chat-messages" class="wb-messages" role="log" aria-label="工作会话消息" aria-live="polite"></div>
+      <form id="composer" class="wb-composer">
+        <div id="chat-context" class="wb-context"></div>
+        <label class="wb-sr-only" for="chat-input">向巡检助手发送消息</label>
+        <textarea id="chat-input" rows="3" maxlength="1500" placeholder="告诉我你要检查哪家门店…"></textarea>
+        <div class="wb-composer-foot"><span>Enter 发送 · Shift + Enter 换行</span><button type="submit" class="primary" id="send-message" aria-label="发送消息">发送 ↑</button></div>
+      </form>
+    </section>
+    <div id="split-handle" class="wb-divider" role="separator" tabindex="0" aria-label="调整对话区宽度" aria-orientation="vertical" aria-valuemin="25" aria-valuemax="50" aria-valuenow="35"><span></span></div>
+    <section class="wb-business" aria-label="业务工作区"><div class="wb-business-head"><div id="view-tabs" role="tablist" aria-label="业务视图"></div><button type="button" class="wb-icon-btn wb-restore" onclick="WB.toggleLayout()" aria-label="恢复AI协作区">◫</button></div><div id="view-content"></div></section>
+  </div>
+  <button type="button" class="wb-floating-restore" onclick="WB.toggleLayout()">✧ 恢复 AI协作</button>
+</main>
+<script src="workbench.js"></script>
+<script src="assets/product-shell.js"></script>
+<script src="business.js"></script>
+<script data-ai-navigation>(function(){var base=location.href.split('/2610_')[0]+'/';var s=document.createElement('script');s.src=new URL('shared/ai-navigation.js',base).href;document.body.append(s)})();</script></body>
+</html>
