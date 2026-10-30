@@ -30,7 +30,22 @@
     return { active: 'overview', views: [{ id: 'overview', type: 'overview', title: '工作概览' }], inspections: {}, records: [], risks: [], analysis: null, dirty: false };
   }
   function persist() { return WB.persist() !== false; }
-  function view() { return b.views.find(v => v.id === b.active) || b.views[0]; }
+  const rootViews = { workbench: { id: 'overview', type: 'overview', title: '工作概览' }, records: { id: 'records', type: 'records', title: '后厨巡检记录' }, risks: { id: 'risks', type: 'risks', title: '巡检风险记录' } };
+  function sectionFor(v) { return ['records', 'record'].includes(v?.type) ? 'records' : ['risks', 'risk'].includes(v?.type) ? 'risks' : 'workbench'; }
+  function rootView(section = 'workbench') {
+    const definition = rootViews[section] || rootViews.workbench;
+    let root = b.views.find(v => v.id === definition.id);
+    if (!root) { root = { ...definition }; b.views.push(root); }
+    return root;
+  }
+  function view() { return b.views.find(v => v.id === b.active) || rootView(); }
+  function navigateSection(section) { if (b) activate(rootView(section)); }
+  function objectTitle(v) {
+    const store = stores.find(s => s.id === v.storeId)?.name;
+    if (v.type === 'record') return [store, v.recordId].filter(Boolean).join(' · ') || v.title;
+    if (v.type === 'risk') return [store, v.riskId].filter(Boolean).join(' · ') || v.title;
+    return v.title;
+  }
   function context(v) {
     if (v.storeId) {
       const s = stores.find(s => s.id === v.storeId), c = cameras.find(c => c.id === v.cameraId);
@@ -49,9 +64,9 @@
     if (!existing) b.views.push(v);
     activate(existing || v);
   }
-  function showOverview() { activate(b.views[0]); }
-  function showRecords() { addView({ id: 'records', type: 'records', title: '巡检记录' }); }
-  function showRisks() { addView({ id: 'risks', type: 'risks', title: '风险事件' }); }
+  function showOverview() { navigateSection('workbench'); }
+  function showRecords() { navigateSection('records'); }
+  function showRisks() { navigateSection('risks'); }
   function openVideo(storeId = 's1', cameraId = 'c1') {
     if (!stores.some(s => s.id === storeId)) return;
     const s = stores.find(s => s.id === storeId), c = cameras.find(c => c.id === cameraId) || cameras[0];
@@ -268,9 +283,10 @@
     const url=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'})), link=document.createElement('a');link.href=url;link.download=`${r.id}-巡检报告.txt`;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);WB.toast('巡检报告已导出');
   }
   function closeView(viewId) {
-    if (viewId === 'overview') return;
-    const draft = b.inspections[viewId];
-    const finish = () => { b.views = b.views.filter(v => v.id !== viewId); if (b.active === viewId) b.active = 'overview'; persist(); render(); };
+    const closing = b.views.find(v => v.id === viewId);
+    if (!closing || ['overview', 'records', 'risks'].includes(closing.type)) return;
+    const draft = b.inspections[viewId], section = sectionFor(closing);
+    const finish = () => { b.views = b.views.filter(v => v.id !== viewId); if (b.active === viewId) b.active = rootView(section).id; persist(); render(); };
     if (draft?.dirty && draft.status === 'draft') {
       WB.modal('关闭巡检视图？', `<p>当前有未保存的检查结果，关闭前可以保存草稿。</p><p id="close-error" class="biz-error" role="alert"></p><div class="biz-modal-actions">${btn('继续编辑','modal-close')}${btn('保留内容并关闭','close-keep','',`data-view="${e(viewId)}"`)}</div>`, d => {
         d.querySelector('[data-b="close-keep"]').onclick = ev => { ev.stopPropagation(); if (!persist()) { $('#close-error').textContent = '保存失败，请继续编辑并重试。'; return; } draft.dirty = false; persist(); WB.closeModal(); finish(); };
@@ -279,13 +295,21 @@
     finish();
   }
   function tabs() {
-    $('#view-tabs').innerHTML = b.views.map(v => `<div class="biz-tab ${b.active === v.id ? 'active' : ''}" role="presentation"><button type="button" role="tab" aria-selected="${b.active === v.id}" data-b="tab" data-view="${e(v.id)}">${e(v.title)}</button>${v.id === 'overview' ? '' : btn('×','close-view','biz-tab-close',`data-view="${e(v.id)}" aria-label="关闭${e(v.title)}"`)}</div>`).join('');
-    $('#view-tabs').setAttribute('role','tablist');
+    const v = view(), section = sectionFor(v), objects = b.views.filter(x => sectionFor(x) === section && !['overview', 'records', 'risks'].includes(x.type));
+    const labels = { workbench: '工作概览', records: '后厨巡检记录', risks: '巡检风险记录' }, node = $('#view-tabs');
+    node.removeAttribute('role');
+    node.setAttribute('aria-label', '当前业务对象');
+    node.innerHTML = objects.length ? btn('← 返回' + labels[section], 'section', 'biz-section-back', 'data-section="' + section + '"') + '<div class="biz-object-tabs" role="tablist" aria-label="已打开的业务对象">' + objects.map(x => {
+      const title = objectTitle(x);
+      return '<div class="biz-tab ' + (b.active === x.id ? 'active' : '') + '" role="presentation"><button type="button" role="tab" aria-selected="' + (b.active === x.id) + '" data-b="tab" data-view="' + e(x.id) + '" title="' + e(title) + '">' + e(title) + '</button>' + btn('×', 'close-view', 'biz-tab-close', 'data-view="' + e(x.id) + '" aria-label="关闭' + e(title) + '"') + '</div>';
+    }).join('') + '</div>' : '';
+    node.closest('.wb-business-head')?.classList.toggle('biz-navigation-empty', !objects.length);
   }
   function render() {
     if (!b || !$('#view-content')) return;
     tabs(); const v = view();
     $('#view-content').innerHTML = ({ overview: overviewHTML, video: videoHTML, records: recordsHTML, record: recordHTML, analysis: analysisHTML, analysisHistory: analysisHistoryHTML, risks: risksHTML, risk: riskHTML }[v.type] || overviewHTML)(v);
+    window.dispatchEvent(new CustomEvent('ai-business-view', { detail: { type: v.type, title: v.title } }));
   }
   function overviewHTML() {
     const lakeRecord=b.records.find(r=>r.storeId==='s1');
@@ -343,6 +367,7 @@
     const action=target.dataset.b, vi=target.dataset.view, index=+target.dataset.index;
     if(action==='tab') activate(b.views.find(v=>v.id===vi));
     else if(action==='close-view') closeView(vi);
+    else if(action==='section') navigateSection(target.dataset.section);
     else if(action==='open-video') openVideo(target.dataset.store||WB.state.context?.storeId||'s1',target.dataset.camera||'c1');
     else if(action==='records') showRecords();
     else if(action==='record') openRecord(target.dataset.id);
@@ -385,5 +410,5 @@
     const v=view(); if(v.type==='video' && v.player==='loading')loadPlayer(v);
   }
   function resetSession(){clearTimeout(analysisTimer);loadingTimers.forEach(clearTimeout);loadingTimers.clear();b=WB.state.business=initial();render();}
-  window.Business={stores,cameras,init,openVideo,showOverview,showRecords,showRisks,requestAnalysis,requestRisk,historyAnalysis,summarize,hasUnsaved:()=>Object.values(b?.inspections||{}).some(i=>i.dirty&&i.status==='draft'),resetSession,render};
+  window.Business={stores,cameras,init,openVideo,showOverview,showRecords,showRisks,navigateSection,requestAnalysis,requestRisk,historyAnalysis,summarize,hasUnsaved:()=>Object.values(b?.inspections||{}).some(i=>i.dirty&&i.status==='draft'),resetSession,render};
 })();

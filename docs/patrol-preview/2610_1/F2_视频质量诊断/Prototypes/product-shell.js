@@ -14,20 +14,8 @@
  function sidebar(){const s=section();return `<aside class="ps-side q-side" aria-label="阳光厨房菜单">${!unit?`<a class="ps-menu ${s==='analysis'?'active':''}" href="${risk('overview.html')}">${svg('chart')}<span>数据研判</span></a>`:''}${!unit||p.qualityOrg?`<details class="ps-menu-group" ${s==='quality'?'open':''}><summary class="${s==='quality'?'current':''}">${svg('camera')}<span>视频监控</span><i>⌄</i></summary><a class="ps-child ${s==='quality'?'active':''}" href="${quality('quality-monitor.html')}">视频质量诊断</a></details>`:''}${!unit||p.store?`<details class="ps-menu-group" ${s==='patrol'?'open':''}><summary class="${s==='patrol'?'current':''}">${svg('flag')}<span>AI抓拍</span><i>⌄</i></summary>${!unit?'<button class="ps-child" onclick="ProductShell.boundary(\'抓拍策略\')">抓拍策略</button>':''}<a class="ps-child ${s==='patrol'?'active':''}" href="${risk('index.html')}">${unit?'本单位巡检':'AI巡检'}</a></details>`:''}${!unit?`<button class="ps-menu ps-menu-boundary" onclick="ProductShell.boundary('物联管理')">${svg('box')}<span>物联管理</span><i>⌄</i></button><button class="ps-menu ps-menu-boundary" onclick="ProductShell.boundary('语音播报')">${svg('mic')}<span>语音播报</span><i>⌄</i></button>`:''}</aside>`}
  function contextNav(options={}){
   if(options.qualityRoute)qualityRoute=options.qualityRoute;
-  if(qroute()==='warning'||section()==='analysis')return'';
-  let tabs,current;
-  if(section()==='quality'){
-   current=({resource:'monitor',event:'events',report:'reports',create:'tasks',task:'tasks'})[qroute()]||qroute();
-   tabs=Object.entries(qualityFiles).map(([id,file])=>[id,({monitor:'运行监测',events:'异常事件',labels:unit?'标注核实记录':'标注核实',reports:'质量报告'})[id],quality(file)]);
-   if(!unit)tabs.push(['tasks','诊断任务',risk('index.html','?business=quality')]);
-  }else if(unit){
-   const v=params.get('view');current=page==='sop'||page==='sopdetail'?'sop':page==='report'||v==='reports'?'reports':v==='issues'?'issues':'tasks';
-   tabs=[['tasks','本单位巡检',risk('index.html')],['issues','问题与整改',risk('unit.html','?view=issues')],['reports','巡检报告',risk('unit.html','?view=reports')],['sop','适用SOP',risk('sop.html')]];
-  }else{
-   current=page==='items'||page==='item'?'items':page==='sop'||page==='sopdetail'?'sop':'tasks';
-   tabs=[['tasks','巡检任务',risk('index.html')],['items','巡检项管理',risk('items.html')],['sop','SOP规范库',risk('sop.html')]];
-  }
-  return `<nav class="ps-business-tabs" aria-label="${section()==='quality'?'视频质量诊断':'AI巡检'}视图">${tabs.map(([id,name,url])=>`<a class="${id===current?'active':''}" ${id===current?'aria-current="page"':''} href="${e(url)}">${name}</a>`).join('')}</nav>`;
+  // Cross-page navigation belongs to the shared sidebar; object tabs stay in each page.
+  return '';
  }
  function path(){return '后厨管理　/　阳光厨房　/　'+(section()==='analysis'?'数据研判':section()==='quality'?'视频监控　/　视频质量诊断':'AI抓拍　/　'+(unit?'本单位巡检':'AI巡检'))}
  function mount(options={}){
